@@ -125,14 +125,18 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
       pop.data[p, "ThetaS"] <- theta.s(s=length(seg.sites(spseqsbin[start:end,])),n=pop.data[p,"sampleN"])
       pop.data[p, "TajD"] <- tajima.test((spseqsbin[start:end,]))[[1]]
       
-      #Sampling Coverage
-      #spseqs.loci[2]
+      ##Sampling Coverage##
       pop.spseq.loci<-spseqs.loci[start:end,]
-      pop.spseq.loci[2]
-      f1<-length(which(pop.spseq.loci[2]==1))
-      f2<-length(which(pop.spseq.loci[2]==2))
+      #pop.spseq.loci[2]
+      hapfreq<-as.data.frame(table(pop.spseq.loci[2]))
+      hapfreq
+      
+      f1<-length(which(hapfreq[,2]==1))
+      f2<-length(which(hapfreq[,2]==2))
+      
       n<-nrow(pop.spseq.loci)
-      coverage<-1-(f1/n)*(((n-1)*f1)/(((n-1)*f1)+2*f2)) ##Chao & Jost 2012
+      ifelse(f2>0, coverage<-1-(f1/n)*(((n-1)*f1)/(((n-1)*f1)+2*f2)), coverage<- 1-(f1/n))
+      #coverage<-1-(f1/n)*(((n-1)*f1)/(((n-1)*f1)+2*f2)) ##Chao & Jost 2012
       pop.data[p, "Coverage"] <- coverage
       
       
