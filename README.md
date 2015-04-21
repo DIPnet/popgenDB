@@ -2,7 +2,7 @@ Population Genetic Statistics for the DIPnet dataset
 =====================================================
 Added April 20, 2015 by Eric Crandall
 
-These scripts are intended for use with the DIPnet dataset that will be finished on May 1, 2015. We plan to convert these scripts eventually into an R package that will talk with the DIPnet database as stored in the FIMS framework to calculate multispecies population genetic statistics. The way it currently works is that all the functions are stored in `DIPnet_Stats_Functions.R` and a script for driving those functions is in `DIPnet_Stats_Script.R`. 
+These scripts are intended for use with the DIPnet dataset that will be finished on May 1, 2015. We plan to convert these scripts eventually into an R package that will talk with the DIPnet database as stored in the FIMS framework to calculate multispecies population genetic statistics. The way it currently works is that all the functions are stored in `DIPnet_Stats_Functions.R` and a script for driving those functions is in `DIPnet_Stats_Script.R`. You'll want to change the paths in `config_sample.R` to values that point to local versions of the DIPnet DB and spatial DB and then save that file as `config.R`. It won't change during subsequent pulls.
 
 There are major functions for looping over the whole database and calculating:
 

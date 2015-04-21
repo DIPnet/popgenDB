@@ -12,17 +12,17 @@ library(adegenet)
 library(plyr)
 library(strataG)
 
-source("~/Google Drive/!DIPnet_Gait_Lig_Bird/Scripts/GeneticDiversityStats/DIPnet_Stats_Functions.R")
-
+source("DIPnet_Stats_Functions.R")
+source("config.R")
 
 #set the working directory
-setwd("~/Google Drive/!DIPnet_Gait_Lig_Bird/Scripts/GeneticDiversityStats")
+setwd(working_directory)
 
 ##READING IN THE DATA. ##
 #need to turn off the quoting with quote="" for it to read correctly. 
 #Point this to keepsdata_ABGD files if you want to calculate stats by ESUs rather than by species
 #Add "_ABGD" to file name to load the ABGD assignments
-ipdb<-read.table("~/Google Drive/!DIPnet_DataQC/Reunite_metadata_and_alignments/2015-03-24/2015-03-24_keepsdata.txt",sep="\t",header=T,stringsAsFactors = F,quote="") 
+ipdb<-read.table(ipdb_path,sep="\t",header=T,stringsAsFactors = F,quote="") 
 
 #windows version of reading in a file
 #ipdb<-read.table("C:/Users/Chris/Google Drive/!DIPnet_DataQC/Reunite_metadata_and_alignments/2015-03-24/2015-03-24_keepsdata.txt", sep="\t", header=T, stringsAsFactors=F, quote="")
