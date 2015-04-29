@@ -12,11 +12,12 @@ library(adegenet)
 library(plyr)
 library(strataG)
 
+#set the working directory and source stuff
+setwd(working_directory)
 source("DIPnet_Stats_Functions.R")
 source("config.R")
 
-#set the working directory
-setwd(working_directory)
+
 
 ##READING IN THE DATA. ##
 #need to turn off the quoting with quote="" for it to read correctly. 
