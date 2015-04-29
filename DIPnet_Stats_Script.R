@@ -11,6 +11,7 @@ library(mmod)
 library(adegenet)
 library(plyr)
 library(strataG)
+library(iNEXT)
 
 #set the working directory and source stuff
 setwd(working_directory)
