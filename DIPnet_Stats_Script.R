@@ -14,9 +14,11 @@ library(strataG)
 library(iNEXT)
 
 #set the working directory and source stuff
-setwd(working_directory)
+
 source("DIPnet_Stats_Functions.R")
 source("config.R")
+
+setwd(working_directory)
 
 
 
@@ -99,8 +101,8 @@ hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb,level1 = "sample",level2=
 
 
 #Save diversity stats to file(s)
-save(divstats,file="./For_NESCent/DIPnet_stats_ecogregions_ABGD_032415.Rdata")
-write.stats(divstats,filename="./For_NESCent/DIPnet_stats_ecoregions_ABGD_032415.csv",structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
+save(divstats,file="../DIPnet_stats_ecogregions_032415.Rdata")
+write.stats(divstats,filename=".../DIPnet_stats_ecoregions_032415.csv",structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
 
 
 #Save differentiation stats to files
