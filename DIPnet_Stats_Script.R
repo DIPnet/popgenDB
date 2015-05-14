@@ -41,7 +41,7 @@ spatial<-read.csv("~/Google Drive/!DIPnet_DataQC/Reunite_metadata_and_alignments
 #Remove commas from fn100id and fn500id (also may need to fix reunion accent issue manually)
 spatial$fn100id<-gsub(",","", spatial$fn100id)
 spatial$fn500id<-gsub(",","", spatial$fn500id)
-ipdb<-join(ipdb,spatial)
+ipdb<-join(ipdb,spatial, by = "IPDB_ID")
 #CHECK FOR DUPLICATES
 dups<-ipdb[duplicated(ipdb),]
 #ipdb<-ipdb[!duplicated(ipdb),]  #remove duplicates if you need to

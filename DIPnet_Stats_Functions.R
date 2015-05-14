@@ -391,6 +391,7 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
     if(!is.null(level2) && !is.null(level3)){if(length(unique(sp[[level3]])) > 1) {l<-3} else {l<-2}}
     
     
+    
     #FILTER
     cat("filtering out population samples with n <", minseqs,"and species with fewer than", minsamps,"total populations \n")
     #filter out populations with low numbers (n<5 for now). Skip the species if this procedure deletes all samples or if there are less than 3 populations total.
@@ -405,11 +406,15 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
                                     next}
     cat("Removed the following population samples:", lowsamps, "\n")
     
+    #Adjust l for the number of groups at each hierarchical level. If the same number, then reduce l by 1
+    if(l==3 && length(unique(sp[[level3]]))>=length(unique(sp[[level2]]))){l<-2}  #if there are the same number groups at level3 as level2, then just treat it as a two level AMOVA
+    if(l==2 && length(unique(sp[[level2]]))>=length(unique(sp[[level1]]))){l<-1} #if there are the same number groups at level2 as level1, then just treat it as a one level AMOVA
     
-    sp<-sp[-which(is.na(sp[[level2]])),] # remove any individuals that have NAs for level2
+    #remove NAs
+    if(l==2){sp<-sp[!(is.na(sp[[level2]])),]} # remove any individuals that have NAs for level2
+    
+    if(l==3){sp<-sp[!(is.na(sp[[level3]])),]} # remove any individuals that have NAs for level3
     # or possibly keep them in "other?"
-    #   sp<-sp[-which(is.na(sp[[level3]])),] # remove any individuals that have NAs for level3
-    
 
     #FORMAT CONVERSION
     cat("converting data to various R DNA formats", "\n")
@@ -423,6 +428,7 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
     
     #HEIRARCHICAL DIFFERENTIATION STATS CALCULATION
     #pie charts? stacked bars?
+    #for eventual stacked bar function barplot(height = amova_out$varcomp[,1]/sum(amova_out$varcomp[,1]),beside = T)
     
     #Calculate distances among individuals for PhiST
     dists<-dist.dna(spseqsbin, model=model)
@@ -433,7 +439,7 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
     #1 level AMOVA
     if(l==1){
       level1factor<-as.factor(sp[[level1]])
-      amova_out<-pegas::amova(dists~level1factor, nperm=nperm)
+      amova_out<-pegas::amova(dists~as.factor(sp[[level1]]), nperm=nperm)
       FST<-amova_out$varcomp[1,1]/sum(amova_out$varcomp[,1])
       diffs<-c(print(amova_out),"FST"=FST)
     }
@@ -444,19 +450,43 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
       level1factor<-as.factor(sp[[level1]])
       level2factor<-as.factor(sp[[level2]])
       amova_out<-pegas::amova(dists~level2factor/level1factor, nperm=nperm)
+      
       FCT<-amova_out$varcomp[1,1]/sum(amova_out$varcomp[,1])
       FCTp<-amova_out$varcomp[1,2]
-      FST<-(amova_out$varcomp[1,1]+amova_out$varcomp[2,1])/sum(amova_out$varcomp[,1])
-      FSTp<-NA
+     
       FSC<-amova_out$varcomp[2,1]/(amova_out$varcomp[2,1]+amova_out$varcomp[3,1])
       FSCp<-amova_out$varcomp[2,2]
       
+      FST<-(amova_out$varcomp[1,1]+amova_out$varcomp[2,1])/sum(amova_out$varcomp[,1])
+      FSTp<-NA
+      
       diffs<-c(amova_out,"FCT"=FCT, "FSC"=FSC,"FST"=FST)
+      if(round((1-FST),digits=4) != round((1-FSC)*(1-FCT),digits = 4)){warning("Variance components don't meet expectation of (1-FST)==(1-FSC)*(1-FCT) for ", gsl)}
     }
     
+  
     #3 level AMOVA
     if(l==3){
-      diffs<-"Not ready for 3 level nested AMOVA yet"
+      level1factor<-as.factor(sp[[level1]])
+      level2factor<-as.factor(sp[[level2]])
+      level3factor<-as.factor(sp[[level3]])
+      amova_out<-pegas::amova(dists~level3factor/level2factor/level1factor, nperm=nperm)
+      
+      FRT<-amova_out$varcomp[1,1]/sum(amova_out$varcomp[,1])
+      FRTp<-amova_out$varcomp[1,2]
+      
+      FCR<-amova_out$varcomp[2,1]/(amova_out$varcomp[2,1]+amova_out$varcomp[3,1]+amova_out$varcomp[4,1])
+      FCRp<-amova_out$varcomp[2,2]
+      
+      FSC<-amova_out$varcomp[3,1]/(amova_out$varcomp[3,1]+amova_out$varcomp[4,1])
+      FSCp<-amova_out$varcomp[3,2]
+      
+      FST<-(amova_out$varcomp[1,1]+amova_out$varcomp[2,1]+amova_out$varcomp[3,1])/sum(amova_out$varcomp[,1])
+      FSTp<-NA
+      
+      
+      diffs<-c(amova_out,"FRT"=FRT, "FCR"=FCR,"FSC"=FSC, "FST"=FST)
+      if(round((1-FST),digits=4) != round((1-FSC)*(1-FCR)*(1-FRT),digits = 4)){warning("Variance components don't meet expectation of (1-FST)==(1-FSC)*(1-FCT) for ", gsl)}
     }
     
     #change this
