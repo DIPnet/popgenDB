@@ -366,38 +366,43 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
   require(pegas)
   
 
-  ###LOOP THROUGH THE SPECIES###
+  ##Code to figure out the number of levels in the analysis
+  if(is.null(level1)){stop("You must enter at least one level - try using 'sample'")}
+  if(is.null(level2) && is.null(level3)){level<-1}
+  if(!is.null(level2) && is.null(level3)){level<-2}
+  if(!is.null(level2) && !is.null(level3)){level<-3}
   
   #create an empty list with headers named for each species/locus combo (or ESU/locus combo)
   esu_loci <- unique(ipdb$Genus_species_locus) 
   all.pops.table<-sapply(esu_loci, function(x) NULL)
   
+  ###LOOP THROUGH THE SPECIES###
+  
   for(gsl in esu_loci){ #gsl<-"Zebrasoma_flavescens_CYB" 
     
     cat("\n","\n","\n","Now starting", gsl, "\n")
+    
+    # Pass in the intended number of levels
+    l<-level
+    l1<-level1
+    l2<-level2
+    l3<-level3
     
     #POPULATION SAMPLES
     
     #modify/replace the following once we have the script that assigns populations
     #subset the genus-species-locus and order it alphabetically by locality name
-    sp<-subset(ipdb, Genus_species_locus == gsl )
-    sp$sample<-paste(sp$locality,round(sp$decimalLatitude, digits=0),round(sp$decimalLongitude, digits=0),sep="_")  #sets up a variable that matches assignsamp function outcome
+    sp<-ipdb[which(ipdb$Genus_species_locus==gsl),]
+    sp$sample<-paste(sp$locality,round(sp$decimalLatitude, digits=0),round(sp$decimalLongitude, digits=0),sep="_")#sets up a variable that matches assignsamp function outcome
     sp<-sp[order(sp$sample),]
-  
-    ##Code to figure out the number of levels in the analysis
-    if(is.null(level1)){stop("You must enter at least one level - try using 'sample'")}
-    if(is.null(level2) && is.null(level3)){l<-1}
-    if(!is.null(level2) && is.null(level3)){if(length(unique(sp[[level2]])) > 1) {l<-2} else {l<-1}}
-    if(!is.null(level2) && !is.null(level3)){if(length(unique(sp[[level3]])) > 1) {l<-3} else {l<-2}}
-    
     
     
     #FILTER
     cat("filtering out population samples with n <", minseqs,"and species with fewer than", minsamps,"total populations \n")
     #filter out populations with low numbers (n<5 for now). Skip the species if this procedure deletes all samples or if there are less than 3 populations total.
-    sampN<-table(sp[[level1]])
+    sampN<-table(sp[[l1]])
     lowsamps<-names(sampN[sampN < minseqs])
-    if(length(lowsamps)>0){sp<-sp[-which(sp[[level1]] %in% lowsamps),]}
+    if(length(lowsamps)>0){sp<-sp[-which(sp[[l1]] %in% lowsamps),]}
     if(length(sampN) - length(lowsamps) < minsamps){all.pops.table[[gsl]]<-paste("Fewer than", minsamps, "sampled populations after filtering. No stats calculated")
                                                     paste("Fewer than", minsamps, "sampled populations after filtering. No stats calculated")
                                                     next}
@@ -406,14 +411,18 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
                                     next}
     cat("Removed the following population samples:", lowsamps, "\n")
     
-    #Adjust l for the number of groups at each hierarchical level. If the same number, then reduce l by 1
-    if(l==3 && length(unique(sp[[level3]]))>=length(unique(sp[[level2]]))){l<-2}  #if there are the same number groups at level3 as level2, then just treat it as a two level AMOVA
-    if(l==2 && length(unique(sp[[level2]]))>=length(unique(sp[[level1]]))){l<-1} #if there are the same number groups at level2 as level1, then just treat it as a one level AMOVA
+
+    #Adjust l for the number of groups at each hierarchical level. If only one group at a certain level, reduce l by 1. If the same number at two levels, then reduce l by 1
+    if(l==3 && length(unique(sp[[l3]]))==1){l<-2}
+    if(l==2 && length(unique(sp[[l2]]))==1){l<-1}
+    if(l==3 && length(unique(sp[[l3]]))>=length(unique(sp[[l2]]))){l<-2}  #if there are the same number groups at level3 as level2, then just treat it as a two level AMOVA
+    if(l==2 && length(unique(sp[[l2]]))>=length(unique(sp[[l1]]))){l<-1} #if there are the same number groups at level2 as level1, then just treat it as a one level AMOVA
+    if(l==3 && length(unique(sp[[l2]]))>=length(unique(sp[[l1]]))){l<-2; l1<-level2; l2<-level3}
     
     #remove NAs
-    if(l==2){sp<-sp[!(is.na(sp[[level2]])),]} # remove any individuals that have NAs for level2
+    if(l==2){sp<-sp[!(is.na(sp[[l2]])),]} # remove any individuals that have NAs for level2
     
-    if(l==3){sp<-sp[!(is.na(sp[[level3]])),]} # remove any individuals that have NAs for level3
+    if(l==3){sp<-sp[!(is.na(sp[[l3]])),]} # remove any individuals that have NAs for level3
     # or possibly keep them in "other?"
 
     #FORMAT CONVERSION
@@ -430,25 +439,28 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
     #pie charts? stacked bars?
     #for eventual stacked bar function barplot(height = amova_out$varcomp[,1]/sum(amova_out$varcomp[,1]),beside = T)
     
-    #Calculate distances among individuals for PhiST
-    dists<-dist.dna(spseqsbin, model=model)
+    #Calculate distances among individuals for PhiST. Need to write it to the global environment, because that is where pegas::amova() will look for it
+    dists<<-dist.dna(spseqsbin, model=model)
     
     #change dists to all 1's if Fst is requested
     # add evolutionary distance along a tree?
     
     #1 level AMOVA
     if(l==1){
-      level1factor<-as.factor(sp[[level1]])
-      amova_out<-pegas::amova(dists~as.factor(sp[[level1]]), nperm=nperm)
+      level1factor<<-as.factor(sp[[l1]]) #Need to write it to the global environment, because that is where pegas::amova() will look for it
+      #amova_df<-data.frame(level1factor)
+      amova_out<-pegas::amova(dists~level1factor, nperm=nperm)
       FST<-amova_out$varcomp[1,1]/sum(amova_out$varcomp[,1])
-      diffs<-c(print(amova_out),"FST"=FST)
-    }
+      diffs<-list("raw_amova_output"=amova_out,"level1_names"=levels(level1factor),"FST"=FST)
+      
+      rm(dists, level1factor, envir=.GlobalEnv)
+   }
     
     #2 level AMOVA (per Arlequin 3.5 manual)
     if(l==2){
       
-      level1factor<-as.factor(sp[[level1]])
-      level2factor<-as.factor(sp[[level2]])
+      level1factor<<-as.factor(sp[[l1]])
+      level2factor<<-as.factor(sp[[l2]])
       amova_out<-pegas::amova(dists~level2factor/level1factor, nperm=nperm)
       
       FCT<-amova_out$varcomp[1,1]/sum(amova_out$varcomp[,1])
@@ -460,16 +472,19 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
       FST<-(amova_out$varcomp[1,1]+amova_out$varcomp[2,1])/sum(amova_out$varcomp[,1])
       FSTp<-NA
       
-      diffs<-c(amova_out,"FCT"=FCT, "FSC"=FSC,"FST"=FST)
-      if(round((1-FST),digits=4) != round((1-FSC)*(1-FCT),digits = 4)){warning("Variance components don't meet expectation of (1-FST)==(1-FSC)*(1-FCT) for ", gsl)}
+      diffs<-list("raw_amova_output"=amova_out,"level2_names"=levels(level2factor), "level1_names"=levels(level1factor), "FCT"=FCT, "FSC"=FSC,"FST"=FST)
+     # if(round((1-FST),digits=4) != round((1-FSC)*(1-FCT),digits = 4)){warning("Variance components don't meet expectation of (1-FST)==(1-FSC)*(1-FCT) for ", gsl)}
+    
+      rm(dists, level1factor, level2factor, envir=.GlobalEnv)
     }
     
   
     #3 level AMOVA
     if(l==3){
-      level1factor<-as.factor(sp[[level1]])
-      level2factor<-as.factor(sp[[level2]])
-      level3factor<-as.factor(sp[[level3]])
+    
+      level1factor<<-as.factor(sp[[l1]])
+      level2factor<<-as.factor(sp[[l2]])
+      level3factor<<-as.factor(sp[[l3]])
       amova_out<-pegas::amova(dists~level3factor/level2factor/level1factor, nperm=nperm)
       
       FRT<-amova_out$varcomp[1,1]/sum(amova_out$varcomp[,1])
@@ -485,22 +500,19 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
       FSTp<-NA
       
       
-      diffs<-c(amova_out,"FRT"=FRT, "FCR"=FCR,"FSC"=FSC, "FST"=FST)
-      if(round((1-FST),digits=4) != round((1-FSC)*(1-FCR)*(1-FRT),digits = 4)){warning("Variance components don't meet expectation of (1-FST)==(1-FSC)*(1-FCT) for ", gsl)}
+      diffs<-list("raw_amova_output"=amova_out,"level3_names"=levels(level3factor),"level2_names"=levels(level2factor), "level1_names"=levels(level1factor), "FRT"=FRT, "FCR"=FCR,"FSC"=FSC, "FST"=FST)
+      #if(round((1-FST),digits=4) != round((1-FSC)*(1-FCR)*(1-FRT),digits = 4)){warning("Variance components don't meet expectation of (1-FST)==(1-FSC)*(1-FCT) for ", gsl)}
+   
+      rm(dists, level1factor, level2factor, level3factor, envir=.GlobalEnv) 
     }
     
     #change this
     all.pops.table[[gsl]]<-diffs
+  
     
   }
   return(all.pops.table)
 }
-
-
-
-
-
-
 
 
 
