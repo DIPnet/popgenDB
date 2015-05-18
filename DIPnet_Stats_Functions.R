@@ -105,48 +105,54 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
     #unique haplotypes
     pop.data$UniqHapNum<-spsummary[[4]]
     #haplotype diversity, calculated by Hs in adegenet corrected for sample size
-    pop.data$HaploDiv<-(pop.data$sampleN/(pop.data$sampleN-1))*Hs(spseqs.genind, truenames=TRUE)
+    pop.data$HaploDiv<-(pop.data$sampleN/(pop.data$sampleN-1))*Hs(spseqs.genind, truenames=TRUE)   #with sample size correction
     #Shannon-Wiener Diversity based on the modified Hs function above
     pop.data$SWdiversity<-shannon.wiener.d(spseqs.genind, truenames=TRUE)
     #Effective number of haplotpyes
-    pop.data$EffNumHaplos<-1/(1-pop.data$HaploDiv)
+    #pop.data$EffNumHaplos<-1/(1-pop.data$HaploDiv)   #OLD code - not quite right
+    pop.data$EffNumHaplos<-1/(1-Hs(spseqs.genind, truenames=TRUE))   #EC - if you agree that this is correct, remove previous line - CR
     #local Fst (Beta of Weir and Hill 2002 NOT of Foll and Gaggiotti 2006)
     betaWH<-betai_haploid(spseqs_wc)
     pop.data$localFST<-betaWH$betaiov 
 
     #list to hold frequency distribution of haplotypes for coverage adjustments
-    hap_freq_dist<-list()
+#     hap_freq_dist<-list()
     
     #DIVERSITY STATS CALCULATION - Stats that need to be calculated one population at a time.
     #now loop through the populations (as delimited by the pop.names in the genind object) 
     #to calculate additional stats that can't be done on a per-population basis as above 
-    cat("Calculating Nucleotide diversity, ThetaS, Tajima's D \n")
-    start=1  #counters for locations to divide as populations
-    end=0
-    for (p in 1:length(spseqs.genind$pop.names)) {
-      end = end + pop.data[p,"sampleN"]
+    cat("Calculating Nucleotide diversity, ThetaS, Tajima's D \n")  
+    populations<-spseqs.genind$pop.names  #Returns in same order as used to create pop.data
+    for (p in 1:length(populations)) {
+      singlepop<-spseqsbin[(spseqs.genind@pop == populations[p] & !is.na(spseqs.genind@pop == populations[p])),]  #DNAbin object containing only the sequences from population p
       #nucleotide diversity, pi (percent)  - based on Nei 1987
-      pop.data[p, "NucDivSite"] <- nuc.div( spseqsbin[start:end,], variance = FALSE, pairwise.deletion = FALSE)[1]
-      pop.data[p,"NucDivLocus"] <- nuc.div( spseqsbin[start:end,], variance = FALSE, pairwise.deletion = FALSE)[1] * nchar(sp$sequence[1])
+      pop.data[p, "NucDivSite"] <- nuc.div( singlepop, variance = FALSE, pairwise.deletion = FALSE)[1]
+      pop.data[p,"NucDivLocus"] <- nuc.div( singlepop, variance = FALSE, pairwise.deletion = FALSE)[1] * nchar(sp$sequence[1])
       #thetaS - based on Watterson 1975
-      pop.data[p, "ThetaS"] <- theta.s(s=length(seg.sites(spseqsbin[start:end,])),n=pop.data[p,"sampleN"])
-      pop.data[p, "TajD"] <- tajima.test((spseqsbin[start:end,]))[[1]]
-      
+      pop.data[p, "ThetaS"] <- theta.s(s=length(seg.sites(singlepop)),n=pop.data[p,"sampleN"])
+      pop.data[p, "TajD"] <- tajima.test((singlepop))[[1]]
+      }
+
+
       ##Sampling Coverage##
-      pop.spseq.loci<-spseqs.loci[start:end,]
-      hapfreq<-as.data.frame(table(pop.spseq.loci[2]))
-      #assign(paste(spseqs.genind$pop.names[2]),subset(hapfreq[,2], hapfreq[,2]>0)) #does not quite work - trying to use population names names in hap_freq_dist list
-      hap_freq_dist[p][[1]]<-subset(hapfreq[,2], hapfreq[,2]>0)  #non zero haplotype occurances added to item p in hap_freq_dist list
-      # Calculating observed coverage from actual sampling
-      f1<-length(which(hapfreq[,2]==1))
-      f2<-length(which(hapfreq[,2]==2))
-      n<-nrow(pop.spseq.loci)
-      ifelse(f2>0, ObsCoverage<-1-(f1/n)*(((n-1)*f1)/(((n-1)*f1)+2*f2)), ObsCoverage<- 1-(f1/n))
-      #coverage<-1-(f1/n)*(((n-1)*f1)/(((n-1)*f1)+2*f2)) ##Chao & Jost 2012
-      pop.data[p, "CoverageforActualSampleSize"] <- ObsCoverage
+      #pop.spseq.loci<-spseqs.loci[start:end,]
+#       hapfreq<-as.data.frame(table(pop.spseq.loci[2]))
+#       hapfreq<-as.data.frame(table(singlepop[2]))
+#       #assign(paste(spseqs.genind$pop.names[2]),subset(hapfreq[,2], hapfreq[,2]>0)) #does not quite work - trying to use population names names in hap_freq_dist list
+      ##hap_freq_dist[p][[1]]<-subset(hapfreq[,2], hapfreq[,2]>0)  #non zero haplotype occurances added to item p in hap_freq_dist list
       
-      start = start + pop.data[p,"sampleN"]
-    }
+      # Calculating observed coverage from actual sampling
+#       f1<-length(which(hapfreq[,2]==1))    #depricated code - remove later
+#       f2<-length(which(hapfreq[,2]==2))    #depricated code - remove later      
+#       f1<-length(which(hap_freq_dist[[p]]==1))
+#       f2<-length(which(hap_freq_dist[[p]]==2))
+#       n<-nrow(pop.spseq.loci)
+      #ifelse(f2>0, ObsCoverage<-1-(f1/n)*(((n-1)*f1)/(((n-1)*f1)+2*f2)), ObsCoverage<- 1-(f1/n))
+#       coverage<-1-(f1/n)*(((n-1)*f1)/(((n-1)*f1)+2*f2)) ##Chao & Jost 2012
+#       pop.data[p, "CoverageforActualSampleSize"] <- coverage
+#  
+#       start = start + pop.data[p,"sampleN"]
+   
     
     
     ##COVERAGE STANDARDIZED DIVERSITY##
@@ -176,12 +182,12 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
   #  rm(coverage); rm(hap_freq_dist)
     
     
-    all.pops.table[[gsl]]<-pop.data
-    
-  }
-  return(all.pops.table)
-}
+     all.pops.table[[gsl]]<-pop.data
+     #rm(pop.data)
 
+  return(all.pops.table)
+}  #end gsl esu_loci
+}  #end genetic.diversity.mtDNA.db
 
 
 

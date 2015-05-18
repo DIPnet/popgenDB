@@ -11,6 +11,10 @@ library(mmod)
 library(adegenet)
 library(plyr)
 library(strataG)
+##Do the first time to install iNEXT##
+# install.packages('devtools')
+# library(devtools)
+# install_github('JohnsonHsieh/iNEXT')
 library(iNEXT)
 
 #set the working directory and source stuff
@@ -33,7 +37,8 @@ ipdb<-read.table(ipdb_path,sep="\t",header=T,stringsAsFactors = F,quote="")
  
 
 #read in geographical regionalizations from Treml
-spatial<-read.csv("~/Google Drive/!DIPnet_DataQC/Reunite_metadata_and_alignments/2015-03-24/KD2_24Mar15_AllJoin_cln.csv", stringsAsFactors = F, na.strings=c("NA"," ",""))
+spatial<-read.csv(spatial_path, stringsAsFactors = F, na.strings=c("NA"," ",""))
+#spatial<-read.csv("~/Google Drive/!DIPnet_DataQC/Reunite_metadata_and_alignments/2015-03-24/KD2_24Mar15_AllJoin_cln.csv", stringsAsFactors = F, na.strings=c("NA"," ",""))
 #windows version
 #spatial<-read.csv("C:/Users/Chris/Google Drive/!DIPnet_DataQC/Reunite_metadata_and_alignments/2015-03-24/KD2_24Mar15_AllJoin_cln.csv", stringsAsFactors = F, na.strings=c("NA"," ",""))
 
@@ -103,7 +108,7 @@ hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb,level1 = "sample",level2=
 #Save diversity stats to file(s)
 save(divstats,file="../DIPnet_stats_ecogregions_032415.Rdata")
 write.stats(divstats,filename=".../DIPnet_stats_ecoregions_032415.csv",structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
-
+#write.stats(divstats,"DIPnet_stats_ecoregions_032415.csv",structure=F)
 
 #Save differentiation stats to files
 save(diffstats,file="./For_NESCent/DIPnet_structure_ecoregions_PhiST_ABGD_032415.Rdata") # for an R object
