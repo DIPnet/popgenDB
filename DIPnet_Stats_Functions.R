@@ -354,7 +354,7 @@ return(all.pops.table)
 
 
 
-hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, level3=NULL, minseqs = 5, minsamps = 3, mintotalseqs = 0, nperm=10, model="raw"){
+hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, level3=NULL, minseqs = 5, minsamps = 3, mintotalseqs = 0, nperm=10, model="N"){
   #add the ability to filter based on sample size at levels 2 and 3?
   
   ###Hierarchical Genetic Structure Function###
@@ -446,9 +446,9 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
     #for eventual stacked bar function barplot(height = amova_out$varcomp[,1]/sum(amova_out$varcomp[,1]),beside = T)
     
     #Calculate distances among individuals for PhiST. Need to write it to the global environment, because that is where pegas::amova() will look for it
-    dists<<-dist.dna(spseqsbin, model=model)
-    
-    #change dists to all 1's if Fst is requested
+    #change dists to all 1's if Fst is requested (model = "none")
+    if(model=="none"){dists<<-dist.dna(spseqsbin, model="N"); .GlobalEnv$dists[.GlobalEnv$dists>0]<-1} else{dists<<-dist.dna(spseqsbin, model=model)}
+   
     # add evolutionary distance along a tree?
     
     #1 level AMOVA
