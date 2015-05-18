@@ -124,27 +124,22 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
     cat("Calculating Nucleotide diversity, ThetaS, Tajima's D \n")  
     populations<-spseqs.genind$pop.names  #Returns in same order as used to create pop.data
     for (p in 1:length(populations)) {
-      
-    singlepop<-spseqsbin[spseqs.genind@pop == populations[p],] #DNAbin object containing only the sequences from population p
-     
-#     start=1  #counters for locations to divide as populations
-#     end=0
-#     for (p in 1:length(spseqs.genind$pop.names)) {
-
-  #    end = end + pop.data[p,"sampleN"]
+      singlepop<-spseqsbin[(spseqs.genind@pop == populations[p] & !is.na(spseqs.genind@pop == populations[p])),]  #DNAbin object containing only the sequences from population p
       #nucleotide diversity, pi (percent)  - based on Nei 1987
       pop.data[p, "NucDivSite"] <- nuc.div( singlepop, variance = FALSE, pairwise.deletion = FALSE)[1]
       pop.data[p,"NucDivLocus"] <- nuc.div( singlepop, variance = FALSE, pairwise.deletion = FALSE)[1] * nchar(sp$sequence[1])
       #thetaS - based on Watterson 1975
       pop.data[p, "ThetaS"] <- theta.s(s=length(seg.sites(singlepop)),n=pop.data[p,"sampleN"])
       pop.data[p, "TajD"] <- tajima.test((singlepop))[[1]]
-      
+      }
+
+
       ##Sampling Coverage##
       #pop.spseq.loci<-spseqs.loci[start:end,]
 #       hapfreq<-as.data.frame(table(pop.spseq.loci[2]))
 #       hapfreq<-as.data.frame(table(singlepop[2]))
 #       #assign(paste(spseqs.genind$pop.names[2]),subset(hapfreq[,2], hapfreq[,2]>0)) #does not quite work - trying to use population names names in hap_freq_dist list
-      hap_freq_dist[p][[1]]<-subset(hapfreq[,2], hapfreq[,2]>0)  #non zero haplotype occurances added to item p in hap_freq_dist list
+      ##hap_freq_dist[p][[1]]<-subset(hapfreq[,2], hapfreq[,2]>0)  #non zero haplotype occurances added to item p in hap_freq_dist list
       
       # Calculating observed coverage from actual sampling
 #       f1<-length(which(hapfreq[,2]==1))    #depricated code - remove later
@@ -157,7 +152,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
 #       pop.data[p, "CoverageforActualSampleSize"] <- coverage
 #  
 #       start = start + pop.data[p,"sampleN"]
-    }
+   
     
     
     ##COVERAGE STANDARDIZED DIVERSITY##
@@ -187,12 +182,12 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
   #  rm(coverage); rm(hap_freq_dist)
     
     
-#     all.pops.table[[gsl]]<-pop.data
-#     rm(pop.data)
-#   }
-  return(all.pops.table)
-}
+     all.pops.table[[gsl]]<-pop.data
+     #rm(pop.data)
 
+  return(all.pops.table)
+}  #end gsl esu_loci
+}  #end genetic.diversity.mtDNA.db
 
 
 
