@@ -132,10 +132,10 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
       }
 
 
-      ##COVERAGE CALCULATION##
-      #list to hold frequency distribution of haplotypes for coverage adjustments
-      hap_freq_dist<-list()  
-      for (p in 1:length(populations)) {
+    ##COVERAGE CALCULATION##
+    #list to hold frequency distribution of haplotypes for coverage adjustments
+     hap_freq_dist<-list()  
+    for (p in 1:length(populations)) {
       hapfreq<-as.data.frame(table(spseqs.loci[(spseqs.genind@pop == populations[p] & !is.na(spseqs.genind@pop == populations[p])),2]))
       hap_freq_dist[p][[1]]<-subset(hapfreq[,2], hapfreq[,2]>0)  #non zero haplotype occurances added to item p in hap_freq_dist list
       f1<-length(which(hap_freq_dist[[p]]==1))
@@ -143,33 +143,33 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
       n<-sum(hap_freq_dist[[p]])
       coverage<-1-(f1/n)*(((n-1)*f1)/(((n-1)*f1)+2*f2)) ##Chao & Jost 2012
       pop.data[p, "CoverageforActualSampleSize"] <- coverage
-     }
+      }
     
     ##COVERAGE STANDARDIZED DIVERSITY##
     #calculate coverage and "species" (haplotype) richness
- #   coverage <- iNEXT(hap_freq_dist, q=c(0))  #Hill number of 0
+    coverage <- iNEXT(hap_freq_dist, q=c(0))  #Hill number of 0
     #ERIC - maybe there is a more efficient way to do this loop with an apply function?
     #create vector to hold max SC (species coverage) values and loop through list of dataframes
- #   max_coverage<-vector()
- #   for (p in 1:length(spseqs.genind$pop.names)) {
+    max_coverage<-vector()
+    for (p in 1:length(spseqs.genind$pop.names)) {
       #coverage[3][[1]][[1]][7]   #[3] list of results; [[1]][p] population p; [7] is SC
-  #    max_coverage<-(c(max_coverage, max(coverage[3][[1]][[p]][7])))
-  #  }
-  #  min_SC<-min(max_coverage) #this is the smallest value of maximal coverage acheivable across the sampled popualations
-  #  rm(max_coverage)
+      max_coverage<-(c(max_coverage, max(coverage[3][[1]][[p]][7])))
+      }
+    min_SC<-min(max_coverage) #this is the smallest value of maximal coverage acheivable across the sampled popualations
+    rm(max_coverage)
     #Loop through the dataframes from the coverage output (again), extract the row with the max SC < min_SC and add to temporary dataframe
-  #  SC_standardized_res<-data.frame()
-  #  for (p in 1:length(spseqs.genind$pop.names)) {
-  #    popdataframe<-coverage[3][[1]][[p]]
-  #    popdataframe<-subset(popdataframe, SC<=min_SC)
-  #    ifelse(nrow(popdataframe)==0,
-  #           SC_standardized_res<-rbind(SC_standardized_res, coverage[3][[1]][[p]][1,]),
-  #           SC_standardized_res<-rbind(SC_standardized_res, popdataframe[nrow(popdataframe),])  )
+    SC_standardized_res<-data.frame()
+    for (p in 1:length(spseqs.genind$pop.names)) {
+      popdataframe<-coverage[3][[1]][[p]]
+      popdataframe<-subset(popdataframe, SC<=min_SC)
+      ifelse(nrow(popdataframe)==0,
+            SC_standardized_res<-rbind(SC_standardized_res, coverage[3][[1]][[p]][1,]),
+            SC_standardized_res<-rbind(SC_standardized_res, popdataframe[nrow(popdataframe),])  )
       #m is interpolated sample size, qD is diversity, SC is coverage - see iNEXT documentation
-  #  }
-  #  pop.data<-cbind(pop.data, SC_standardized_res)
-  #  rm(SC_standardized_res); rm(popdataframe); rm(min_SC)
-  #  rm(coverage); rm(hap_freq_dist)
+      }
+    pop.data<-cbind(pop.data, SC_standardized_res)
+    rm(SC_standardized_res); rm(popdataframe); rm(min_SC)
+    rm(coverage); rm(hap_freq_dist)
     
     
      all.pops.table[[gsl]]<-pop.data
