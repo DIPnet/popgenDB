@@ -16,10 +16,6 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
   require(mmod)
   require(hierfstat)
   require(iNEXT)
-  ##Do the first time to install iNEXT##
-  #install.packages('devtools')
-  #library(devtools)
-  #install_github('JohnsonHsieh/iNEXT')
   
   #create an empty list with headers named for each species/locus combo (or ESU/locus combo)
   esu_loci <- unique(ipdb$Genus_species_locus) 
@@ -70,7 +66,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
     spseqs.genind@pop <- factor(as.character((sp[[regionalization]]))) #convert to character then to factor
     spseqs.genind@ploidy<-1L  #L needed to indicate an integer
     spseqs.genind@loc.names<-strsplit(sp$Genus_species_locus[1],"_")[[1]][3] #add in the locus name, why not
-    spseqs.genind@pop.names <- sort((as.character(unique(sp[[regionalization]])))) # I will add the sample name into the pop.names slot here anyway. There seems to be a bug here - the function is expecting a character vector, but summary() is looking for a factor
+    spseqs.genind@pop.names <- sort((as.character(unique(sp[[regionalization]])))) # I will add the sample name into the pop.names slot here anyway.
     spseqs.genind@other <- sp[,c("decimalLatitude","decimalLongitude")] #and the lat longs, why not
     
     #convert to genpop (adegenet)
@@ -120,11 +116,13 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
       pop.data[p,"NucDivLocus"] <- nuc.div( singlepop, variance = FALSE, pairwise.deletion = FALSE)[1] * nchar(sp$sequence[1])
       #thetaS - based on Watterson 1975
       pop.data[p, "ThetaS"] <- theta.s(s=length(seg.sites(singlepop)),n=pop.data[p,"sampleN"])
-      pop.data[p, "TajD"] <- tajima.test((singlepop))[[1]]
+      tajD<-tajima.test(singlepop)
+      pop.data[p, "TajD"] <- tajD[[1]]
+      pop.data[p, "TajDp"] <- tajD[[3]] #Pval.beta - p-value assuming that D follows a beta distribution (Tajima, 1989)
       }
 
-
     ##COVERAGE CALCULATION##
+    cat("Calculating Coverage \n")  
     #list to hold frequency distribution of haplotypes for coverage adjustments
      hap_freq_dist<-list()  
     for (p in 1:length(populations)) {
@@ -138,20 +136,25 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
       }
     
     ##COVERAGE STANDARDIZED DIVERSITY##
+    cat("Calculating Coverage Standardized Diversity \n")
+    #find entries in hap_freq_dist with length=1
+    singlehap.pops<-which(sapply(hap_freq_dist,length)==1)
+    #replace these entries with c(1,1) just as a placeholder so iNEXT will work
+    hap_freq_dist[singlehap.pops]<-lapply(1:length(singlehap.pops),function(x) c(1,1))
     #calculate coverage and "species" (haplotype) richness
     coverage <- iNEXT(hap_freq_dist, q=c(0))  #Hill number of 0
     #ERIC - maybe there is a more efficient way to do this loop with an apply function?
     #create vector to hold max SC (species coverage) values and loop through list of dataframes
     max_coverage<-vector()
-    for (p in 1:length(spseqs.genind$pop.names)) {
+    for (p in 1:length(populations)) {
       #coverage[3][[1]][[1]][7]   #[3] list of results; [[1]][p] population p; [7] is SC
       max_coverage<-(c(max_coverage, max(coverage[3][[1]][[p]][7])))
       }
-    min_SC<-min(max_coverage) #this is the smallest value of maximal coverage acheivable across the sampled popualations
+    min_SC<-min(max_coverage) #this is the smallest value of maximal coverage achievable across the sampled popualations
     rm(max_coverage)
     #Loop through the dataframes from the coverage output (again), extract the row with the max SC < min_SC and add to temporary dataframe
     SC_standardized_res<-data.frame()
-    for (p in 1:length(spseqs.genind$pop.names)) {
+    for (p in 1:length(populations)) {
       popdataframe<-coverage[3][[1]][[p]]
       popdataframe<-subset(popdataframe, SC<=min_SC)
       ifelse(nrow(popdataframe)==0,
@@ -159,16 +162,16 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
             SC_standardized_res<-rbind(SC_standardized_res, popdataframe[nrow(popdataframe),])  )
       #m is interpolated sample size, qD is diversity, SC is coverage - see iNEXT documentation
       }
+    SC_standardized_res[singlehap.pops,]<-NA  #replace the pops with single haplotypes with NA
     pop.data<-cbind(pop.data, SC_standardized_res)
     rm(SC_standardized_res); rm(popdataframe); rm(min_SC)
     rm(coverage); rm(hap_freq_dist)
     
     
      all.pops.table[[gsl]]<-pop.data
-     #rm(pop.data)
 
-  return(all.pops.table)
 }  #end gsl esu_loci
+return(all.pops.table)
 }  #end genetic.diversity.mtDNA.db
 
 
