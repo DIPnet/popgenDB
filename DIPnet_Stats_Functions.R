@@ -115,9 +115,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
     betaWH<-betai_haploid(spseqs_wc)
     pop.data$localFST<-betaWH$betaiov 
 
-    #list to hold frequency distribution of haplotypes for coverage adjustments
-#     hap_freq_dist<-list()
-    
+     
     #DIVERSITY STATS CALCULATION - Stats that need to be calculated one population at a time.
     #now loop through the populations (as delimited by the pop.names in the genind object) 
     #to calculate additional stats that can't be done on a per-population basis as above 
@@ -134,26 +132,18 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
       }
 
 
-      ##Sampling Coverage##
-      #pop.spseq.loci<-spseqs.loci[start:end,]
-#       hapfreq<-as.data.frame(table(pop.spseq.loci[2]))
-#       hapfreq<-as.data.frame(table(singlepop[2]))
-#       #assign(paste(spseqs.genind$pop.names[2]),subset(hapfreq[,2], hapfreq[,2]>0)) #does not quite work - trying to use population names names in hap_freq_dist list
-      ##hap_freq_dist[p][[1]]<-subset(hapfreq[,2], hapfreq[,2]>0)  #non zero haplotype occurances added to item p in hap_freq_dist list
-      
-      # Calculating observed coverage from actual sampling
-#       f1<-length(which(hapfreq[,2]==1))    #depricated code - remove later
-#       f2<-length(which(hapfreq[,2]==2))    #depricated code - remove later      
-#       f1<-length(which(hap_freq_dist[[p]]==1))
-#       f2<-length(which(hap_freq_dist[[p]]==2))
-#       n<-nrow(pop.spseq.loci)
-      #ifelse(f2>0, ObsCoverage<-1-(f1/n)*(((n-1)*f1)/(((n-1)*f1)+2*f2)), ObsCoverage<- 1-(f1/n))
-#       coverage<-1-(f1/n)*(((n-1)*f1)/(((n-1)*f1)+2*f2)) ##Chao & Jost 2012
-#       pop.data[p, "CoverageforActualSampleSize"] <- coverage
-#  
-#       start = start + pop.data[p,"sampleN"]
-   
-    
+      ##COVERAGE CALCULATION##
+      #list to hold frequency distribution of haplotypes for coverage adjustments
+      hap_freq_dist<-list()  
+      for (p in 1:length(populations)) {
+      hapfreq<-as.data.frame(table(spseqs.loci[(spseqs.genind@pop == populations[p] & !is.na(spseqs.genind@pop == populations[p])),2]))
+      hap_freq_dist[p][[1]]<-subset(hapfreq[,2], hapfreq[,2]>0)  #non zero haplotype occurances added to item p in hap_freq_dist list
+      f1<-length(which(hap_freq_dist[[p]]==1))
+      f2<-length(which(hap_freq_dist[[p]]==2))
+      n<-sum(hap_freq_dist[[p]])
+      coverage<-1-(f1/n)*(((n-1)*f1)/(((n-1)*f1)+2*f2)) ##Chao & Jost 2012
+      pop.data[p, "CoverageforActualSampleSize"] <- coverage
+     }
     
     ##COVERAGE STANDARDIZED DIVERSITY##
     #calculate coverage and "species" (haplotype) richness
