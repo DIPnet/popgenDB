@@ -1,13 +1,10 @@
-#####Eric Crandall and Cynthia Riginos, March 2015#####
-
-#Future functions
-#AMOVA given a regionalization
-
+#####Eric Crandall and Cynthia Riginos
+#####Started: March 2015
 
 genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, mintotalseqs = 0, regionalization = c("sample","fn100id", "fn500id", "meow_ecoregion", "meow_prov_name", "meow_rlm_name", "EEZ_country")){
   
   ###Diversity Stats Function###
-  #Computes diversity stats by species and population for a flatfile of mtDNA sequences and metadata (with required fields $Genus_species_locus and $loc_lat_long)
+  #Computes diversity stats by species and population for a flatfile of mtDNA sequences and metadata (with required field $Genus_species_locus)
   # minseqs = minimum sequences per sampled population, 
   # minsamps = minimum sampled populations per species (after pops with n < minseqs have been removed)
   # To be added: rarefaction, Fus Fs, Fu and Li's D
@@ -37,12 +34,10 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
     #modify/replace the following once we have the script that assigns populations
     #subset the genus-species-locus and order it alphabetically by locality name
     sp<-subset(ipdb, Genus_species_locus == gsl )
-    sp$loc_lat_long<-paste(sp$locality,round(sp$decimalLatitude, digits=0),round(sp$decimalLongitude, digits=0),sep="_")  #sets up a variable that matches assignsamp function outcome
-    sp<-sp[order(sp$loc_lat_long),]
+    sp$sample<-paste(sp$locality,round(sp$decimalLatitude, digits=0),round(sp$decimalLongitude, digits=0),sep="_")  #sets up a variable that matches assignsamp function outcome
+    sp<-sp[order(sp$sample),]
     
-    if(regionalization=="sample"){regionalization<-"loc_lat_long"}
-    
-    #this code is not currently necessary given the sp$loc_lat_long field above may come in handy when we start using ecoregions etc.
+    #this code is not currently necessary given the sp$sample field above may come in handy when we start using ecoregions etc.
     #create a set of unique samples, as denoted by lat+long+pi, and sort it alphabetically. 
     #This is because the genind object will return things in alphaetical order, so we want to be on the same page with it
     #samps<-sort(unique(paste(sp$locality,sp$decimalLatitude,sp$decimalLongitude,sep="_")))
@@ -52,7 +47,6 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
     
     #FILTER
     cat("filtering out population samples with n <", minseqs,"and species with fewer than", minsamps,"total populations \n")
-    #filter out populations with low numbers (n<5 for now). Skip the species if this procedure deletes all samples or if there are less than 3 populations total.
     sampN<-table(sp[[regionalization]])
     lowsamps<-names(sampN[sampN < minseqs])
     if(length(lowsamps)>0){sp<-sp[-which(sp[[regionalization]] %in% lowsamps),]}
@@ -79,7 +73,6 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
     spseqs.genind@pop.names <- sort((as.character(unique(sp[[regionalization]])))) # I will add the sample name into the pop.names slot here anyway. There seems to be a bug here - the function is expecting a character vector, but summary() is looking for a factor
     spseqs.genind@other <- sp[,c("decimalLatitude","decimalLongitude")] #and the lat longs, why not
     
-    
     #convert to genpop (adegenet)
     #spseqs.pop<-genind2genpop(spseqs.genind)
     
@@ -89,7 +82,6 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
     spseqs_wc[,1]<-as.integer(spseqs_wc[,1]) #a vector of integers for population
     spseqs_wc[,2]<-as.numeric(as.character(spseqs_wc[,2])) #and a vector of numeric for haplotype
     spseqs_wc$dummy<-1 #OMFG! You need to have two loci for betai to work, this is a dummy matrix of 1s
-    
     
     
     #DIVERSITY STATS CALCULATION - Stats that can be calculated for all populations at the same time
@@ -182,10 +174,9 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
 
 
 
-# 
 pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei FST","Nei GST", "Hedrick G'ST", "Jost D", "WC Theta", "PhiST", "Chi2", "NL dA"), minseqs = 5, minsamps = 3, mintotalseqs = 0, nrep = 0, num.cores = 1, regionalization = c("sample","fn100id", "fn500id", "meow_ecoregion", "meow_prov_name", "meow_rlm_name", "EEZ_country")){
   ###Genetic Structure Function###
-  #Computes genetic differentiation statistics by species and population for a flatfile of mtDNA sequences and metadata (with required fields $Genus_species_locus and $loc_lat_long)
+  #Computes genetic differentiation statistics by species and population for a flatfile of mtDNA sequences and metadata (with required field $Genus_species_locus)
   # gdist = You must choose one genetic distance to calculate
   # minseqs = minimum sequences per sampled population, 
   # minsamps = minimum sampled populations per species (after pops with n < minseqs have been removed)
@@ -221,12 +212,10 @@ pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei FST","Nei GST", 
     #modify/replace the following once we have the script that assigns populations
     #subset the genus-species-locus and order it alphabetically by locality name
     sp<-subset(ipdb, Genus_species_locus == gsl )
-    sp$loc_lat_long<-paste(sp$locality,round(sp$decimalLatitude, digits=0),round(sp$decimalLongitude, digits=0),sep="_")  #sets up a variable that matches assignsamp function outcome
-    sp<-sp[order(sp$loc_lat_long),]
-    
-    if(regionalization=="sample"){regionalization<-"loc_lat_long"}
-    
-    #this code is not currently necessary given the sp$loc_lat_long field above may come in handy when we start using ecoregions etc.
+    sp$sample<-paste(sp$locality,round(sp$decimalLatitude, digits=0),round(sp$decimalLongitude, digits=0),sep="_")  #sets up a variable that matches assignsamp function outcome
+    sp<-sp[order(sp$sample),]
+        
+    #this code is not currently necessary given the sp$sample field above may come in handy when we start using ecoregions etc.
     #create a set of unique samples, as denoted by lat+long+pi, and sort it alphabetically. 
     #This is because the genind object will return things in alphaetical order, so we want to be on the same page with it
     #samps<-sort(unique(paste(sp$locality,sp$decimalLatitude,sp$decimalLongitude,sep="_")))
@@ -348,12 +337,13 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
   #add the ability to filter based on sample size at levels 2 and 3?
   
   ###Hierarchical Genetic Structure Function###
-  #Computes hierarchical genetic differentiation statistics by species and population for a flatfile of mtDNA sequences and metadata (with required fields $Genus_species_locus and $loc_lat_long)
+  #Computes hierarchical genetic differentiation statistics by species and population for a flatfile of mtDNA sequences and metadata (with required field $Genus_species_locus)
   # minseqs = minimum sequences per sampled population, 
   # minsamps = minimum sampled populations per species (after pops with n < minseqs have been removed)
   # mintotalseqs = minimum sampled sequences per species (after pops with n < minseqs have been removed)
   # nperm = number of AMOVA permutations
-  # model= model of molecular evolution to be passed to dna.dist() = c("raw", "N", "TS", "TV", "JC69", "K80", "F81", "K81", "F84", "BH87", "T92", "TN93", "GG95", "logdet", "paralin", "indel", "indelblock")
+  # model= model of molecular evolution to be passed to dna.dist() = c("none","N", "raw", "TS", "TV", "JC69", "K80", "F81", "K81", "F84", "BH87", "T92", "TN93", "GG95", "logdet", "paralin", "indel", "indelblock")
+  # model defaults to "N" which is the raw count of differences ("raw" is the proportion- same thing). If you use model = "none" you will get all distances between haplotypes = 1, which is the same as "regular" FST
   # To be added: capability to do 3-level F-statistics and option for Fst (distance matrix =1)
   
   require(seqinr)
@@ -582,8 +572,6 @@ betai_haploid<-function (gendata)
               betaw = betaw))
 }
 
-
-
 #Write the output of genetic.diversity.mtDNA.db and genetic.structure.mtDNA.db to a csv file readable by Excel
 write.stats<-function(x=divstats,filename=NULL,structure=F){
   outfile<-file(filename)
@@ -604,5 +592,6 @@ write.stats<-function(x=divstats,filename=NULL,structure=F){
   close(outfile)
 }
 
+# another function that uses sink()?
 
 
