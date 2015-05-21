@@ -70,7 +70,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
     spseqs.genind@other <- sp[,c("decimalLatitude","decimalLongitude")] #and the lat longs, why not
     
     #convert to genpop (adegenet)
-    #spseqs.pop<-genind2genpop(spseqs.genind)
+    #spseqs.pop<-genind2genpop(spseqs.genind) 
     
     #convert to loci format (pegas) and a data-frame format that works for hierfstat
     spseqs.loci<-as.loci(spseqs.genind)
@@ -97,8 +97,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
     #Shannon-Wiener Diversity based on the modified Hs function above
     pop.data$SWdiversity<-shannon.wiener.d(spseqs.genind, truenames=TRUE)
     #Effective number of haplotpyes
-    #pop.data$EffNumHaplos<-1/(1-pop.data$HaploDiv)   #OLD code - not quite right
-    pop.data$EffNumHaplos<-1/(1-Hs(spseqs.genind, truenames=TRUE))   #EC - if you agree that this is correct, remove previous line - CR
+    pop.data$EffNumHaplos<-1/(1-Hs(spseqs.genind, truenames=TRUE))   #No sample size correction - based on Crow & Kimura 1964, eq 21. See also Jost 2008 eq 5
     #local Fst (Beta of Weir and Hill 2002 NOT of Foll and Gaggiotti 2006)
     betaWH<-betai_haploid(spseqs_wc)
     pop.data$localFST<-betaWH$betaiov 
@@ -164,8 +163,8 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
       }
     SC_standardized_res[singlehap.pops,]<-NA  #replace the pops with single haplotypes with NA
     pop.data<-cbind(pop.data, SC_standardized_res)
-    rm(SC_standardized_res); rm(popdataframe); rm(min_SC)
-    rm(coverage); rm(hap_freq_dist)
+    #rm(SC_standardized_res); rm(popdataframe); rm(min_SC)
+    #rm(coverage); rm(hap_freq_dist)
     
     
      all.pops.table[[gsl]]<-pop.data
