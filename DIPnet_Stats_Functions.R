@@ -1,12 +1,13 @@
 #####Eric Crandall and Cynthia Riginos
 #####Started: March 2015
 
-genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, mintotalseqs = 0, regionalization = c("sample","fn100id", "fn500id", "meow_ecoregion", "meow_prov_name", "meow_rlm_name", "EEZ_country")){
+genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, mintotalseqs = 0, regionalization = c("sample","fn100id", "fn500id", "meow_ecoregion", "meow_prov_name", "meow_rlm_name", "EEZ_country"), keep_all_gsls=F){
   
   ###Diversity Stats Function###
   #Computes diversity stats by species and population for a flatfile of mtDNA sequences and metadata (with required field $Genus_species_locus)
   # minseqs = minimum sequences per sampled population, 
   # minsamps = minimum sampled populations per species (after pops with n < minseqs have been removed)
+  # keep_all_gsls = set to T if you want to keep the name of all gsls in the output, even if they don't meet the above thresholds
   # To be added: rarefaction, Fus Fs, Fu and Li's D
 
   require(seqinr)
@@ -46,10 +47,11 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
     sampN<-table(sp[[regionalization]])
     lowsamps<-names(sampN[sampN < minseqs])
     if(length(lowsamps)>0){sp<-sp[-which(sp[[regionalization]] %in% lowsamps),]}
-    if(length(sampN) - length(lowsamps) < minsamps){all.pops.table[[gsl]]<-paste("Fewer than", minsamps, "sampled populations after filtering. No stats calculated") 
+    if(length(sampN) - length(lowsamps) < minsamps){cat("Fewer than", minsamps, "sampled populations after filtering. No stats calculated")
+                                                    if(keep_all_gsls==T){all.pops.table[[gsl]]<-paste("Fewer than", minsamps, "sampled populations after filtering. No stats calculated")} 
                                                     next}
-    if(length(sp[,1])<mintotalseqs){all.pops.table[[gsl]]<-paste("fewer than",mintotalseqs,"samples left after filtering. No stats calculated")
-                          cat("fewer than",mintotalseqs,"samples left after filtering. No stats calculated")
+    if(length(sp[,1])<mintotalseqs){cat("fewer than",mintotalseqs,"samples left after filtering. No stats calculated")
+                          if(keep_all_gsls==T){all.pops.table[[gsl]]<-paste("fewer than",mintotalseqs,"samples left after filtering. No stats calculated")}
                           next}
     cat("Removed the following population samples:", lowsamps, "\n")
     
@@ -170,6 +172,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
      all.pops.table[[gsl]]<-pop.data
 
 }  #end gsl esu_loci
+if(keep_all_gsls==F) {all.pops.table<-all.pops.table[!sapply(all.pops.table, is.null)]} # remove the NULL gsls if they were not requested
 return(all.pops.table)
 }  #end genetic.diversity.mtDNA.db
 
