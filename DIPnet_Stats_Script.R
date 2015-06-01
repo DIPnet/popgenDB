@@ -19,8 +19,8 @@ library(iNEXT)
 
 #set the working directory and source stuff
 
-source("DIPnet_Stats_Functions.R")
-source("config.R")
+source("../DIPnet_Stats_Functions.R")
+source("../config.R")
 
 setwd(working_directory)
 
@@ -30,7 +30,7 @@ setwd(working_directory)
 #need to turn off the quoting with quote="" for it to read correctly. 
 #Point this to keepsdata_ABGD files if you want to calculate stats by ESUs rather than by species
 #Add "_ABGD" to file name to load the ABGD assignments
-ipdb<-read.table(ipdb_path,sep="\t",header=T,stringsAsFactors = F,quote="") 
+ipdb<-read.table(ipdb_path,sep="\t",header=T,stringsAsFactors = F,quote="", na.strings=c("NA"," ","")) 
 
 #windows version of reading in a file
 #ipdb<-read.table("C:/Users/Chris/Google Drive/!DIPnet_DataQC/Reunite_metadata_and_alignments/2015-03-24/2015-03-24_keepsdata.txt", sep="\t", header=T, stringsAsFactors=F, quote="")
@@ -47,6 +47,7 @@ spatial<-read.csv(spatial_path, stringsAsFactors = F, na.strings=c("NA"," ",""))
 spatial$fn100id<-gsub(",","", spatial$fn100id)
 spatial$fn500id<-gsub(",","", spatial$fn500id)
 ipdb<-join(ipdb,spatial, by = "IPDB_ID")
+
 #CHECK FOR DUPLICATES
 dups<-ipdb[duplicated(ipdb),]
 #ipdb<-ipdb[!duplicated(ipdb),]  #remove duplicates if you need to
@@ -55,19 +56,9 @@ dups<-ipdb[duplicated(ipdb),]
 drops <- c("Acanthurus_sohal_CO1_A8","Acanthurus_sohal_CO1_RS3407","Acanthurus_sohal_CO1_RS3406","Linckia_laevigata_CO1_2130.14","Linckia_laevigata_CO1_1195.01","Linckia_laevigata_CO1_1195.02","Labroides_dimidiatus_CR_LB10","Labroides_dimidiatus_CR_LB01","Labroides_dimidiatus_CR_LB02","Labroides_dimidiatus_CR_LB09","Labroides_dimidiatus_CR_LP03","Labroides_dimidiatus_CR_LP01","Labroides_dimidiatus_CR_LP04","Labroides_dimidiatus_CR_LP02","Katsuwonus_pelamis_CR_3637_01","Katsuwonus_pelamis_CR_3637_1","Periclimenes_soror_CO1_2227.07","Periclimenes_soror_CO1_2227.01","Periclimenes_soror_CO1_2227.02","Periclimenes_soror_CO1_2227.11","Periclimenes_soror_CO1_2227.12","Periclimenes_soror_CO1_2227.1","Periclimenes_soror_CO1_2227.16","Lutjanus_kasmira_CYB_Lka_OK4", "Lutjanus_kasmira_CYB_Lka_OK3")
 ipdb<-ipdb[ipdb$IPDB_ID %in% drops == FALSE, ] 
 
-#Also found some duplicate MSIDs in the COTS data removed thusly (apparently Toonen and Worheide contributed the same data)
-#cots_dups<-rownames(sp[which(duplicated(sp$materialSampleID,fromLast=F)),1:7])
-cots_dups<-c("1536","1539","1541","1542","1543","1546","1548","1550","1551","490","477","478","479","480","481","482","483","484","485")
-ipdb<-ipdb[rownames(ipdb) %in% cots_dups==FALSE,]
-
 #CHECK FOR MISSING LOCALITIES
-#note there are 1162 individual sequences with no locality! Distributed thusly:
 table(ipdb$principalInvestigator[which(is.na(ipdb$locality))])
 ipdb$locality[which(is.na(ipdb$locality))]<-"no_name"  #give "no_name" to NA localities
-
-#Remove this later on - lat and long are replaced with rounded values to aid with population reduction
-#ipdb$decimalLatitude<-round(ipdb$decimalLatitude, digits=0)      
-#ipdb$decimalLongitude<-round(ipdb$decimalLongitude, digits=0)
 
 #subset by species (or whatever else) if necessary
 zebfla<-subset(ipdb, Genus_species_locus == "Zebrasoma_flavescens_CYB" )
@@ -79,7 +70,7 @@ zebfla<-subset(ipdb, Genus_species_locus == "Zebrasoma_flavescens_CYB" )
 # minsamps = minimum sampled populations per species (after pops with n < minseqs have been removed)
 # mintotalseqs = minimum sampled sequences per species (after pops with n < minseqs have been removed)
 # To be added: rarefaction, Fus Fs, Fu and Li's D
-divstats<-genetic.diversity.mtDNA.db(ipdb=ipdb, minseqs = 5, minsamps= 3, mintotalseqs= 0, regionalization = "meow_ecoregion")
+divstats<-genetic.diversity.mtDNA.db(ipdb=ipdb, minseqs = 5, minsamps= 3, mintotalseqs= 0, regionalization = "sample")
 
 
 ###Pairwise Genetic Structure Function###
@@ -106,13 +97,13 @@ hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb,level1 = "sample",level2=
 
 
 #Save diversity stats to file(s)
-save(divstats,file="../DIPnet_stats_ecogregions_032415_2.Rdata")
-write.stats(divstats,filename=".../DIPnet_stats_ecoregions_032415.csv",structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
+save(divstats,file="DIPnet_stats_samples_060115.Rdata")
+write.stats(divstats,filename="DIPnet_stats_samples_060115.csv",structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
 #write.stats(divstats,"DIPnet_stats_ecoregions_032415.csv",structure=F)
 
 #Save differentiation stats to files
-save(diffstats,file="./For_NESCent/DIPnet_structure_ecoregions_PhiST_ABGD_032415.Rdata") # for an R object
-write.stats(diffstats,filename="./For_NESCent/DIPnet_structure_ecoregions_PhiST_ABGD_032415.csv",structure=T) # for an excel-readable csv. Ignore warnings. structure=T for triangular matrices. Note this function will not overwrite, it will append to existing files
+save(diffstats,file="DIPnet_structure_ecoregions_PhiST_ABGD_032415.Rdata") # for an R object
+write.stats(diffstats,filename="DIPnet_structure_ecoregions_PhiST_ABGD_032415.csv",structure=T) # for an excel-readable csv. Ignore warnings. structure=T for triangular matrices. Note this function will not overwrite, it will append to existing files
 
 
 
