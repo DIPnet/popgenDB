@@ -1,7 +1,7 @@
 #####Eric Crandall and Cynthia Riginos
 #####Started: March 2015
 
-genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, mintotalseqs = 0, regionalization = c("sample","fn100id", "fn500id", "meow_ecoregion", "meow_prov_name", "meow_rlm_name", "EEZ_country"), keep_all_gsls=F){
+genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, mintotalseqs = 0, regionalization = c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ"), keep_all_gsls=F){
   
   ###Diversity Stats Function###
   #Computes diversity stats by species and population for a flatfile of mtDNA sequences and metadata (with required field $Genus_species_locus)
@@ -179,7 +179,7 @@ return(all.pops.table)
 
 
 
-pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei FST","Nei GST", "Hedrick G'ST", "Jost D", "WC Theta", "PhiST", "Chi2", "NL dA"), minseqs = 5, minsamps = 3, mintotalseqs = 0, nrep = 0, num.cores = 1, regionalization = c("sample","fn100id", "fn500id", "meow_ecoregion", "meow_prov_name", "meow_rlm_name", "EEZ_country")){
+pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei FST","Nei GST", "Hedrick G'ST", "Jost D", "WC Theta", "PhiST", "Chi2", "NL dA"), minseqs = 5, minsamps = 3, mintotalseqs = 0, nrep = 0, num.cores = 1, regionalization = c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ")){
   ###Genetic Structure Function###
   #Computes genetic differentiation statistics by species and population for a flatfile of mtDNA sequences and metadata (with required field $Genus_species_locus)
   # gdist = You must choose one genetic distance to calculate
@@ -350,6 +350,7 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
   # model= model of molecular evolution to be passed to dna.dist() = c("none","N", "raw", "TS", "TV", "JC69", "K80", "F81", "K81", "F84", "BH87", "T92", "TN93", "GG95", "logdet", "paralin", "indel", "indelblock")
   # model defaults to "N" which is the raw count of differences ("raw" is the proportion- same thing). If you use model = "none" you will get all distances between haplotypes = 1, which is the same as "regular" FST
   # To be added: capability to do 3-level F-statistics and option for Fst (distance matrix =1)
+  # levels can be one of c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ") or new regionalizations as they are added.
   
   require(seqinr)
   require(ape)
