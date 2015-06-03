@@ -2,6 +2,7 @@
 # Relevant Links:
 # Interesting discussion about calculating Fst in R: http://www.molecularecologist.com/2012/05/calculating-pair-wise-unbiased-fst-with-r/
 
+setwd("~/github/popgenDB/output")
 
 #Load libraries and source the functions
 library(seqinr)  #might have to download .tgz file directly from CRAN site and install locally, not directly from CRAN repository
@@ -37,19 +38,17 @@ ipdb<-read.table(ipdb_path,sep="\t",header=T,stringsAsFactors = F,quote="", na.s
  
 
 #read in geographical regionalizations from Treml
-spatial<-read.csv(spatial_path, stringsAsFactors = F, na.strings=c("NA"," ",""))
-#spatial<-read.csv("~/Google Drive/!DIPnet_DataQC/Reunite_metadata_and_alignments/2015-03-24/KD2_24Mar15_AllJoin_cln.csv", stringsAsFactors = F, na.strings=c("NA"," ",""))
+spatial<-read.table(spatial_path, header=T, sep="\t",stringsAsFactors = F, na.strings=c("NA"," ",""), quote="")
+
 #windows version
 #spatial<-read.csv("C:/Users/Chris/Google Drive/!DIPnet_DataQC/Reunite_metadata_and_alignments/2015-03-24/KD2_24Mar15_AllJoin_cln.csv", stringsAsFactors = F, na.strings=c("NA"," ",""))
 
 
 #Remove commas from fn100id and fn500id (also may need to fix reunion accent issue manually)
-spatial$fn100id<-gsub(",","", spatial$fn100id)
-spatial$fn500id<-gsub(",","", spatial$fn500id)
-ipdb<-join(ipdb,spatial, by = "IPDB_ID")
+ipdb<-join(ipdb,spatial, by = "IPDB_ID",type = "left")
 
 #CHECK FOR DUPLICATES
-dups<-ipdb[duplicated(ipdb),]
+#dups<-ipdb[duplicated(ipdb),]
 #ipdb<-ipdb[!duplicated(ipdb),]  #remove duplicates if you need to
 
 #the following IDs should be removed if not using the ABGD dataset per Libby Liggins
@@ -57,13 +56,13 @@ drops <- c("Acanthurus_sohal_CO1_A8","Acanthurus_sohal_CO1_RS3407","Acanthurus_s
 ipdb<-ipdb[ipdb$IPDB_ID %in% drops == FALSE, ] 
 
 #CHECK FOR MISSING LOCALITIES
-table(ipdb$principalInvestigator[which(is.na(ipdb$locality))])
-ipdb$locality[which(is.na(ipdb$locality))]<-"no_name"  #give "no_name" to NA localities
+#table(ipdb$principalInvestigator[which(is.na(ipdb$locality))])
+#ipdb$locality[which(is.na(ipdb$locality))]<-"no_name"  #give "no_name" to NA localities
 
 #subset by species (or whatever else) if necessary
-zebfla<-subset(ipdb, Genus_species_locus == "Zebrasoma_flavescens_CYB" )
+#zebfla<-subset(ipdb, Genus_species_locus == "Zebrasoma_flavescens_CYB" )
 
-####RUN IT###
+####Examples###
 ###Diversity Stats Function###
 #Computes diversity stats by species and population for a flatfile of mtDNA sequences and metadata (with required fields $Genus_species_locus and $loc_lat_long)
 # minseqs = minimum sequences per sampled population, 
