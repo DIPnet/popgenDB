@@ -1,7 +1,7 @@
 #####Eric Crandall and Cynthia Riginos
 #####Started: March 2015
 
-genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, mintotalseqs = 0, regionalization = c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ"), keep_all_gsls=F){
+genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, mintotalseqs = 0, ABGD=F,regionalization = c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ"), keep_all_gsls=F){
   
   ###Diversity Stats Function###
   #Computes diversity stats by species and population for a flatfile of mtDNA sequences and metadata (with required field $Genus_species_locus)
@@ -19,7 +19,9 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
   require(iNEXT)
   
   #create an empty list with headers named for each species/locus combo (or ESU/locus combo)
-  esu_loci <- unique(ipdb$Genus_species_locus) 
+  if(ABGD==T & "ABGD_Genus_species_locus" %in% colnames(ipdb)){esu_loci <- unique(ipdb$ABGD_Genus_species_locus)} else {esu_loci <- unique(ipdb$Genus_species_locus)}
+  if(ABGD==T & !"ABGD_Genus_species_locus" %in% colnames(ipdb)){cat("No ABGD groupings provided. Using standard taxonomy")}
+ 
   all.pops.table<-sapply(esu_loci, function(x) NULL) 
   
   for(gsl in esu_loci){ #gsl<-"Chaetodon_auriga_CYB" 
@@ -179,7 +181,7 @@ return(all.pops.table)
 
 
 
-pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei FST","Nei GST", "Hedrick G'ST", "Jost D", "WC Theta", "PhiST", "Chi2", "NL dA"), minseqs = 5, minsamps = 3, mintotalseqs = 0, nrep = 0, num.cores = 1, regionalization = c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ")){
+pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei FST","Nei GST", "Hedrick G'ST", "Jost D", "WC Theta", "PhiST", "Chi2", "NL dA"), minseqs = 5, minsamps = 3, mintotalseqs = 0, nrep = 0, num.cores = 1, ABGD = F, regionalization = c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ")){
   ###Genetic Structure Function###
   #Computes genetic differentiation statistics by species and population for a flatfile of mtDNA sequences and metadata (with required field $Genus_species_locus)
   # gdist = You must choose one genetic distance to calculate
@@ -205,7 +207,9 @@ pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei FST","Nei GST", 
   }
   
   #create an empty list with headers named for each species/locus combo (or ESU/locus combo)
-  esu_loci <- unique(ipdb$Genus_species_locus) 
+  if(ABGD==T & "ABGD_Genus_species_locus" %in% colnames(ipdb)){esu_loci <- unique(ipdb$ABGD_Genus_species_locus)} else {esu_loci <- unique(ipdb$Genus_species_locus)}
+  if(ABGD==T & !"ABGD_Genus_species_locus" %in% colnames(ipdb)){cat("No ABGD groupings provided. Using standard taxonomy")}
+
   all.pops.table<-sapply(esu_loci, function(x) NULL)
   
   for(gsl in esu_loci){ #gsl<-"Zebrasoma_flavescens_CYB" 
@@ -338,7 +342,7 @@ return(all.pops.table)
 
 
 
-hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, level3=NULL, minseqs = 5, minsamps = 3, mintotalseqs = 0, nperm=10, model="N"){
+hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, level3=NULL, minseqs = 5, minsamps = 3, mintotalseqs = 0, ABGD = F, nperm=10, model="N"){
   #add the ability to filter based on sample size at levels 2 and 3?
   
   ###Hierarchical Genetic Structure Function###
@@ -365,7 +369,9 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
   if(!is.null(level2) && !is.null(level3)){level<-3}
   
   #create an empty list with headers named for each species/locus combo (or ESU/locus combo)
-  esu_loci <- unique(ipdb$Genus_species_locus) 
+  if(ABGD==T & "ABGD_Genus_species_locus" %in% colnames(ipdb)){esu_loci <- unique(ipdb$ABGD_Genus_species_locus)} else {esu_loci <- unique(ipdb$Genus_species_locus)}
+  if(ABGD==T & !"ABGD_Genus_species_locus" %in% colnames(ipdb)){cat("No ABGD groupings provided. Using standard taxonomy")}
+
   all.pops.table<-sapply(esu_loci, function(x) NULL)
   
   ###LOOP THROUGH THE SPECIES###

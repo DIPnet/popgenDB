@@ -29,23 +29,21 @@ setwd(working_directory)
 
 ##READING IN THE DATA. ##
 #need to turn off the quoting with quote="" for it to read correctly. 
-#Point this to keepsdata_ABGD files if you want to calculate stats by ESUs rather than by species
-#Add "_ABGD" to file name to load the ABGD assignments
+
 ipdb<-read.table(ipdb_path,sep="\t",header=T,stringsAsFactors = F,quote="", na.strings=c("NA"," ","")) 
 
-#windows version of reading in a file
-#ipdb<-read.table("C:/Users/Chris/Google Drive/!DIPnet_DataQC/Reunite_metadata_and_alignments/2015-03-24/2015-03-24_keepsdata.txt", sep="\t", header=T, stringsAsFactors=F, quote="")
- 
 
 #read in geographical regionalizations from Treml
 spatial<-read.table(spatial_path, header=T, sep="\t",stringsAsFactors = F, na.strings=c("NA"," ",""), quote="")
 
-#windows version
-#spatial<-read.csv("C:/Users/Chris/Google Drive/!DIPnet_DataQC/Reunite_metadata_and_alignments/2015-03-24/KD2_24Mar15_AllJoin_cln.csv", stringsAsFactors = F, na.strings=c("NA"," ",""))
+#read in ABGD groups
+abgd<-read.table(abgd_path, header=T, sep="\t", stringsAsFactors = F)
 
-
-#Remove commas from fn100id and fn500id (also may need to fix reunion accent issue manually)
+#join spatial
 ipdb<-join(ipdb,spatial, by = "IPDB_ID",type = "left")
+
+#join ABGD
+ipdb2<-join(ipdb,abgd[,c(1,3)], by = "IPDB_ID",type = "left")
 
 #CHECK FOR DUPLICATES
 #dups<-ipdb[duplicated(ipdb),]
