@@ -43,7 +43,7 @@ abgd<-read.table(abgd_path, header=T, sep="\t", stringsAsFactors = F)
 ipdb<-join(ipdb,spatial, by = "IPDB_ID",type = "left")
 
 #join ABGD
-ipdb2<-join(ipdb,abgd[,c(1,3)], by = "IPDB_ID",type = "left")
+ipdb<-join(ipdb,abgd[,c(1,3)], by = "IPDB_ID",type = "left")
 
 #CHECK FOR DUPLICATES
 #dups<-ipdb[duplicated(ipdb),]
@@ -108,10 +108,10 @@ write.stats(diffstats,filename="DIPnet_structure_ecoregions_PhiST_ABGD_032415.cs
 
 # Loop through all regionalizations and calculate the statistics
 for(r in c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ")){
-  divstats<-genetic.diversity.mtDNA.db(ipdb=ipdb, minseqs = 5, minsamps= 3, mintotalseqs= 0, regionalization = r)
+  divstats<-genetic.diversity.mtDNA.db(ipdb=ipdb, minseqs = 5, minsamps= 3, mintotalseqs= 0, regionalization = r, ABGD=T)
   dir.create(file.path("./",r))
-  save(divstats,file=file.path("./",r,paste("DIPnet_stats_060315_no_coverage_correction",r,".Rdata",sep="")))
-  write.stats(divstats,filename=file.path("./",r,paste("DIPnet_stats_060315_no_coverage_correction",r,".csv",sep="")),structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
+  save(divstats,file=file.path("./",r,paste("DIPnet_stats_060315_ABGD_no_coverage_correction",r,".Rdata",sep="")))
+  write.stats(divstats,filename=file.path("./",r,paste("DIPnet_stats_060315_ABGD_no_coverage_correction",r,".csv",sep="")),structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
   
 }
 

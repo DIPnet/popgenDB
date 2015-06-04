@@ -18,12 +18,16 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
   require(hierfstat)
   require(iNEXT)
   
-  #create an empty list with headers named for each species/locus combo (or ESU/locus combo)
-  if(ABGD==T & "ABGD_Genus_species_locus" %in% colnames(ipdb)){esu_loci <- unique(ipdb$ABGD_Genus_species_locus)} else {esu_loci <- unique(ipdb$Genus_species_locus)}
+  #If ABGD=T and there is an ABGD field in the data frame, then replace Genus_species_locus with this ABGD version.
+  if(ABGD==T & "ABGD_Genus_species_locus" %in% colnames(ipdb)){ipdb$Genus_species_locus <- ipdb$ABGD_Genus_species_locus}
   if(ABGD==T & !"ABGD_Genus_species_locus" %in% colnames(ipdb)){cat("No ABGD groupings provided. Using standard taxonomy")}
  
+  #create an empty list with headers named for each species/locus combo (or ESU/locus combo)
+  esu_loci <- unique(ipdb$Genus_species_locus)
+  
   all.pops.table<-sapply(esu_loci, function(x) NULL) 
   
+  # LOOP through all gsl combos
   for(gsl in esu_loci){ #gsl<-"Chaetodon_auriga_CYB" 
     
     cat("\n","\n","\n","Now starting", gsl, "\n")
@@ -32,7 +36,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
     
     #modify/replace the following once we have the script that assigns populations
     #subset the genus-species-locus and order it alphabetically by locality name
-    sp<-subset(ipdb, Genus_species_locus == gsl )
+    sp<-ipdb[which(ipdb$Genus_species_locus==gsl),]
     sp$sample<-paste(sp$locality,round(sp$decimalLatitude, digits=0),round(sp$decimalLongitude, digits=0),sep="_")  #sets up a variable that matches assignsamp function outcome
     sp<-sp[order(sp$sample),]
     
@@ -206,12 +210,16 @@ pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei FST","Nei GST", 
     stop("Please select a genetic distance from the following", gdistlist)
   }
   
-  #create an empty list with headers named for each species/locus combo (or ESU/locus combo)
-  if(ABGD==T & "ABGD_Genus_species_locus" %in% colnames(ipdb)){esu_loci <- unique(ipdb$ABGD_Genus_species_locus)} else {esu_loci <- unique(ipdb$Genus_species_locus)}
+  #If ABGD=T and there is an ABGD field in the data frame, then replace Genus_species_locus with this ABGD version.
+  if(ABGD==T & "ABGD_Genus_species_locus" %in% colnames(ipdb)){ipdb$Genus_species_locus <- ipdb$ABGD_Genus_species_locus}
   if(ABGD==T & !"ABGD_Genus_species_locus" %in% colnames(ipdb)){cat("No ABGD groupings provided. Using standard taxonomy")}
-
-  all.pops.table<-sapply(esu_loci, function(x) NULL)
   
+  #create an empty list with headers named for each species/locus combo (or ESU/locus combo)
+  esu_loci <- unique(ipdb$Genus_species_locus)
+  
+  all.pops.table<-sapply(esu_loci, function(x) NULL) 
+  
+  # LOOP through all gsl combos  
   for(gsl in esu_loci){ #gsl<-"Zebrasoma_flavescens_CYB" 
     
     cat("\n","\n","\n","Now starting", gsl, "\n")
@@ -368,14 +376,16 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
   if(!is.null(level2) && is.null(level3)){level<-2}
   if(!is.null(level2) && !is.null(level3)){level<-3}
   
-  #create an empty list with headers named for each species/locus combo (or ESU/locus combo)
-  if(ABGD==T & "ABGD_Genus_species_locus" %in% colnames(ipdb)){esu_loci <- unique(ipdb$ABGD_Genus_species_locus)} else {esu_loci <- unique(ipdb$Genus_species_locus)}
+  #If ABGD=T and there is an ABGD field in the data frame, then replace Genus_species_locus with this ABGD version.
+  if(ABGD==T & "ABGD_Genus_species_locus" %in% colnames(ipdb)){ipdb$Genus_species_locus <- ipdb$ABGD_Genus_species_locus}
   if(ABGD==T & !"ABGD_Genus_species_locus" %in% colnames(ipdb)){cat("No ABGD groupings provided. Using standard taxonomy")}
-
-  all.pops.table<-sapply(esu_loci, function(x) NULL)
   
-  ###LOOP THROUGH THE SPECIES###
+  #create an empty list with headers named for each species/locus combo (or ESU/locus combo)
+  esu_loci <- unique(ipdb$Genus_species_locus)
   
+  all.pops.table<-sapply(esu_loci, function(x) NULL) 
+  
+  #LOOP through all gsl combos
   for(gsl in esu_loci){ #gsl<-"Zebrasoma_flavescens_CYB" 
     
     cat("\n","\n","\n","Now starting", gsl, "\n")
