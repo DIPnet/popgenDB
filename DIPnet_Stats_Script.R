@@ -94,8 +94,8 @@ hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb,level1 = "sample",level2=
 
 
 #Save diversity stats to file(s)
-save(divstats,file="DIPnet_stats_samples_060115.Rdata")
-write.stats(divstats,filename="DIPnet_stats_samples_060115.csv",structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
+save(divstats,file="DIPnet_stats_samples_060815.Rdata")
+write.stats(divstats,filename="DIPnet_stats_samples_060815.csv",structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
 #write.stats(divstats,"DIPnet_stats_ecoregions_032415.csv",structure=F)
 
 #Save differentiation stats to files

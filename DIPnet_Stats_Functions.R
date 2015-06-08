@@ -361,7 +361,6 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
   # nperm = number of AMOVA permutations
   # model= model of molecular evolution to be passed to dna.dist() = c("none","N", "raw", "TS", "TV", "JC69", "K80", "F81", "K81", "F84", "BH87", "T92", "TN93", "GG95", "logdet", "paralin", "indel", "indelblock")
   # model defaults to "N" which is the raw count of differences ("raw" is the proportion- same thing). If you use model = "none" you will get all distances between haplotypes = 1, which is the same as "regular" FST
-  # To be added: capability to do 3-level F-statistics and option for Fst (distance matrix =1)
   # levels can be one of c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ") or new regionalizations as they are added.
   
   require(seqinr)
