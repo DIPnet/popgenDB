@@ -95,6 +95,8 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
    
     pop.data<-data.frame(popname=sort(unique(sp[[regionalization]])),sampleN=spsummary$pop.eff) 
     
+    populations<-spseqs.genind$pop.names  #Returns in same order as used to create pop.data
+    
     #BASIC DIVERSITY STATS CALCULATION - Stats that can be calculated for all populations at the same time
     #create a data frame alphabetically sorted by locality to populate with popgen statistics
     #start with sampleN and Unique Haps that are already calculated in the genind object
@@ -118,7 +120,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
     #to calculate additional stats that can't be done on a per-population basis as above 
     if(sequence_diversity == T){
       cat("Calculating Sequence-Based Diversity Statistics: Nucleotide diversity, ThetaS, Tajima's D \n")  
-      populations<-spseqs.genind$pop.names  #Returns in same order as used to create pop.data
+      
       for (p in 1:length(populations)) {
         singlepop<-spseqsbin[(spseqs.genind@pop == populations[p] & !is.na(spseqs.genind@pop == populations[p])),]  #DNAbin object containing only the sequences from population p
         #nucleotide diversity, pi (percent)  - based on Nei 1987
@@ -133,7 +135,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
     }
 
     ##COVERAGE CALCULATION##
-    if(coverage_calc == T){
+   
       cat("Calculating Coverage \n")
       #list to hold frequency distribution of haplotypes for coverage adjustments
       hap_freq_dist<-list()  
@@ -144,9 +146,11 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
         f2<-length(which(hap_freq_dist[[p]]==2))
         n<-sum(hap_freq_dist[[p]])
         coverage<-1-(f1/n)*(((n-1)*f1)/(((n-1)*f1)+2*f2)) ##Chao & Jost 2012
+        if(coverage_calc == T){
         pop.data[p, "CoverageforActualSampleSize"] <- coverage
+        }
       }
-    }
+
     
     ##COVERAGE STANDARDIZED DIVERSITY##
     if(coverage_correction == T){
