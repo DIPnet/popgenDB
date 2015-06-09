@@ -107,15 +107,15 @@ write.stats(diffstats,filename="DIPnet_structure_ecoregions_PhiST_ABGD_032415.cs
 
 
 # Loop through all regionalizations and calculate the statistics
-for(r in c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ")){
-  divstats<-genetic.diversity.mtDNA.db(ipdb=ipdb, minseqs = 5, minsamps= 3, mintotalseqs= 0, regionalization = r, ABGD=T)
+for(r in c("sample","ECOREGION", "PROVINCE", "REALM", "EEZ", "fn100id", "fn500id")){
+  divstats<-genetic.diversity.mtDNA.db(ipdb=ipdb, minseqs = 5, minsamps= 3, mintotalseqs= 0, regionalization = r, ABGD=F)
   dir.create(file.path("./",r))
-  save(divstats,file=file.path("./",r,paste("DIPnet_stats_060315_ABGD_no_coverage_correction",r,".Rdata",sep="")))
-  write.stats(divstats,filename=file.path("./",r,paste("DIPnet_stats_060315_ABGD_no_coverage_correction",r,".csv",sep="")),structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
+  save(divstats,file=file.path("./",r,paste("DIPnet_stats_060815",r,".Rdata",sep="")))
+  write.stats(divstats,filename=file.path("./",r,paste("DIPnet_stats_060815",r,".csv",sep="")),structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
   
 }
 
-for(r in c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ")){
+for(r in c("sample","ECOREGION", "PROVINCE", "REALM", "EEZ", "fn100id", "fn500id")){
   for(g in c("WC Theta","PhiST", "Jost D")){
   diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb, gdist = g, regionalization = r, minseqs = 5, minsamps= 3, mintotalseqs= 0, num.cores = 2)
   #dir.create(file.path("./",r))

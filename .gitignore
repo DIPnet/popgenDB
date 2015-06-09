@@ -3,3 +3,4 @@ config.R
 .Rproj.user
 .Rhistory
 .RData
+.DS_Store

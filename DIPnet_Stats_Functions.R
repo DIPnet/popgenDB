@@ -1,13 +1,15 @@
 #####Eric Crandall and Cynthia Riginos
 #####Started: March 2015
 
-genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, mintotalseqs = 0, ABGD=F,regionalization = c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ"), keep_all_gsls=F){
+genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_diversity = T, coverage_calc = T, coverage_correction = T, minseqs = 6, minsamps = 3, mintotalseqs = 0, ABGD=F,regionalization = c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ"), keep_all_gsls=F, mincoverage = 0.4, hill.number = 0){
   
   ###Diversity Stats Function###
   #Computes diversity stats by species and population for a flatfile of mtDNA sequences and metadata (with required field $Genus_species_locus)
   # minseqs = minimum sequences per sampled population, 
   # minsamps = minimum sampled populations per species (after pops with n < minseqs have been removed)
   # keep_all_gsls = set to T if you want to keep the name of all gsls in the output, even if they don't meet the above thresholds
+  # mincoverage = minimum coverage for a single population at which the dataset will be reduced to transversions for haplotype diversity computation
+  #               set mincoverage to 1 to apply this correction to all species. Set to 0 to apply it to no species.
   # To be added: rarefaction, Fus Fs, Fu and Li's D
 
   require(seqinr)
@@ -88,94 +90,185 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, minto
     spseqs_wc$dummy<-1 #OMFG! You need to have two loci for betai to work, this is a dummy matrix of 1s
     
     
-    #DIVERSITY STATS CALCULATION - Stats that can be calculated for all populations at the same time
+    #Set up the pop.data data frame
+    spsummary<-summary(spseqs.genind) # the summary of the genind object does some legwork for us
+   
+    pop.data<-data.frame(popname=sort(unique(sp[[regionalization]])),sampleN=spsummary$pop.eff) 
+    
+    populations<-spseqs.genind$pop.names  #Returns in same order as used to create pop.data
+    
+    #BASIC DIVERSITY STATS CALCULATION - Stats that can be calculated for all populations at the same time
     #create a data frame alphabetically sorted by locality to populate with popgen statistics
     #start with sampleN and Unique Haps that are already calculated in the genind object
-    spsummary<-summary(spseqs.genind) # the summary of the genind object does some legwork for us
-    cat("Calculating Haplotype diversity, Shannon-Wiener diversity, Effective Number of Haps \n")
-    pop.data<-data.frame(popname=sort(unique(sp[[regionalization]])),sampleN=spsummary$pop.eff) 
-    #add lat and long as fields in pop.data
-    #pop.data$decimalLatitude<-unique(spseqs.genind@other)[,1]   #this does not work b/c rounding makes for overlapping values
-    #pop.data$decimalLatitude<-gsub(".+_(.+)_(.+)$", "\\1", pop.data$popname, perl=TRUE)  #strips lat and long out of [[regionalization]]
-    #pop.data$decimalLongitude<-gsub(".+_(.+)_(.+)$", "\\2", pop.data$popname, perl=TRUE)
-    #unique haplotypes
-    pop.data$UniqHapNum<-spsummary[[4]]
-    #haplotype diversity, calculated by Hs in adegenet corrected for sample size
-    pop.data$HaploDiv<-(pop.data$sampleN/(pop.data$sampleN-1))*Hs(spseqs.genind, truenames=TRUE)   #with sample size correction
-    #Shannon-Wiener Diversity based on the modified Hs function above
-    pop.data$SWdiversity<-shannon.wiener.d(spseqs.genind, truenames=TRUE)
-    #Effective number of haplotpyes
-    pop.data$EffNumHaplos<-1/(1-Hs(spseqs.genind, truenames=TRUE))   #No sample size correction - based on Crow & Kimura 1964, eq 21. See also Jost 2008 eq 5
-    #local Fst (Beta of Weir and Hill 2002 NOT of Foll and Gaggiotti 2006)
-    betaWH<-betai_haploid(spseqs_wc)
-    pop.data$localFST<-betaWH$betaiov 
-
+    if(basic_diversity == T){
+      cat("Calculating Basic Diversity Statistics: Haplotype diversity, Shannon-Wiener diversity, Effective Number of Haps, Local FST \n")
+      #unique haplotypes
+      pop.data$UniqHapNum<-spsummary[[4]]
+      #haplotype diversity, calculated by Hs in adegenet corrected for sample size
+      pop.data$HaploDiv<-(pop.data$sampleN/(pop.data$sampleN-1))*Hs(spseqs.genind, truenames=TRUE)   #with sample size correction
+      #Shannon-Wiener Diversity based on the modified Hs function above
+      pop.data$SWdiversity<-shannon.wiener.d(spseqs.genind, truenames=TRUE)
+      #Effective number of haplotpyes
+      pop.data$EffNumHaplos<-1/(1-Hs(spseqs.genind, truenames=TRUE))   #No sample size correction - based on Crow & Kimura 1964, eq 21. See also Jost 2008 eq 5
+      #local Fst (Beta of Weir and Hill 2002 NOT of Foll and Gaggiotti 2006)
+      betaWH<-betai_haploid(spseqs_wc)
+      pop.data$localFST<-betaWH$betaiov 
+    }
      
-    #DIVERSITY STATS CALCULATION - Stats that need to be calculated one population at a time.
+    #SEQUENCE-BASED DIVERSITY STATS CALCULATION - Stats that need to be calculated one population at a time.
     #now loop through the populations (as delimited by the pop.names in the genind object) 
     #to calculate additional stats that can't be done on a per-population basis as above 
-    cat("Calculating Nucleotide diversity, ThetaS, Tajima's D \n")  
-    populations<-spseqs.genind$pop.names  #Returns in same order as used to create pop.data
-    for (p in 1:length(populations)) {
-      singlepop<-spseqsbin[(spseqs.genind@pop == populations[p] & !is.na(spseqs.genind@pop == populations[p])),]  #DNAbin object containing only the sequences from population p
-      #nucleotide diversity, pi (percent)  - based on Nei 1987
-      pop.data[p, "NucDivSite"] <- nuc.div( singlepop, variance = FALSE, pairwise.deletion = FALSE)[1]
-      pop.data[p,"NucDivLocus"] <- nuc.div( singlepop, variance = FALSE, pairwise.deletion = FALSE)[1] * nchar(sp$sequence[1])
-      #thetaS - based on Watterson 1975
-      pop.data[p, "ThetaS"] <- theta.s(s=length(seg.sites(singlepop)),n=pop.data[p,"sampleN"])
-      tajD<-tajima.test(singlepop)
-      pop.data[p, "TajD"] <- tajD[[1]]
-      pop.data[p, "TajDp"] <- tajD[[3]] #Pval.beta - p-value assuming that D follows a beta distribution (Tajima, 1989)
+    if(sequence_diversity == T){
+      cat("Calculating Sequence-Based Diversity Statistics: Nucleotide diversity, ThetaS, Tajima's D \n")  
+      
+      for (p in 1:length(populations)) {
+        singlepop<-spseqsbin[(spseqs.genind@pop == populations[p] & !is.na(spseqs.genind@pop == populations[p])),]  #DNAbin object containing only the sequences from population p
+        #nucleotide diversity, pi (percent)  - based on Nei 1987
+        pop.data[p, "NucDivSite"] <- nuc.div( singlepop, variance = FALSE, pairwise.deletion = FALSE)[1]
+        pop.data[p,"NucDivLocus"] <- nuc.div( singlepop, variance = FALSE, pairwise.deletion = FALSE)[1] * nchar(sp$sequence[1])
+        #thetaS - based on Watterson 1975
+        pop.data[p, "ThetaS"] <- theta.s(s=length(seg.sites(singlepop)),n=pop.data[p,"sampleN"])
+        tajD<-tajima.test(singlepop)
+        pop.data[p, "TajD"] <- tajD[[1]]
+        pop.data[p, "TajDp"] <- tajD[[3]] #Pval.beta - p-value assuming that D follows a beta distribution (Tajima, 1989)
       }
+    }
 
     ##COVERAGE CALCULATION##
-    cat("Calculating Coverage \n")  
-    #list to hold frequency distribution of haplotypes for coverage adjustments
-     hap_freq_dist<-list()  
-    for (p in 1:length(populations)) {
-      hapfreq<-as.data.frame(table(spseqs.loci[(spseqs.genind@pop == populations[p] & !is.na(spseqs.genind@pop == populations[p])),2]))
-      hap_freq_dist[p][[1]]<-subset(hapfreq[,2], hapfreq[,2]>0)  #non zero haplotype occurances added to item p in hap_freq_dist list
-      f1<-length(which(hap_freq_dist[[p]]==1))
-      f2<-length(which(hap_freq_dist[[p]]==2))
-      n<-sum(hap_freq_dist[[p]])
-      coverage<-1-(f1/n)*(((n-1)*f1)/(((n-1)*f1)+2*f2)) ##Chao & Jost 2012
-      pop.data[p, "CoverageforActualSampleSize"] <- coverage
+   
+      cat("Calculating Coverage \n")
+      #list to hold frequency distribution of haplotypes for coverage adjustments
+      hap_freq_dist<-list()  
+      for (p in 1:length(populations)) {
+        hapfreq<-as.data.frame(table(spseqs.loci[(spseqs.genind@pop == populations[p] & !is.na(spseqs.genind@pop == populations[p])),2]))
+        hap_freq_dist[p][[1]]<-subset(hapfreq[,2], hapfreq[,2]>0)  #non zero haplotype occurances added to item p in hap_freq_dist list
+        f1<-length(which(hap_freq_dist[[p]]==1))
+        f2<-length(which(hap_freq_dist[[p]]==2))
+        n<-sum(hap_freq_dist[[p]])
+        coverage<-1-(f1/n)*(((n-1)*f1)/(((n-1)*f1)+2*f2)) ##Chao & Jost 2012
+        if(coverage_calc == T){
+        pop.data[p, "CoverageforActualSampleSize"] <- coverage
+        }
       }
+
     
     ##COVERAGE STANDARDIZED DIVERSITY##
-    cat("Calculating Coverage Standardized Diversity \n")
-    #find entries in hap_freq_dist with length=1
-    singlehap.pops<-which(sapply(hap_freq_dist,length)==1)
-    #replace these entries with c(1,1) just as a placeholder so iNEXT will work
-    hap_freq_dist[singlehap.pops]<-lapply(1:length(singlehap.pops),function(x) c(1,1))
-    #calculate coverage and "species" (haplotype) richness
-    coverage <- iNEXT(hap_freq_dist, q=c(0))  #Hill number of 0
-    #ERIC - maybe there is a more efficient way to do this loop with an apply function?
-    #create vector to hold max SC (species coverage) values and loop through list of dataframes
-    max_coverage<-vector()
-    for (p in 1:length(populations)) {
-      #coverage[3][[1]][[1]][7]   #[3] list of results; [[1]][p] population p; [7] is SC
-      max_coverage<-(c(max_coverage, max(coverage[3][[1]][[p]][7])))
+    if(coverage_correction == T){
+      cat("Calculating Coverage Standardized Diversity based on original data \n")
+      #find entries in hap_freq_dist with length=1
+      singlehap.pops<-which(sapply(hap_freq_dist,length)==1)
+      #replace these entries with c(1,1) just as a placeholder so iNEXT will work
+      hap_freq_dist[singlehap.pops]<-lapply(1:length(singlehap.pops),function(x) c(1,1))
+      
+      #calculate coverage and "species" (haplotype) richness
+      coverage <- iNEXT(hap_freq_dist, q=c(hill.number))  #Hill number of 0
+      #ERIC - maybe there is a more efficient way to do this loop with an apply function?
+      #create vector to hold max SC (species coverage) values and loop through list of dataframes
+      max_coverage<-vector()
+      for (p in 1:length(populations)) {
+        #coverage[3][[1]][[1]][7]   #[3] list of results; [[1]][p] population p; [7] is SC
+        max_coverage<-(c(max_coverage, max(coverage[3][[1]][[p]][7])))
       }
-    min_SC<-min(max_coverage) #this is the smallest value of maximal coverage achievable across the sampled popualations
-    rm(max_coverage)
-    #Loop through the dataframes from the coverage output (again), extract the row with the max SC < min_SC and add to temporary dataframe
-    SC_standardized_res<-data.frame()
-    for (p in 1:length(populations)) {
-      popdataframe<-coverage[3][[1]][[p]]
-      popdataframe<-subset(popdataframe, SC<=min_SC)
-      ifelse(nrow(popdataframe)==0,
-            SC_standardized_res<-rbind(SC_standardized_res, coverage[3][[1]][[p]][1,]),
-            SC_standardized_res<-rbind(SC_standardized_res, popdataframe[nrow(popdataframe),])  )
-      #m is interpolated sample size, qD is diversity, SC is coverage - see iNEXT documentation
+      min_SC<-min(max_coverage) #this is the smallest value of maximal coverage achievable across the sampled popualations
+      rm(max_coverage)
+      #Loop through the dataframes from the coverage output (again), extract the row with the max SC < min_SC and add to temporary dataframe
+      SC_standardized_res<-data.frame()
+      for (p in 1:length(populations)) {
+        popdataframe<-coverage[3][[1]][[p]]
+        popdataframe<-subset(popdataframe, SC<=min_SC)
+        ifelse(nrow(popdataframe)==0,
+               SC_standardized_res<-rbind(SC_standardized_res, coverage[3][[1]][[p]][1,]),
+               SC_standardized_res<-rbind(SC_standardized_res, popdataframe[nrow(popdataframe),])  )
+        #m is interpolated sample size, qD is diversity, SC is coverage - see iNEXT documentation
+        #pop.data[p, "HaploSimplification"] <- "Orig_haplos"
       }
-    SC_standardized_res[singlehap.pops,]<-NA  #replace the pops with single haplotypes with NA
-    pop.data<-cbind(pop.data, SC_standardized_res)
-    #rm(SC_standardized_res); rm(popdataframe); rm(min_SC)
-    #rm(coverage); rm(hap_freq_dist)
+      
+      TV = F
+      ##REDUCE TO TRANSVERSIONS ONLY GSL'S CONTAINING AT LEAST ONE POP WITH STANDARDIZED COVERAGE < mincoverage ##  code from LL
+      if(any((sapply(SC_standardized_res$SC,max,na.rm=T) < mincoverage) == TRUE)) {
+        
+        TV = T
+        
+        #Loop by population - just need to reduce haplotypes within each population
+        for (p in 1:length(populations)) {
+          spseqsbin_pop<-spseqsbin[(spseqs.genind@pop == populations[p] & !is.na(spseqs.genind@pop == populations[p])),]
+          h<-haplotype(spseqsbin_pop)
+          #dist.TV will give you a lower triangular matrix of transversions between every sequence in the dataset
+          dist.TV <- dist.dna(spseqsbin_pop, model = "TV") #calculate the distance among sequences in the datasets based on transversions only
+          #put all the pairwise comparisons among sequences into a dataframe
+          m <- nrow(spseqsbin_pop)  #m is the number of sequences in the dataset
+          prs <- cbind(rep(1:m, each = m), 1:m)  #prs is all of the possible pairwise comparisons shifted into columns (as above, just different format)
+          prs.comp <- prs[prs[, 1] < prs[, 2], , drop = FALSE]  #this drops the diagonal comparisons, i.e. sequence 1 with sequence 1
+          #rename the elements in the column so that they are the actual names of the sequences, rather than an integer telling us their position. Append the pairwise distance among sequences based on transversions only
+          seq.df <- data.frame(t(apply(prs.comp, 1, function(x) labels(dist.TV)[x])), TV.dist = as.vector(dist.TV))
+          h.lib <- data.frame(labels(dist.TV), 0) #allocating sequences with 0 distance between them to haplotypes
+          
+          for (i in 1:m){
+            if(h.lib[i,2] == 0){
+              index <- labels(dist.TV)[i]
+              tmp <- seq.df[seq.df[,1] == index, ]    
+              tmp.2 <- c(index, levels(droplevels(tmp[tmp[,3] == 0, 2])))   #identifies haplotype labels with zero distance
+              h.lib[h.lib[,1] %in% tmp.2, 2] <- i                         #identical haplotypes are labeled as "i"
+            }
+          }
+          
+          TV_defined_hapfreqs<-as.data.frame(with(h.lib,table(X0)))
+          hap_freq_dist[p][[1]]<-TV_defined_hapfreqs[,2]       
+        }
+        
+        ##REDO COVERAGE AND STANDARDIZED COVERAGE CALCS FOR TV HAPLOTYPES
+        for (p in 1:length(populations)) {
+          f1<-length(which(hap_freq_dist[[p]]==1))
+          f2<-length(which(hap_freq_dist[[p]]==2))
+          n<-sum(hap_freq_dist[[p]])
+          coverage<-1-(f1/n)*(((n-1)*f1)/(((n-1)*f1)+2*f2)) ##Chao & Jost 2012
+          pop.data[p, "CoverageforActualSampleSize_TV"] <- coverage
+        }
+        
+        ##COVERAGE STANDARDIZED DIVERSITY##
+        cat("Calculating Coverage Standardized Diversity based on transversion defined haplotypes\n")
+        #find entries in hap_freq_dist with length=1
+        singlehap.pops<-which(sapply(hap_freq_dist,length)==1)
+        #replace these entries with c(1,1) just as a placeholder so iNEXT will work
+        hap_freq_dist[singlehap.pops]<-lapply(1:length(singlehap.pops),function(x) c(1,1))
+        #calculate coverage and "species" (haplotype) richness
+        TVcoverage <- iNEXT(hap_freq_dist, q=c(0))  #Hill number of 0
+        #ERIC - maybe there is a more efficient way to do this loop with an apply function?
+        #create vector to hold max SC (species coverage) values and loop through list of dataframes
+        max_coverage<-vector()
+        for (p in 1:length(populations)) {
+          #coverage[3][[1]][[1]][7]   #[3] list of results; [[1]][p] population p; [7] is SC
+          max_coverage<-(c(max_coverage, max(TVcoverage[3][[1]][[p]][7])))
+        }
+        
+        
+        min_SC<-min(max_coverage) #this is the smallest value of maximal coverage achievable across the sampled popualations
+        rm(max_coverage)
+        #Loop through the dataframes from the coverage output (again), extract the row with the max SC < min_SC and add to temporary dataframe
+        SC_TV_standardized_res<-data.frame()
+        for (p in 1:length(populations)) {
+          popdataframe<-TVcoverage[3][[1]][[p]]
+          popdataframe<-subset(popdataframe, SC<=min_SC)
+          ifelse(nrow(popdataframe)==0,
+                 SC_TV_standardized_res<-rbind(SC_TV_standardized_res, TVcoverage[3][[1]][[p]][1,]),
+                 SC_TV_standardized_res<-rbind(SC_TV_standardized_res, popdataframe[nrow(popdataframe),])  )
+          #m is interpolated sample size, qD is diversity, SC is coverage - see iNEXT documentation
+          
+        }  
+        names(SC_TV_standardized_res)<-paste(names(SC_TV_standardized_res),"TV",sep="_")
+        
+      } #ends (any((sapply(SC_standardized_res$SC,max) < mincoverage) == TRUE)
+      
+      SC_standardized_res[singlehap.pops,]<-NA  #replace the pops with single haplotypes with NA
+      pop.data<-cbind(pop.data, SC_standardized_res)  
+      if(TV == T){SC_TV_standardized_res[singlehap.pops,]<-NA}  #replace the pops with single haplotypes with NA
+      if(TV == T){pop.data<-cbind(pop.data, SC_TV_standardized_res)} 
+      
+      
+  
+    } #end coverage_correction 
     
-    
-     all.pops.table[[gsl]]<-pop.data
+    all.pops.table[[gsl]]<-pop.data
 
 }  #end gsl esu_loci
 if(keep_all_gsls==F) {all.pops.table<-all.pops.table[!sapply(all.pops.table, is.null)]} # remove the NULL gsls if they were not requested

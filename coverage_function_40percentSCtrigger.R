@@ -1,4 +1,4 @@
-coverage.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, mintotalseqs = 0, regionalization = c("sample","fn100id", "fn500id", "meow_ecoregion", "meow_prov_name", "meow_rlm_name", "EEZ_country")){
+coverage.db<-function(ipdb=ipdb, minseqs = 6, minsamps = 3, mintotalseqs = 0, regionalization = c("sample","fn100id", "fn500id", "meow_ecoregion", "meow_prov_name", "meow_rlm_name", "EEZ_country")){
   
   ###Based on Diversity Stats Function###
   #Computes coverage stats by species and population for a flatfile of mtDNA sequences and metadata (with required field $Genus_species_locus)
@@ -35,6 +35,7 @@ coverage.db<-function(ipdb=ipdb, minseqs = 5, minsamps = 3, mintotalseqs = 0, re
     lowsamps<-names(sampN[sampN < minseqs])
     if(length(lowsamps)>0){sp<-sp[-which(sp[[regionalization]] %in% lowsamps),]}
     if(length(sampN) - length(lowsamps) < minsamps){ 
+                                                    cat("")
                                                     next}
     if(length(sp[,1])<mintotalseqs){
                                     cat("fewer than",mintotalseqs,"samples left after filtering. No stats calculated")
