@@ -94,8 +94,8 @@ hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb,level1 = "sample",level2=
 
 
 #Save diversity stats to file(s)
-save(divstats,file="DIPnet_stats_samples_060115.Rdata")
-write.stats(divstats,filename="DIPnet_stats_samples_060115.csv",structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
+save(divstats,file="DIPnet_stats_samples_060815.Rdata")
+write.stats(divstats,filename="DIPnet_stats_samples_060815.csv",structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
 #write.stats(divstats,"DIPnet_stats_ecoregions_032415.csv",structure=F)
 
 #Save differentiation stats to files
@@ -107,20 +107,20 @@ write.stats(diffstats,filename="DIPnet_structure_ecoregions_PhiST_ABGD_032415.cs
 
 
 # Loop through all regionalizations and calculate the statistics
-for(r in c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ")){
+for(r in c("sample","ECOREGION", "PROVINCE", "REALM", "EEZ", "fn100id", "fn500id")){
   divstats<-genetic.diversity.mtDNA.db(ipdb=ipdb, minseqs = 5, minsamps= 3, mintotalseqs= 0, regionalization = r, ABGD=F)
   dir.create(file.path("./",r))
-  save(divstats,file=file.path("./",r,paste("DIPnet_stats_060315_no_coverage_correction",r,".Rdata",sep="")))
-  write.stats(divstats,filename=file.path("./",r,paste("DIPnet_stats_060315_no_coverage_correction",r,".csv",sep="")),structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
+  save(divstats,file=file.path("./",r,paste("DIPnet_stats_060815",r,".Rdata",sep="")))
+  write.stats(divstats,filename=file.path("./",r,paste("DIPnet_stats_060815",r,".csv",sep="")),structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
   
 }
 
-for(r in c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ")){
+for(r in c("sample","ECOREGION", "PROVINCE", "REALM", "EEZ", "fn100id", "fn500id")){
   for(g in c("WC Theta","PhiST", "Jost D")){
   diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb, gdist = g, regionalization = r, minseqs = 5, minsamps= 3, mintotalseqs= 0, num.cores = 2)
-  dir.create(file.path("./",r))
-  save(diffstats,file=file.path("./",r,paste("DIPnet_structure_060715_",g,"_",r,".Rdata",sep="")))
-  write.stats(diffstats,filename=file.path("./",r,paste("DIPnet_structure_060715_",g,"_",r,".csv",sep="")),structure=T) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
+  #dir.create(file.path("./",r))
+  save(diffstats,file=file.path("./",r,paste("DIPnet_structure_060315_",g,"_",r,".Rdata",sep="")))
+  write.stats(diffstats,filename=file.path("./",r,paste("DIPnet_structure_060315_",g,"_",r,".csv",sep="")),structure=T) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
   }
 }
 
