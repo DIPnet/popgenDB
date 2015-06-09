@@ -2,7 +2,7 @@
 #Eric Crandall June 3, 2015
 
 esu_loci<-c("Acanthurus_nigrofuscus_CO1","Zebrasoma_flavescens_CYB","Sphyrna_lewini_CR","Halichoeres_hortulanus_CR","Diadema_paucispinum_A68","Stenopus_hispidus_CO1","Stenella_longirostris_CYB","Diadema_savignyi_A68")
-regionalization<-"ECOREGION"
+regionalization<-"sample"
 minseqs = 5
 minsamps = 3
 mintotalseqs = 0
