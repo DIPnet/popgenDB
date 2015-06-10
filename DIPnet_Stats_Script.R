@@ -111,7 +111,7 @@ for(r in c("sample","ECOREGION", "PROVINCE", "REALM", "EEZ", "fn100id", "fn500id
   divstats<-genetic.diversity.mtDNA.db(ipdb=ipdb, minseqs = 5, minsamps= 3, mintotalseqs= 0, regionalization = r, ABGD=F)
   dir.create(file.path("./",r))
   save(divstats,file=file.path("./",r,paste("DIPnet_stats_060815",r,".Rdata",sep="")))
-  write.stats(divstats,filename=file.path("./",r,paste("DIPnet_stats_060815",r,".csv",sep="")),structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
+  write.stats(divstats,filename=file.path("./",r,paste("DIPnet_stats_060815_",r,".csv",sep="")),structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
   
 }
 

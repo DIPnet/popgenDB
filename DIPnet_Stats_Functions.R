@@ -2,7 +2,6 @@
 #####Started: March 2015
 
 genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_diversity = T, coverage_calc = T, coverage_correction = T, minseqs = 6, minsamps = 3, mintotalseqs = 0, ABGD=F,regionalization = c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ"), keep_all_gsls=F, mincoverage = 0.4, hill.number = 0){
-  
   ###Diversity Stats Function###
   #Computes diversity stats by species and population for a flatfile of mtDNA sequences and metadata (with required field $Genus_species_locus)
   # minseqs = minimum sequences per sampled population, 
@@ -10,7 +9,9 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
   # keep_all_gsls = set to T if you want to keep the name of all gsls in the output, even if they don't meet the above thresholds
   # mincoverage = minimum coverage for a single population at which the dataset will be reduced to transversions for haplotype diversity computation
   #               set mincoverage to 1 to apply this correction to all species. Set to 0 to apply it to no species.
-  # To be added: rarefaction, Fus Fs, Fu and Li's D
+  # Troubleshooting settings:
+  # basic_diversity = T; sequence_diversity = T; coverage_calc = T; coverage_correction = T; minseqs = 6; minsamps = 3; mintotalseqs = 0; ABGD=F;regionalization = "sample"; keep_all_gsls=F; mincoverage = 0.4; hill.number = 0
+
 
   require(seqinr)
   require(ape)
@@ -183,9 +184,13 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
         #pop.data[p, "HaploSimplification"] <- "Orig_haplos"
       }
       
+      SC_standardized_res[singlehap.pops,]<-NA  #replace the pops with single haplotypes with NA
+      pop.data<-cbind(pop.data, SC_standardized_res)  
       TV = F
+      SC<-SC_standardized_res$SC
+      
       ##REDUCE TO TRANSVERSIONS ONLY GSL'S CONTAINING AT LEAST ONE POP WITH STANDARDIZED COVERAGE < mincoverage ##  code from LL
-      if(any((sapply(SC_standardized_res$SC,max,na.rm=T) < mincoverage) == TRUE)) {
+      if(any((sapply(SC,max,na.rm=T) < mincoverage) == TRUE)) {
         
         TV = T
         
@@ -259,8 +264,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
         
       } #ends (any((sapply(SC_standardized_res$SC,max) < mincoverage) == TRUE)
       
-      SC_standardized_res[singlehap.pops,]<-NA  #replace the pops with single haplotypes with NA
-      pop.data<-cbind(pop.data, SC_standardized_res)  
+
       if(TV == T){SC_TV_standardized_res[singlehap.pops,]<-NA}  #replace the pops with single haplotypes with NA
       if(TV == T){pop.data<-cbind(pop.data, SC_TV_standardized_res)} 
       
