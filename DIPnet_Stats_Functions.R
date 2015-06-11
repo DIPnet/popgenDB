@@ -162,7 +162,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
       hap_freq_dist[singlehap.pops]<-lapply(1:length(singlehap.pops),function(x) c(1,1))
       
       #calculate coverage and "species" (haplotype) richness
-      coverage <- iNEXT(hap_freq_dist, q=c(hill.number))  #Hill number of 0
+      coverage <- iNEXT(hap_freq_dist, q=c(hill.number))
       #ERIC - maybe there is a more efficient way to do this loop with an apply function?
       #create vector to hold max SC (species coverage) values and loop through list of dataframes
       max_coverage<-vector()
@@ -184,15 +184,15 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
         #pop.data[p, "HaploSimplification"] <- "Orig_haplos"
       }
       
-      SC_standardized_res[singlehap.pops,]<-NA  #replace the pops with single haplotypes with NA
+      SC_standardized_res[singlehap.pops,]<-data.frame(1,"singleHaplotype",hill.number,1,1,1,1,0,1,stringsAsFactors = F)  #replace the pops with single haplotypes with appropriate values. m=1,method="singleHaplotype,q=1,SC=1)
       pop.data<-cbind(pop.data, SC_standardized_res)  
-      TV = F
+      #TV = F
       SC<-SC_standardized_res$SC
       
       ##REDUCE TO TRANSVERSIONS ONLY GSL'S CONTAINING AT LEAST ONE POP WITH STANDARDIZED COVERAGE < mincoverage ##  code from LL
       if(any((sapply(SC,max,na.rm=T) < mincoverage) == TRUE)) {
         
-        TV = T
+        #TV = T
         
         #Loop by population - just need to reduce haplotypes within each population
         for (p in 1:length(populations)) {
@@ -237,7 +237,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
         #replace these entries with c(1,1) just as a placeholder so iNEXT will work
         hap_freq_dist[singlehap.pops]<-lapply(1:length(singlehap.pops),function(x) c(1,1))
         #calculate coverage and "species" (haplotype) richness
-        TVcoverage <- iNEXT(hap_freq_dist, q=c(0))  #Hill number of 0
+        TVcoverage <- iNEXT(hap_freq_dist, q=hill.number) 
         #ERIC - maybe there is a more efficient way to do this loop with an apply function?
         #create vector to hold max SC (species coverage) values and loop through list of dataframes
         max_coverage<-vector()
@@ -262,11 +262,13 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
         }  
         names(SC_TV_standardized_res)<-paste(names(SC_TV_standardized_res),"TV",sep="_")
         
+        SC_TV_standardized_res[singlehap.pops,]<-data.frame(1,"singleHaplotype",hill.number,1,1,1,1,0,1,stringsAsFactors = F)  #replace the pops with single haplotypes with appropriate values. m=1,method="singleHaplotype,q=1,SC=1)
+        pop.data<-cbind(pop.data, SC_TV_standardized_res)
+        
       } #ends (any((sapply(SC_standardized_res$SC,max) < mincoverage) == TRUE)
       
 
-      if(TV == T){SC_TV_standardized_res[singlehap.pops,]<-NA}  #replace the pops with single haplotypes with NA
-      if(TV == T){pop.data<-cbind(pop.data, SC_TV_standardized_res)} 
+
       
       
   
