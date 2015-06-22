@@ -555,7 +555,7 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
     if(l==1){
       level1factor<<-as.factor(sp[[l1]]) #Need to write it to the global environment, because that is where pegas::amova() will look for it
       #amova_df<-data.frame(level1factor)
-      amova_out<-pegas::amova(dists~level1factor, nperm=nperm)
+      amova_out<-pegas::amova(dists~level1factor, nperm=nperm, is.squared=T)
       FST<-amova_out$varcomp[1,1]/sum(amova_out$varcomp[,1])
       diffs<-list("raw_amova_output"=amova_out,"level1_names"=levels(level1factor),"FST"=FST)
       
@@ -567,7 +567,7 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
       
       level1factor<<-as.factor(sp[[l1]])
       level2factor<<-as.factor(sp[[l2]])
-      amova_out<-pegas::amova(dists~level2factor/level1factor, nperm=nperm)
+      amova_out<-pegas::amova(dists~level2factor/level1factor, nperm=nperm, is.squared=T)
       
       FCT<-amova_out$varcomp[1,1]/sum(amova_out$varcomp[,1])
       FCTp<-amova_out$varcomp[1,2]
@@ -591,7 +591,7 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
       level1factor<<-as.factor(sp[[l1]])
       level2factor<<-as.factor(sp[[l2]])
       level3factor<<-as.factor(sp[[l3]])
-      amova_out<-pegas::amova(dists~level3factor/level2factor/level1factor, nperm=nperm)
+      amova_out<-pegas::amova(dists~level3factor/level2factor/level1factor, nperm=nperm, is.squared=T)
       
       FRT<-amova_out$varcomp[1,1]/sum(amova_out$varcomp[,1])
       FRTp<-amova_out$varcomp[1,2]
