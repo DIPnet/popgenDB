@@ -50,3 +50,30 @@ for(gsl in esu_loci){ #gsl<-"Zebrasoma_flavescens_CYB"
   seqinr::write.fasta(as.list(spseqs$seq),faboxnames,file.out=paste(gsl,regionalization,"fabox.fasta",sep="_"))
   
 }
+
+
+
+load("/Users/eric/Google Drive/!DIPnet_Gait_Lig_Bird/DIPnet_WG4/statistics/By_Species/Diversity_statistics/sample/DIPnet_stats_061015sample.Rdata")
+
+for(gsl in esu_loci){#gsl<-"Zebrasoma_flavescens_CYB" 
+  
+    level<-"sample"
+    cat(gsl,level,"\n \n")
+    arlstats<-read.csv(paste("/Users/eric/Google Drive/!DIPnet_Gait_Lig_Bird/DIPnet_WG4/statistics/Arlequin_crosscheck/",gsl,"_",level,"_stats.csv", sep=""),fill = T)
+    
+    dipnetstats<-divstats[[gsl]]
+    
+    tol<-4
+    
+    for(stat in c("sampleN","UniqHapNum","HaploDiv","NucDivSite","ThetaS","TajD")) { #stat<-"ThetaS"
+      cat("Now checking", stat,"\n")
+      diffs<-setdiff(round(arlstats[[stat]],tol), round(dipnetstats[[stat]],tol))
+      if(length(diffs > 0)){ cat("different values for", stat,
+                                  ": Arlequin =", round(arlstats[[stat]],tol)[which(round(arlstats[[stat]],tol) %in% diffs)], 
+                                    "and DIPnet =", round(dipnetstats[[stat]],tol)[which(round(arlstats[[stat]],tol) %in% diffs)],
+                                  "for",rownames(dipnetstats)[which(round(arlstats[[stat]],tol) %in% diffs)],"\n","\n")
+                              
+                              }
+    }
+}
+  

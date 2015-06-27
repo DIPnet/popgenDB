@@ -90,7 +90,7 @@ diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb,gdist = "PhiST",minseqs = 5,min
 # nperm = number of AMOVA permutations
 # model= model of molecular evolution to be passed to dna.dist() = c("raw", "N", "TS", "TV", "JC69", "K80", "F81", "K81", "F84", "BH87", "T92", "TN93", "GG95", "logdet", "paralin", "indel", "indelblock")
 # To be added: capability to do 3-level F-statistics and option for Fst (distance matrix =1)
-hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb,level1 = "sample",level2="ECOREGION",model="raw",nperm=100)
+hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb,level1 = "sample",level2="ECOREGION",model="raw",nperm=1)
 
 
 #Save diversity stats to file(s)
