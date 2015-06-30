@@ -89,7 +89,8 @@ diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb,gdist = "PhiST",minseqs = 5,min
 # mintotalseqs = minimum sampled sequences per species (after pops with n < minseqs have been removed)
 # nperm = number of AMOVA permutations
 # model= model of molecular evolution to be passed to dna.dist() = c("raw", "N", "TS", "TV", "JC69", "K80", "F81", "K81", "F84", "BH87", "T92", "TN93", "GG95", "logdet", "paralin", "indel", "indelblock")
-# To be added: capability to do 3-level F-statistics and option for Fst (distance matrix =1)
+# model defaults to "N" which is the raw count of differences ("raw" is the proportion- same thing). If you use model = "none" you will get all distances between haplotypes = 1, which is the same as "regular" FST
+# levels can be one of c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ") or new regionalizations as they are added.
 hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb,level1 = "sample",level2="ECOREGION",model="raw",nperm=1)
 
 

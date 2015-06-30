@@ -52,13 +52,21 @@ for(gsl in esu_loci){ #gsl<-"Zebrasoma_flavescens_CYB"
 }
 
 
-
+# Check local Stats
+## to load in sampled pop stats
 load("/Users/eric/Google Drive/!DIPnet_Gait_Lig_Bird/DIPnet_WG4/statistics/By_Species/Diversity_statistics/sample/DIPnet_stats_061015sample.Rdata")
+
+## to load in ecoregion stats
+load("/Users/eric/Google Drive/!DIPnet_Gait_Lig_Bird/DIPnet_WG4/statistics/By_Species/Diversity_statistics/ECOREGION/DIPnet_stats_061015ECOREGION.Rdata")
+
+##set this to either sample or ECOREGION
+level<-"ECOREGION"
+
 
 for(gsl in esu_loci){#gsl<-"Zebrasoma_flavescens_CYB" 
   
-    level<-"sample"
-    cat(gsl,level,"\n \n")
+
+    cat("\n \n*",gsl,level,"\n \n")
     arlstats<-read.csv(paste("/Users/eric/Google Drive/!DIPnet_Gait_Lig_Bird/DIPnet_WG4/statistics/Arlequin_crosscheck/",gsl,"_",level,"_stats.csv", sep=""),fill = T)
     
     dipnetstats<-divstats[[gsl]]
@@ -66,9 +74,9 @@ for(gsl in esu_loci){#gsl<-"Zebrasoma_flavescens_CYB"
     tol<-4
     
     for(stat in c("sampleN","UniqHapNum","HaploDiv","NucDivSite","ThetaS","TajD")) { #stat<-"ThetaS"
-      cat("Now checking", stat,"\n")
+      cat("  - Now checking", stat,"\n")
       diffs<-setdiff(round(arlstats[[stat]],tol), round(dipnetstats[[stat]],tol))
-      if(length(diffs > 0)){ cat("different values for", stat,
+      if(length(diffs > 0)){ cat("    - different values for", stat,
                                   ": Arlequin =", round(arlstats[[stat]],tol)[which(round(arlstats[[stat]],tol) %in% diffs)], 
                                     "and DIPnet =", round(dipnetstats[[stat]],tol)[which(round(arlstats[[stat]],tol) %in% diffs)],
                                   "for",rownames(dipnetstats)[which(round(arlstats[[stat]],tol) %in% diffs)],"\n","\n")
@@ -76,4 +84,57 @@ for(gsl in esu_loci){#gsl<-"Zebrasoma_flavescens_CYB"
                               }
     }
 }
+
+
+# Check AMOVA output
+
+load("/Users/eric/Google Drive/!DIPnet_Gait_Lig_Bird/DIPnet_WG4/statistics/By_Species/Hierarchical_structure/DIPnet_AMOVA_Ecoregions_Sample_PHIST.Rdata")
+#save(hierstats,file="/Users/eric/Google Drive/!DIPnet_Gait_Lig_Bird/DIPnet_WG4/statistics/By_Species/Hierarchical_structure/DIPnet_AMOVA_Sampleonly_FST.Rdata")
+
+
+for(gsl in esu_loci){#gsl<-"Zebrasoma_flavescens_CYB" 
+  
+  
+  cat("\n \n*",gsl,level,"\n \n")
+  arlstats<-read.csv(paste("/Users/eric/Google Drive/!DIPnet_Gait_Lig_Bird/DIPnet_WG4/statistics/Arlequin_crosscheck/",gsl,"_",level,"_stats.csv", sep=""),fill = T)
+  
+  dipnetstats<-hierstats[[gsl]]
+  
+  tol<-4
+  
+    cat("    - Arlequin =",arlstats$global.PHIST[1], "& DIPnet = ", dipnetstats$FST)
+    if(round(arlstats$global.PHIST[1],tol) != round(dipnetstats$FST,tol)) {cat("\n    - different values for Global FST")}
+                           
+    
+}
+
+
+
+#Check pairwise stats
+
+load("/Users/eric/Google Drive/!DIPnet_Gait_Lig_Bird/DIPnet_WG4/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_060715_WC Theta_sample.Rdata")
+#save(hierstats,file="/Users/eric/Google Drive/!DIPnet_Gait_Lig_Bird/DIPnet_WG4/statistics/By_Species/Hierarchical_structure/DIPnet_AMOVA_Sampleonly_FST.Rdata")
+
+
+for(gsl in esu_loci){#gsl<-"Zebrasoma_flavescens_CYB" 
+  
+  
+  cat("\n \n*",gsl,level,"\n \n")
+  arlstats<-read.csv(paste("/Users/eric/Google Drive/!DIPnet_Gait_Lig_Bird/DIPnet_WG4/statistics/Arlequin_crosscheck/",gsl,"_",level,"_pairwiseFST.csv", sep=""),fill = T)
+  arlstats<-as.dist(arlstats[,-1])
+  dipnetstats<-diffstats[[gsl]]
+  
+  tol<-3
+  
+  diffs<-setdiff(round(arlstats,tol), round(dipnetstats,tol))
+  
+  if(length(diffs > 0)){ cat("    - different values for FST",
+                             "\n:  Arlequin =", round(arlstats,tol)[which(round(arlstats,tol) %in% diffs)], 
+                             "\n and DIPnet =", round(dipnetstats,tol)[which(round(arlstats,tol) %in% diffs)])
+                             
+                         }
+  
+}
+
+
   
