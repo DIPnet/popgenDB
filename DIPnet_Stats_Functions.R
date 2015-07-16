@@ -126,7 +126,9 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
         singlepop<-spseqsbin[(spseqs.genind@pop == populations[p] & !is.na(spseqs.genind@pop == populations[p])),]  #DNAbin object containing only the sequences from population p
         #nucleotide diversity, pi (percent)  - based on Nei 1987
         pop.data[p, "NucDivSite"] <- nuc.div( singlepop, variance = FALSE, pairwise.deletion = FALSE)[1]
-        pop.data[p,"NucDivLocus"] <- nuc.div( singlepop, variance = FALSE, pairwise.deletion = FALSE)[1] * nchar(sp$sequence[1])
+        pop.data[p, "NucDivSiteVAR"] <- nuc.div( singlepop, variance = TRUE, pairwise.deletion = FALSE)[2]
+        pop.data[p, "NucDivLocus"] <- nuc.div( singlepop, variance = FALSE, pairwise.deletion = FALSE)[1]* nchar(sp$sequence[1])
+        pop.data[p, "NucDivLocusVAR"] <- nuc.div( singlepop, variance = TRUE, pairwise.deletion = FALSE)[2]* nchar(sp$sequence[1])
         #thetaS - based on Watterson 1975
         pop.data[p, "ThetaS"] <- theta.s(s=length(seg.sites(singlepop)),n=pop.data[p,"sampleN"])
         tajD<-tajima.test(singlepop)

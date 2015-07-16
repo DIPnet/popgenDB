@@ -23,6 +23,7 @@ library(iNEXT)
 source("../DIPnet_Stats_Functions.R")
 source("../config.R")
 
+source("DIPnet_Stats_Functions.R")
 setwd(working_directory)
 
 
