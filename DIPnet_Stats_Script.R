@@ -100,8 +100,8 @@ write.stats(divstats,filename="DIPnet_stats_samples_060815.csv",structure=F) # f
 #write.stats(divstats,"DIPnet_stats_ecoregions_032415.csv",structure=F)
 
 #Save differentiation stats to files
-save(diffstats,file="DIPnet_structure_ecoregions_PhiST_ABGD_032415.Rdata") # for an R object
-write.stats(diffstats,filename="DIPnet_structure_ecoregions_PhiST_ABGD_032415.csv",structure=T) # for an excel-readable csv. Ignore warnings. structure=T for triangular matrices. Note this function will not overwrite, it will append to existing files
+save(diffstats,file="DIPnet_structure_ecoregions_PhiST_070215.Rdata") # for an R object
+write.stats(diffstats,filename="DIPnet_structure_ecoregions_PhiST_070215.csv",structure=T) # for an excel-readable csv. Ignore warnings. structure=T for triangular matrices. Note this function will not overwrite, it will append to existing files
 
 
 
