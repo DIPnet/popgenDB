@@ -22,8 +22,9 @@ library(iNEXT)
 
 source("../DIPnet_Stats_Functions.R")
 source("../config.R")
+# source("DIPnet_Stats_Functions.R")
+# source("config.R")
 
-source("DIPnet_Stats_Functions.R")
 setwd(working_directory)
 
 
@@ -75,8 +76,7 @@ divstats<-genetic.diversity.mtDNA.db(ipdb=ipdb, minseqs = 5, minsamps= 3, mintot
 # minseqs = minimum sequences per sampled population, 
 # minsamps = minimum sampled populations per species (after pops with n < minseqs have been removed)
 # mintotalseqs = minimum sampled sequences per species (after pops with n < minseqs have been removed)
-# To be added: rarefaction, Fus Fs, Fu and Li's D
-covstats<-genetic.diversity.coverage.mtDNA.db(ipdb=ipdb, minseqs = 5, minsamps= 3, mintotalseqs= 0, regionalization = "sample")
+covstats<-genetic.diversity.coverage.mtDNA.db(ipdb=ipdb, minseqs = 5, minsamps= 3, mintotalseqs= 0, regionalization = "sample", hill.number = 1)
 
 ###Pairwise Genetic Structure Function###
 #Computes genetic differentiation statistics by species and population for a flatfile of mtDNA sequences and metadata (with required fields $Genus_species_locus and $loc_lat_long)

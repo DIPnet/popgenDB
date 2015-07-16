@@ -7,10 +7,8 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
   # minseqs = minimum sequences per sampled population, 
   # minsamps = minimum sampled populations per species (after pops with n < minseqs have been removed)
   # keep_all_gsls = set to T if you want to keep the name of all gsls in the output, even if they don't meet the above thresholds
-  # mincoverage = minimum coverage for a single population at which the dataset will be reduced to transversions for haplotype diversity computation
-  #               set mincoverage to 1 to apply this correction to all species. Set to 0 to apply it to no species.
   # Troubleshooting settings:
-  # basic_diversity = T; sequence_diversity = T; coverage_calc = T; coverage_correction = T; minseqs = 6; minsamps = 3; mintotalseqs = 0; ABGD=F;regionalization = "sample"; keep_all_gsls=F; mincoverage = 0.4; hill.number = 0
+  # basic_diversity = T; sequence_diversity = T; minseqs = 6; minsamps = 3; mintotalseqs = 0; ABGD=F;regionalization = "sample"; keep_all_gsls=F
 
 
   require(seqinr)
@@ -249,38 +247,38 @@ genetic.diversity.coverage.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, se
     #create a data frame alphabetically sorted by locality to populate with popgen statistics
     #start with sampleN and Unique Haps that are already calculated in the genind object
     if(basic_diversity == T){
-      cat("Calculating Basic Diversity Statistics: Haplotype diversity, Shannon-Wiener diversity, Effective Number of Haps, Local FST \n")
+      #cat("Calculating Basic Diversity Statistics: Haplotype diversity, Shannon-Wiener diversity, Effective Number of Haps, Local FST \n")
       #unique haplotypes
       pop.data$UniqHapNum<-spsummary[[4]]
       #haplotype diversity, calculated by Hs in adegenet corrected for sample size
       pop.data$HaploDiv<-(pop.data$sampleN/(pop.data$sampleN-1))*Hs(spseqs.genind, truenames=TRUE)   #with sample size correction
-      #Shannon-Wiener Diversity based on the modified Hs function above
-      pop.data$SWdiversity<-shannon.wiener.d(spseqs.genind, truenames=TRUE)
-      #Effective number of haplotpyes
-      pop.data$EffNumHaplos<-1/(1-Hs(spseqs.genind, truenames=TRUE))   #No sample size correction - based on Crow & Kimura 1964, eq 21. See also Jost 2008 eq 5
-      #local Fst (Beta of Weir and Hill 2002 NOT of Foll and Gaggiotti 2006)
-      betaWH<-betai_haploid(spseqs_wc)
-      pop.data$localFST<-betaWH$betaiov 
+#       #Shannon-Wiener Diversity based on the modified Hs function above
+#       pop.data$SWdiversity<-shannon.wiener.d(spseqs.genind, truenames=TRUE)
+#       #Effective number of haplotpyes
+#       pop.data$EffNumHaplos<-1/(1-Hs(spseqs.genind, truenames=TRUE))   #No sample size correction - based on Crow & Kimura 1964, eq 21. See also Jost 2008 eq 5
+#       #local Fst (Beta of Weir and Hill 2002 NOT of Foll and Gaggiotti 2006)
+#       betaWH<-betai_haploid(spseqs_wc)
+#       pop.data$localFST<-betaWH$betaiov 
     }
     
     #SEQUENCE-BASED DIVERSITY STATS CALCULATION - Stats that need to be calculated one population at a time.
     #now loop through the populations (as delimited by the pop.names in the genind object) 
     #to calculate additional stats that can't be done on a per-population basis as above 
-    if(sequence_diversity == T){
-      cat("Calculating Sequence-Based Diversity Statistics: Nucleotide diversity, ThetaS, Tajima's D \n")  
-      
-      for (p in 1:length(populations)) {
-        singlepop<-spseqsbin[(spseqs.genind@pop == populations[p] & !is.na(spseqs.genind@pop == populations[p])),]  #DNAbin object containing only the sequences from population p
-        #nucleotide diversity, pi (percent)  - based on Nei 1987
-        pop.data[p, "NucDivSite"] <- nuc.div( singlepop, variance = FALSE, pairwise.deletion = FALSE)[1]
-        pop.data[p,"NucDivLocus"] <- nuc.div( singlepop, variance = FALSE, pairwise.deletion = FALSE)[1] * nchar(sp$sequence[1])
-        #thetaS - based on Watterson 1975
-        pop.data[p, "ThetaS"] <- theta.s(s=length(seg.sites(singlepop)),n=pop.data[p,"sampleN"])
-        tajD<-tajima.test(singlepop)
-        pop.data[p, "TajD"] <- tajD[[1]]
-        pop.data[p, "TajDp"] <- tajD[[3]] #Pval.beta - p-value assuming that D follows a beta distribution (Tajima, 1989)
-      }
-    }
+#     if(sequence_diversity == T){
+#       cat("Calculating Sequence-Based Diversity Statistics: Nucleotide diversity, ThetaS, Tajima's D \n")  
+#       
+#       for (p in 1:length(populations)) {
+#         singlepop<-spseqsbin[(spseqs.genind@pop == populations[p] & !is.na(spseqs.genind@pop == populations[p])),]  #DNAbin object containing only the sequences from population p
+#         #nucleotide diversity, pi (percent)  - based on Nei 1987
+#         pop.data[p, "NucDivSite"] <- nuc.div( singlepop, variance = FALSE, pairwise.deletion = FALSE)[1]
+#         pop.data[p,"NucDivLocus"] <- nuc.div( singlepop, variance = FALSE, pairwise.deletion = FALSE)[1] * nchar(sp$sequence[1])
+#         #thetaS - based on Watterson 1975
+#         pop.data[p, "ThetaS"] <- theta.s(s=length(seg.sites(singlepop)),n=pop.data[p,"sampleN"])
+#         tajD<-tajima.test(singlepop)
+#         pop.data[p, "TajD"] <- tajD[[1]]
+#         pop.data[p, "TajDp"] <- tajD[[3]] #Pval.beta - p-value assuming that D follows a beta distribution (Tajima, 1989)
+#       }
+#     }
     
     ##COVERAGE CALCULATION##
     
@@ -426,7 +424,7 @@ genetic.diversity.coverage.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, se
   }  #end gsl esu_loci
   if(keep_all_gsls==F) {all.pops.table<-all.pops.table[!sapply(all.pops.table, is.null)]} # remove the NULL gsls if they were not requested
   return(all.pops.table)
-}  #end genetic.diversity.mtDNA.db
+}  #end genetic.diversity.coverage.mtDNA.db
 
 
 
