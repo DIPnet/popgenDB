@@ -131,6 +131,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
         pop.data[p, "NucDivLocusVAR"] <- nuc.div( singlepop, variance = TRUE, pairwise.deletion = FALSE)[2]* nchar(sp$sequence[1])
         #thetaS - based on Watterson 1975
         pop.data[p, "ThetaS"] <- theta.s(s=length(seg.sites(singlepop)),n=pop.data[p,"sampleN"])
+        pop.data[p, "ThetaSVAR"] <- theta.s(s=length(seg.sites(singlepop)),n=pop.data[p,"sampleN"], variance=TRUE)[2]
         tajD<-tajima.test(singlepop)
         pop.data[p, "TajD"] <- tajD[[1]]
         pop.data[p, "TajDp"] <- tajD[[3]] #Pval.beta - p-value assuming that D follows a beta distribution (Tajima, 1989)
