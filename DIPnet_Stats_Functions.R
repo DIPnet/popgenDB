@@ -425,7 +425,7 @@ return(all.pops.table)
 
 
 
-hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, level3=NULL, minseqs = 5, minsamps = 3, mintotalseqs = 0, ABGD = F, nperm=10, model="N"){
+hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, level3=NULL, minseqs = 6, minsamps = 3, mintotalseqs = 0, ABGD = F, nperm=10, model="N"){
   #add the ability to filter based on sample size at levels 2 and 3?
   
   ###Hierarchical Genetic Structure Function###
