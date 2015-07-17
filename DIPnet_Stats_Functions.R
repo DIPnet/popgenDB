@@ -75,13 +75,8 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
     #convert to genind format (adegenet and mmod) with various pieces of information accompanying it (may not be important though)
     spseqs.genind<-as.genind.DNAbin(x = spseqsbin, pops = sp[[regionalization]])
     spseqs.genind@pop <- factor(as.character((sp[[regionalization]]))) #convert to character then to factor
-    spseqs.genind@ploidy<-1L  #L needed to indicate an integer
-    spseqs.genind@loc.names<-strsplit(sp$Genus_species_locus[1],"_")[[1]][3] #add in the locus name, why not
-    spseqs.genind@pop.names <- sort((as.character(unique(sp[[regionalization]])))) # I will add the sample name into the pop.names slot here anyway.
+    spseqs.genind@ploidy<-rep(1L,length.out=length(sp[,1]))  #L needed to indicate an integer
     spseqs.genind@other <- sp[,c("decimalLatitude","decimalLongitude")] #and the lat longs, why not
-    
-    #convert to genpop (adegenet)
-    #spseqs.pop<-genind2genpop(spseqs.genind) 
     
     #convert to loci format (pegas) and a data-frame format that works for hierfstat
     spseqs.loci<-as.loci(spseqs.genind)
@@ -96,7 +91,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
     
     pop.data<-data.frame(popname=sort(unique(sp[[regionalization]])),sampleN=spsummary$pop.eff) 
     
-    populations<-spseqs.genind$pop.names  #Returns in same order as used to create pop.data
+    populations<-levels(pop(spseqs.genind))  #Returns in same order as used to create pop.data
     
     #BASIC DIVERSITY STATS CALCULATION - Stats that can be calculated for all populations at the same time
     #create a data frame alphabetically sorted by locality to populate with popgen statistics
@@ -186,7 +181,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
         #pop.data[p, "HaploSimplification"] <- "Orig_haplos"
       }
       
-      SC_standardized_res[singlehap.pops,]<-data.frame(1,"singleHaplotype",hill.number,1,1,1,1,0,1,stringsAsFactors = F)  #replace the pops with single haplotypes with appropriate values. m=1,method="singleHaplotype,q=1,SC=1)
+      SC_standardized_res[singlehap.pops,]<-data.frame(1,"singleHaplotype",hill.number,1,0,1,1,0,1,stringsAsFactors = F)  #replace the pops with single haplotypes with appropriate values. m=1,method="singleHaplotype,q=1,SC=1)
       pop.data<-cbind(pop.data, SC_standardized_res)  
       #TV = F
       SC<-SC_standardized_res$SC
@@ -286,7 +281,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
 
 
 
-pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei FST","Nei GST", "Hedrick G'ST", "Jost D", "WC Theta", "PhiST", "Chi2", "NL dA"), minseqs = 5, minsamps = 3, mintotalseqs = 0, nrep = 0, num.cores = 1, ABGD = F, regionalization = c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ")){
+pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei GST", "Hedrick G'ST", "Jost D", "WC Theta", "PhiST", "Chi2", "NL dA"), minseqs = 5, minsamps = 3, mintotalseqs = 0, nrep = 0, num.cores = 1, ABGD = F, regionalization = c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ")){
   ###Genetic Structure Function###
   #Computes genetic differentiation statistics by species and population for a flatfile of mtDNA sequences and metadata (with required field $Genus_species_locus)
   # gdist = You must choose one genetic distance to calculate
@@ -306,7 +301,7 @@ pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei FST","Nei GST", 
   require(strataG)
   
   ###LOOP THROUGH THE SPECIES###
-  gdistlist<-c("Nei FST","Nei GST", "Hedrick G'ST", "Jost D", "WC Theta", "PhiST", "Chi2", "NL dA")
+  gdistlist<-c("Nei GST", "Hedrick G'ST", "Jost D", "WC Theta", "PhiST", "Chi2", "NL dA")
   if(!gdist %in% gdistlist){
     stop("Please select a genetic distance from the following", gdistlist)
   }
@@ -365,16 +360,8 @@ pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei FST","Nei GST", 
     #convert to genind format (adegenet and mmod) with various pieces of information accompanying it (may not be important though)
     spseqs.genind<-as.genind.DNAbin(x = spseqsbin, pops = sp[[regionalization]])
     spseqs.genind@pop <- factor(as.character((sp[[regionalization]]))) #convert to character then to factor
-    spseqs.genind@ploidy<-1L  #L needed to indicate an integer
-    spseqs.genind@loc.names<-strsplit(sp$Genus_species_locus[1],"_")[[1]][3] #add in the locus name, why not
-    spseqs.genind@pop.names <- sort((as.character(unique(sp[[regionalization]])))) # I will add the sample name into the pop.names slot here anyway. There seems to be a bug here - the function is expecting a character vector, but summary() is looking for a factor
+    spseqs.genind@ploidy<-rep(1L,length.out=length(sp[,1]))
     spseqs.genind@other <- sp[,c("decimalLatitude","decimalLongitude")] #and the lat longs, why not
-    
-    #convert to genpop (adegenet)
-    #spseqs.pop<-genind2genpop(spseqs.genind)
-    
-    #convert to loci format (pegas)
-    #spseqs.loci<-as.loci(spseqs.genind)
     
     #convert to gtypes format (strataG)
     seqs<-sp$sequence
@@ -385,12 +372,7 @@ pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei FST","Nei GST", 
     
     #DIFFERENTIATION STATS CALCULATION
     cat("Calculating", gdist)
-    
-    #Nei's Fst (Nei 1973) Ht - ((Hs(A) + Hs(B)/(n_A+n_B)) / Ht ) ... pairwise.fst() function from adegenet package
-    if(gdist=="Nei FST"){
-      diffs<-pairwise.fst(spseqs.genind,res.type="dist")
-      attr(diffs, "Labels") <- names(sampN) 
-    }
+
       
     #Nei's Gst (Nei 1973, Nei and Chesser 1983) - mmod package
     if(gdist=="Nei GST"){
@@ -411,14 +393,6 @@ pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei FST","Nei GST", 
     if(gdist=="WC Theta"){
       pairwise<-pairwise.test(seq.gtype,stats="fst",nrep=nrep,num.cores=num.cores,quietly=T)
       diffs<-as.dist(t(pairwise$pair.mat$Fst))
-      
-      #spseqs_wc<-as.data.frame(spseqs.loci) #convert locus format to format for hierfstat by making  
-      #spseqs_wc[,1]<-as.integer(spseqs_wc[,1]) #a vector of integers for population
-      #spseqs_wc[,2]<-as.integer(as.character(spseqs_wc[,2])) #and a vector of integers for haplotype
-      #spseqs_wc$dummy<-1 #OMFG! You need to have two loci for pp.fst to work, this is a dummy matrix of 1s
-      #test5<-pp.fst(spseqs_wc,diploid=F)
-      #test6<-as.dist(t(test5$fst.pp))
-      #attr(test6, "Labels") <- names(sampN)
     }
     
     
@@ -638,9 +612,8 @@ shannon.wiener.d<-function (x, truenames = TRUE)
     stop("x is not a valid genpop object")
   if (x@type == "PA") 
     stop("not implemented for presence/absence markers")
-  x.byloc <- seploc(x, truenames = truenames)
-  lX <- lapply(x.byloc, function(e) makefreq(e, quiet = TRUE, 
-                                             truenames = truenames)$tab)
+  x.byloc <- seploc(x)
+  lX <- lapply(x.byloc, function(e) makefreq(e, quiet = TRUE))
   lres<-lapply(lX, function(X) apply((-X+0.0000000001)*log(X+0.0000000001), 1, sum))
   res <- apply(as.matrix(data.frame(lres)), 1, mean)
   return(res)

@@ -69,25 +69,18 @@ ipdb<-ipdb[ipdb$IPDB_ID %in% drops == FALSE, ]
 # minsamps = minimum sampled populations per species (after pops with n < minseqs have been removed)
 # mintotalseqs = minimum sampled sequences per species (after pops with n < minseqs have been removed)
 # To be added: rarefaction, Fus Fs, Fu and Li's D
-divstats<-genetic.diversity.mtDNA.db(ipdb=ipdb, minseqs = 5, minsamps= 3, mintotalseqs= 0, regionalization = "sample")
-
-###Coverage Corrected Stats Function###
-#Computes coverage corrected diversity stats by species and population for a flatfile of mtDNA sequences and metadata (with required fields $Genus_species_locus and $loc_lat_long)
-# minseqs = minimum sequences per sampled population, 
-# minsamps = minimum sampled populations per species (after pops with n < minseqs have been removed)
-# mintotalseqs = minimum sampled sequences per species (after pops with n < minseqs have been removed)
-covstats<-genetic.diversity.coverage.mtDNA.db(ipdb=ipdb, minseqs = 5, minsamps= 3, mintotalseqs= 0, regionalization = "sample", hill.number = 1)
+divstats<-genetic.diversity.mtDNA.db(ipdb=ipdb, basic_diversity = T, sequence_diversity = T, coverage_calc = F, coverage_correction = F, minseqs = 6, minsamps = 3, mintotalseqs = 0, ABGD=F,regionalization = "sample", keep_all_gsls=F, mincoverage = 0.4, hill.number = 0)
 
 ###Pairwise Genetic Structure Function###
 #Computes genetic differentiation statistics by species and population for a flatfile of mtDNA sequences and metadata (with required fields $Genus_species_locus and $loc_lat_long)
-# gdist = You must choose one genetic distance to calculate: choose gdist from: "Nei FST","Nei GST", "Hedrick G'ST", "Jost D", "WC Theta", "PhiST", "Chi2", or "NL dA"
+# gdist = You must choose one genetic distance to calculate: choose gdist from:"Nei GST", "Hedrick G'ST", "Jost D", "WC Theta", "PhiST", "Chi2", or "NL dA"
 # minseqs = minimum sequences per sampled population, 
 # minsamps = minimum sampled populations per species (after pops with n < minseqs have been removed)
 # mintotalseqs = minimum sampled sequences per species (after pops with n < minseqs have been removed)
 # nreps = number of resampling permutations for WC Theta, PhiST, Chi2, and NL dA (strataG package). This is working, but you will not currently see p-values in the output, so not much use for now
 # num.cores = number of computer cores to devote to computations for WC Theta, PhiST, Chi2, and NL dA (strataG package)
 # To be added: option to output square matrices with p-values.
-diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb,gdist = "PhiST",minseqs = 5,minsamps=3, mintotalseqs=0, num.cores=2, regionalization = "ECOREGION")
+diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb, gdist = "PhiST", minseqs = 5, minsamps = 3, mintotalseqs = 0, nrep = 0, num.cores = 1, ABGD = F, regionalization = "sample")
 
 
 ###Hierarchical Genetic Structure Function###
