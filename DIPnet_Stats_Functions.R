@@ -308,7 +308,6 @@ genetic.diversity.coverage.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, se
       
       #calculate coverage and "species" (haplotype) richness
       coverage <- iNEXT(hap_freq_dist, q=c(hill.number))
-      #ERIC - maybe there is a more efficient way to do this loop with an apply function?
       #create vector to hold max SC (species coverage) values and loop through list of dataframes
       max_coverage<-vector()
       for (p in 1:length(populations)) {
