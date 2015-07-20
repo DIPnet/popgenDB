@@ -20,6 +20,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
   require(mmod)
   require(hierfstat)
   require(iNEXT)
+  require(gdata)
   
   #If ABGD=T and there is an ABGD field in the data frame, then replace Genus_species_locus with this ABGD version.
   if(ABGD==T & "ABGD_Genus_species_locus" %in% colnames(ipdb)){ipdb$Genus_species_locus <- ipdb$ABGD_Genus_species_locus}
@@ -209,7 +210,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
             if(h.lib[i,2] == 0){
               index <- labels(dist.TV)[i]
               tmp <- seq.df[seq.df[,1] == index, ]    
-              tmp.2 <- c(index, levels(droplevels(tmp[tmp[,3] == 0, 2])))   #identifies haplotype labels with zero distance
+              tmp.2 <- c(index, levels(drop.levels(tmp[tmp[,3] == 0, 2])))   #identifies haplotype labels with zero distance
               h.lib[h.lib[,1] %in% tmp.2, 2] <- i                         #identical haplotypes are labeled as "i"
             }
           }

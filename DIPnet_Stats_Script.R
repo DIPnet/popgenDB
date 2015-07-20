@@ -110,16 +110,16 @@ write.stats(diffstats,filename="DIPnet_structure_ecoregions_PhiST_070215.csv",st
 
 # Loop through all regionalizations and calculate the statistics
 for(r in c("sample","ECOREGION", "PROVINCE", "REALM", "EEZ", "fn100id", "fn500id")){
-  divstats<-genetic.diversity.mtDNA.db(ipdb=ipdb, minseqs = 5, minsamps= 3, mintotalseqs= 0, regionalization = r, ABGD=F)
+  divstats<-genetic.diversity.mtDNA.db(ipdb=ipdb, basic_diversity = T, sequence_diversity = T, coverage_calc = T, coverage_correction = T, minseqs = 6, minsamps = 3, mintotalseqs = 0, ABGD=F,regionalization = "sample", keep_all_gsls=F, mincoverage = 0.4, hill.number = 0)
   dir.create(file.path("./",r))
-  save(divstats,file=file.path("./",r,paste("DIPnet_stats_061015",r,".Rdata",sep="")))
-  write.stats(divstats,filename=file.path("./",r,paste("DIPnet_stats_061015_",r,".csv",sep="")),structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
+  save(divstats,file=file.path("./",r,paste("DIPnet_stats_072015",r,".Rdata",sep="")))
+  write.stats(divstats,filename=file.path("./",r,paste("DIPnet_stats_072015_",r,".csv",sep="")),structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
   
 }
 
 for(r in c("sample","ECOREGION", "PROVINCE", "REALM", "EEZ", "fn100id", "fn500id")){
   for(g in c("WC Theta","PhiST", "Jost D")){
-  diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb, gdist = g, regionalization = r, minseqs = 5, minsamps= 3, mintotalseqs= 0, num.cores = 2)
+  diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb, gdist = g, regionalization = r, minseqs = 6, minsamps= 3, mintotalseqs= 0, num.cores = 2)
   #dir.create(file.path("./",r))
   save(diffstats,file=file.path("./",r,paste("DIPnet_structure_060315_",g,"_",r,".Rdata",sep="")))
   write.stats(diffstats,filename=file.path("./",r,paste("DIPnet_structure_060315_",g,"_",r,".csv",sep="")),structure=T) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
