@@ -74,10 +74,17 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
     spseqsbin<-as.DNAbin(spseqs)
     
     #convert to genind format (adegenet and mmod) with various pieces of information accompanying it (may not be important though)
-    spseqs.genind<-as.genind.DNAbin(x = spseqsbin, pops = sp[[regionalization]])
-    spseqs.genind@pop <- factor(as.character((sp[[regionalization]]))) #convert to character then to factor
-    spseqs.genind@ploidy<-rep(1L,length.out=length(sp[,1]))  #L needed to indicate an integer
-    spseqs.genind@other <- sp[,c("decimalLatitude","decimalLongitude")] #and the lat longs, why not
+    #spseqs.genind<-as.genind.DNAbin(x = spseqsbin, pops = sp[[regionalization]])
+    #spseqs.genind@pop <- factor(as.character((sp[[regionalization]]))) #convert to character then to factor
+    #spseqs.genind@ploidy<-rep(1L,length.out=length(sp[,1]))  #L needed to indicate an integer
+    #spseqs.genind@other <- sp[,c("decimalLatitude","decimalLongitude")] #and the lat longs, why not
+    
+    #convert to gtypes format (strataG)
+    seqs<-sp$sequence
+    names(seqs)<-sp$materialSampleID
+    gseqs<-as.dna.seq(seqs)
+    gseqhaps<-label.haplotypes(gseqs,prefix="H")
+    seq.gtype<-gtypes(gen.data=data.frame(sp$materialSampleID,sp[[regionalization]],gseqhaps$haps),id.col=1,strata.col=2,locus.col=3,dna.seq=gseqhaps$hap.seqs)
     
     #convert to loci format (pegas) and a data-frame format that works for hierfstat
     spseqs.loci<-as.loci(spseqs.genind)
@@ -88,28 +95,30 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
     
     
     #Set up the pop.data data frame
-    spsummary<-summary(spseqs.genind) # the summary of the genind object does some legwork for us
+    #spsummary<-summary(seq.gtype) # the summary of the gtype object does some legwork for us
     
-    pop.data<-data.frame(popname=sort(unique(sp[[regionalization]])),sampleN=spsummary$pop.eff) 
+    pop.data<-data.frame(popname=sort(unique(sp[[regionalization]])),sampleN=as.integer(table(sp[[regionalization]])) )
     
-    populations<-levels(pop(spseqs.genind))  #Returns in same order as used to create pop.data
+    populations<-sort(unique(sp[[regionalization]]))  #Returns in same order as used to create pop.data
     
     #BASIC DIVERSITY STATS CALCULATION - Stats that can be calculated for all populations at the same time
     #create a data frame alphabetically sorted by locality to populate with popgen statistics
     #start with sampleN and Unique Haps that are already calculated in the genind object
     if(basic_diversity == T){
       cat("Calculating Basic Diversity Statistics: Haplotype diversity, Shannon-Wiener diversity, Effective Number of Haps, Local FST \n")
-      #unique haplotypes
-      pop.data$UniqHapNum<-spsummary[[4]]
-      #haplotype diversity, calculated by Hs in adegenet corrected for sample size
-      pop.data$HaploDiv<-(pop.data$sampleN/(pop.data$sampleN-1))*Hs(spseqs.genind, truenames=TRUE)   #with sample size correction
-      #Shannon-Wiener Diversity based on the modified Hs function above
-      pop.data$SWdiversity<-shannon.wiener.d(spseqs.genind, truenames=TRUE)
+
+      for (p in 1:length(populations)) {
+        singlepop<-subset(seq.gtype,strata=populations[p])
+        pop.data[p, "UniqHapNum"]<-num.alleles(singlepop) 
+        pop.data[p, "HaploDiv"]<-haplotypic.diversity(singlepop) #haplotypic diversity from StrataG package (with sample size correction)
+        #pop.data[p, "SWdiversity"]<-shannon.wiener.d(singlepop) #Shannon-Wiener Diversity based on the modified haplotypic.diversity function below
+#next-write diversity function, SW diversity, and effective haps
       #Effective number of haplotpyes
       pop.data$EffNumHaplos<-1/(1-Hs(spseqs.genind, truenames=TRUE))   #No sample size correction - based on Crow & Kimura 1964, eq 21. See also Jost 2008 eq 5
       #local Fst (Beta of Weir and Hill 2002 NOT of Foll and Gaggiotti 2006)
       betaWH<-betai_haploid(spseqs_wc)
-      pop.data$localFST<-betaWH$betaiov 
+      pop.data$localFST<-betaWH$betaiov
+      }
     }
     
     #SEQUENCE-BASED DIVERSITY STATS CALCULATION - Stats that need to be calculated one population at a time.
@@ -119,7 +128,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
       cat("Calculating Sequence-Based Diversity Statistics: Nucleotide diversity, ThetaS, Tajima's D \n")  
       
       for (p in 1:length(populations)) {
-        singlepop<-spseqsbin[(spseqs.genind@pop == populations[p] & !is.na(spseqs.genind@pop == populations[p])),]  #DNAbin object containing only the sequences from population p
+        singlepop<-spseqsbin[which(sp[[regionalization]] == p), ]  #DNAbin object containing only the sequences from population p
         #nucleotide diversity, pi (percent)  - based on Nei 1987
         pop.data[p, "NucDivSite"] <- nuc.div( singlepop, variance = FALSE, pairwise.deletion = FALSE)[1]
         pop.data[p, "NucDivSiteVAR"] <- nuc.div( singlepop, variance = TRUE, pairwise.deletion = FALSE)[2]
