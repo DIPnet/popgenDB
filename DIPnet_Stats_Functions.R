@@ -32,7 +32,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
   all.pops.table<-sapply(esu_loci, function(x) NULL) 
   
   # LOOP through all gsl combos
-  for(gsl in esu_loci){ #gsl<-"Chaetodon_auriga_CYB" 
+  for(gsl in esu_loci){ #gsl<-"Acanthaster_planciPac_CR" 
     
     cat("\n","\n","\n","Now starting", gsl, "\n")
     
