@@ -1,7 +1,7 @@
 #####Eric Crandall and Cynthia Riginos
 #####Started: March 2015
 
-genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_diversity = T, coverage_calc = F, coverage_correction = F, minseqs = 6, minsamps = 3, mintotalseqs = 0, ABGD=F,regionalization = c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ"), keep_all_gsls=F, mincoverage = 0.4, hill.number = 0){
+1genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_diversity = T, coverage_calc = F, coverage_correction = F, minseqs = 6, minsamps = 3, mintotalseqs = 0, ABGD=F,regionalization = c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ"), keep_all_gsls=F, mincoverage = 0.4, hill.number = 0){
   ###Diversity Stats Function###
   #Computes diversity stats by species and population for a flatfile of mtDNA sequences and metadata (with required field $Genus_species_locus)
   # minseqs = minimum sequences per sampled population, 
@@ -86,44 +86,45 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
     gseqhaps<-label.haplotypes(gseqs,prefix="H")
     seq.gtype<-gtypes(gen.data=data.frame(sp$materialSampleID,sp[[regionalization]],gseqhaps$haps),id.col=1,strata.col=2,locus.col=3,dna.seq=gseqhaps$hap.seqs)
     
-    #convert to loci format (pegas) and a data-frame format that works for hierfstat
-    spseqs.loci<-as.loci(spseqs.genind)
-    spseqs_wc<-as.data.frame(spseqs.loci) #convert locus format to format for hierfstat by making  
-    spseqs_wc[,1]<-as.integer(spseqs_wc[,1]) #a vector of integers for population
-    spseqs_wc[,2]<-as.numeric(as.character(spseqs_wc[,2])) #and a vector of numeric for haplotype
+    #convert to a data-frame format that works for hierfstat
+    spseqs_wc<-as.data.frame(seq.gtype$genotypes)
     spseqs_wc$dummy<-1 #OMFG! You need to have two loci for betai to work, this is a dummy matrix of 1s
+    
+    #spseqs.loci<-as.loci(spseqs.genind)
+    #spseqs_wc<-as.data.frame(spseqs.loci) #convert locus format to format for hierfstat by making  
+    #spseqs_wc[,1]<-as.integer(spseqs_wc[,1]) #a vector of integers for population
+    #spseqs_wc[,2]<-as.numeric(as.character(spseqs_wc[,2])) #and a vector of numeric for haplotype
+    #spseqs_wc$dummy<-1 #OMFG! You need to have two loci for betai to work, this is a dummy matrix of 1s
     
     
     #Set up the pop.data data frame
-    #spsummary<-summary(seq.gtype) # the summary of the gtype object does some legwork for us
-    
     pop.data<-data.frame(popname=sort(unique(sp[[regionalization]])),sampleN=as.integer(table(sp[[regionalization]])) )
     
     populations<-sort(unique(sp[[regionalization]]))  #Returns in same order as used to create pop.data
     
-    #BASIC DIVERSITY STATS CALCULATION - Stats that can be calculated for all populations at the same time
-    #create a data frame alphabetically sorted by locality to populate with popgen statistics
-    #start with sampleN and Unique Haps that are already calculated in the genind object
+    #BASIC DIVERSITY STATS CALCULATION
+    
     if(basic_diversity == T){
       cat("Calculating Basic Diversity Statistics: Haplotype diversity, Shannon-Wiener diversity, Effective Number of Haps, Local FST \n")
 
       for (p in 1:length(populations)) {
         singlepop<-subset(seq.gtype,strata=populations[p])
-        pop.data[p, "UniqHapNum"]<-num.alleles(singlepop) 
+        pop.data[p, "UniqHapNum"]<-num.alleles(singlepop)
+      #Haplotype Diversity  
         pop.data[p, "HaploDiv"]<-haplotypic.diversity(singlepop) #haplotypic diversity from StrataG package (with sample size correction)
-        #pop.data[p, "SWdiversity"]<-shannon.wiener.d(singlepop) #Shannon-Wiener Diversity based on the modified haplotypic.diversity function below
-#next-write diversity function, SW diversity, and effective haps
+      #Shannon-Wiener Diversity
+        pop.data[p, "SWdiversity"]<-shannon.wiener.diversity(singlepop$genotypes[,2]) #Shannon-Wiener Diversity based on the modified diversity function below
       #Effective number of haplotpyes
-      pop.data$EffNumHaplos<-1/(1-Hs(spseqs.genind, truenames=TRUE))   #No sample size correction - based on Crow & Kimura 1964, eq 21. See also Jost 2008 eq 5
+        pop.data[p, "EffNumHaplos"]<-1/(1-uncorrected.diversity(singlepop$genotypes[,2])) #No sample size correction - based on Crow & Kimura 1964, eq 21. See also Jost 2008 eq 5
+      }
+      
       #local Fst (Beta of Weir and Hill 2002 NOT of Foll and Gaggiotti 2006)
       betaWH<-betai_haploid(spseqs_wc)
       pop.data$localFST<-betaWH$betaiov
-      }
     }
     
-    #SEQUENCE-BASED DIVERSITY STATS CALCULATION - Stats that need to be calculated one population at a time.
-    #now loop through the populations (as delimited by the pop.names in the genind object) 
-    #to calculate additional stats that can't be done on a per-population basis as above 
+    #SEQUENCE-BASED DIVERSITY STATS CALCULATION
+    
     if(sequence_diversity == T){
       cat("Calculating Sequence-Based Diversity Statistics: Nucleotide diversity, ThetaS, Tajima's D \n")  
       
@@ -627,6 +628,26 @@ shannon.wiener.d<-function (x, truenames = TRUE)
   lres<-lapply(lX, function(X) apply((-X+0.0000000001)*log(X+0.0000000001), 1, sum))
   res <- apply(as.matrix(data.frame(lres)), 1, mean)
   return(res)
+}
+
+
+uncorrected.diversity<-function (x){ 
+#adapted from diversity() in StrataG
+  if (!(is.vector(x) | is.factor(x))) 
+    stop("'x' must be a character or numeric vector, or a factor")
+  x <- na.omit(x)
+  x.freq <- prop.table(table(x))
+  out<-1- sum(x.freq^2)
+}
+
+shannon.wiener.diversity<-function (x){ 
+  #adapted from diversity() in StrataG
+  if (!(is.vector(x) | is.factor(x))) 
+    stop("'x' must be a character or numeric vector, or a factor")
+  x <- na.omit(x)
+  x.freq <- prop.table(table(x))
+  n <- length(x)
+  out<--sum((x.freq+0.0000000001)*log(x.freq+0.0000000001))
 }
 
 #adapt the betai function from heirfstat for haploid data (add diploid=F to pop.freq() function call in this function)
