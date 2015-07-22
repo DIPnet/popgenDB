@@ -1,7 +1,7 @@
 #####Eric Crandall and Cynthia Riginos
 #####Started: March 2015
 
-1genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_diversity = T, coverage_calc = F, coverage_correction = F, minseqs = 6, minsamps = 3, mintotalseqs = 0, ABGD=F,regionalization = c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ"), keep_all_gsls=F, mincoverage = 0.4, hill.number = 0){
+genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_diversity = T, coverage_calc = F, coverage_correction = F, minseqs = 6, minsamps = 3, mintotalseqs = 0, ABGD=F,regionalization = c("sample","fn100id", "fn500id", "ECOREGION", "PROVINCE", "REALM", "EEZ"), keep_all_gsls=F, mincoverage = 0.4, hill.number = 0){
   ###Diversity Stats Function###
   #Computes diversity stats by species and population for a flatfile of mtDNA sequences and metadata (with required field $Genus_species_locus)
   # minseqs = minimum sequences per sampled population, 
@@ -32,7 +32,7 @@
   all.pops.table<-sapply(esu_loci, function(x) NULL) 
   
   # LOOP through all gsl combos
-  for(gsl in esu_loci){ #gsl<-"Acanthaster_planciPac_CR" 
+  for(gsl in esu_loci){ #gsl<-"Acanthaster_planci_CO1" 
     
     cat("\n","\n","\n","Now starting", gsl, "\n")
     
@@ -43,14 +43,6 @@
     sp<-ipdb[which(ipdb$Genus_species_locus==gsl),]
     sp$sample<-paste(sp$locality,round(sp$decimalLatitude, digits=0),round(sp$decimalLongitude, digits=0),sep="_")  #sets up a variable that matches assignsamp function outcome
     sp<-sp[order(sp$sample),]
-    
-    #this code is not currently necessary given the sp$sample field above may come in handy when we start using ecoregions etc.
-    #create a set of unique samples, as denoted by lat+long+pi, and sort it alphabetically. 
-    #This is because the genind object will return things in alphaetical order, so we want to be on the same page with it
-    #samps<-sort(unique(paste(sp$locality,sp$decimalLatitude,sp$decimalLongitude,sep="_")))
-    ##assign each individual to its population sample##
-    #sp$sample<-sapply(1:length(sp[,1]), assignsamp) 
-    #To be added: add option for rarefaction, fu's Fs and Fu and Li's D
     
     #FILTER
     cat("filtering out population samples with n <", minseqs,"and species with fewer than", minsamps,"total populations \n")
@@ -73,12 +65,6 @@
     #convert to ape DNAbin format (ape)
     spseqsbin<-as.DNAbin(spseqs)
     
-    #convert to genind format (adegenet and mmod) with various pieces of information accompanying it (may not be important though)
-    #spseqs.genind<-as.genind.DNAbin(x = spseqsbin, pops = sp[[regionalization]])
-    #spseqs.genind@pop <- factor(as.character((sp[[regionalization]]))) #convert to character then to factor
-    #spseqs.genind@ploidy<-rep(1L,length.out=length(sp[,1]))  #L needed to indicate an integer
-    #spseqs.genind@other <- sp[,c("decimalLatitude","decimalLongitude")] #and the lat longs, why not
-    
     #convert to gtypes format (strataG)
     seqs<-sp$sequence
     names(seqs)<-sp$materialSampleID
@@ -88,19 +74,12 @@
     
     #convert to a data-frame format that works for hierfstat
     spseqs_wc<-as.data.frame(seq.gtype$genotypes)
-    spseqs_wc$dummy<-1 #OMFG! You need to have two loci for betai to work, this is a dummy matrix of 1s
-    
-    #spseqs.loci<-as.loci(spseqs.genind)
-    #spseqs_wc<-as.data.frame(spseqs.loci) #convert locus format to format for hierfstat by making  
-    #spseqs_wc[,1]<-as.integer(spseqs_wc[,1]) #a vector of integers for population
-    #spseqs_wc[,2]<-as.numeric(as.character(spseqs_wc[,2])) #and a vector of numeric for haplotype
-    #spseqs_wc$dummy<-1 #OMFG! You need to have two loci for betai to work, this is a dummy matrix of 1s
-    
+    spseqs_wc$dummy<-1 #You need to have two loci for betai_haploid to work, this is a dummy matrix of 1s
     
     #Set up the pop.data data frame
     pop.data<-data.frame(popname=sort(unique(sp[[regionalization]])),sampleN=as.integer(table(sp[[regionalization]])) )
     
-    populations<-sort(unique(sp[[regionalization]]))  #Returns in same order as used to create pop.data
+    populations<-as.character(sort(unique(sp[[regionalization]])))  #Returns in same order as used to create pop.data
     
     #BASIC DIVERSITY STATS CALCULATION
     
@@ -129,7 +108,8 @@
       cat("Calculating Sequence-Based Diversity Statistics: Nucleotide diversity, ThetaS, Tajima's D \n")  
       
       for (p in 1:length(populations)) {
-        singlepop<-spseqsbin[which(sp[[regionalization]] == p), ]  #DNAbin object containing only the sequences from population p
+        pop<-populations[p]
+        singlepop<-spseqsbin[which(sp[[regionalization]] == pop), ]  #DNAbin object containing only the sequences from population p
         #nucleotide diversity, pi (percent)  - based on Nei 1987
         pop.data[p, "NucDivSite"] <- nuc.div( singlepop, variance = FALSE, pairwise.deletion = FALSE)[1]
         pop.data[p, "NucDivSiteVAR"] <- nuc.div( singlepop, variance = TRUE, pairwise.deletion = FALSE)[2]
@@ -150,8 +130,9 @@
     #list to hold frequency distribution of haplotypes for coverage adjustments
     hap_freq_dist<-list()  
     for (p in 1:length(populations)) {
-      hapfreq<-as.data.frame(table(spseqs.loci[(spseqs.genind@pop == populations[p] & !is.na(spseqs.genind@pop == populations[p])),2]))
-      hap_freq_dist[p][[1]]<-subset(hapfreq[,2], hapfreq[,2]>0)  #non zero haplotype occurances added to item p in hap_freq_dist list
+      singlepop<-subset(seq.gtype, strata = populations[p])
+      hapfreq<-table(singlepop$genotypes[,2])
+      hap_freq_dist[p][[1]]<-hapfreq
       f1<-length(which(hap_freq_dist[[p]]==1))
       f2<-length(which(hap_freq_dist[[p]]==2))
       n<-sum(hap_freq_dist[[p]])
@@ -194,22 +175,21 @@
       
       SC_standardized_res[singlehap.pops,]<-data.frame(1,"singleHaplotype",hill.number,1,0,1,1,0,1,stringsAsFactors = F)  #replace the pops with single haplotypes with appropriate values. m=1,method="singleHaplotype,q=1,SC=1)
       pop.data<-cbind(pop.data, SC_standardized_res)  
-      #TV = F
+      
       SC<-SC_standardized_res$SC
       
       ##REDUCE TO TRANSVERSIONS ONLY GSL'S CONTAINING AT LEAST ONE POP WITH STANDARDIZED COVERAGE < mincoverage ##  code from LL
       if(any((sapply(SC,max,na.rm=T) < mincoverage) == TRUE)) {
         
-        #TV = T
-        
         #Loop by population - just need to reduce haplotypes within each population
         for (p in 1:length(populations)) {
-          spseqsbin_pop<-spseqsbin[(spseqs.genind@pop == populations[p] & !is.na(spseqs.genind@pop == populations[p])),]
-          h<-haplotype(spseqsbin_pop)
+          pop<-populations[p]
+          singlepop<-spseqsbin[which(sp[[regionalization]] == pop), ]  #DNAbin object containing only the sequences from population p
+          h<-haplotype(singlepop)
           #dist.TV will give you a lower triangular matrix of transversions between every sequence in the dataset
-          dist.TV <- dist.dna(spseqsbin_pop, model = "TV") #calculate the distance among sequences in the datasets based on transversions only
+          dist.TV <- dist.dna(singlepop, model = "TV") #calculate the distance among sequences in the datasets based on transversions only
           #put all the pairwise comparisons among sequences into a dataframe
-          m <- nrow(spseqsbin_pop)  #m is the number of sequences in the dataset
+          m <- nrow(singlepop)  #m is the number of sequences in the dataset
           prs <- cbind(rep(1:m, each = m), 1:m)  #prs is all of the possible pairwise comparisons shifted into columns (as above, just different format)
           prs.comp <- prs[prs[, 1] < prs[, 2], , drop = FALSE]  #this drops the diagonal comparisons, i.e. sequence 1 with sequence 1
           #rename the elements in the column so that they are the actual names of the sequences, rather than an integer telling us their position. Append the pairwise distance among sequences based on transversions only
