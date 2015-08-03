@@ -402,7 +402,7 @@ pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei GST", "Hedrick G
     #neis dA Nei and Li 1979 - net divergence (within pop divergence removed) - StrataG package
     if(gdist=="NL dA") {
       nucdiv<-nucleotide.divergence(seq.gtype)
-      diffs<-matrix(nrow=19,ncol=19)
+      diffs<-matrix(nrow=nrow(pop.data),ncol=nrow(pop.data))
       diffs[lower.tri(diffs)]<-nucdiv$between$dA
       diffs<-as.dist(diffs)
       attr(diffs, "Labels") <- names(sampN)
