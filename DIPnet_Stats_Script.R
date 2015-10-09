@@ -39,13 +39,14 @@ ipdb<-read.table(ipdb_path,sep="\t",header=T,stringsAsFactors = F,quote="", na.s
 spatial<-read.table(spatial_path, header=T, sep="\t",stringsAsFactors = F, na.strings=c("NA"," ",""), quote="")
 
 #read in geographical regionalizations from Beger
-spatial2<-read.table(spatial2_path, header=T,sep=",", stringsAsFactors = F, na.strings=c("NA"," ",""), quote="")
+spatial2<-read.table(spatial2_path, header=T,sep="\t", stringsAsFactors = F, na.strings=c("NA"," ",""), quote="")
 
 #read in ABGD groups
 abgd<-read.table(abgd_path, header=T, sep="\t", stringsAsFactors = F)
 
 #join spatial
 ipdb<-join(ipdb,spatial, by = "IPDB_ID",type = "left")
+ipdb<-join(ipdb,spatial2[,c(2,18:24)], by = "IPDB_ID", type = "left")
 
 #join ABGD
 ipdb<-join(ipdb,abgd[,c(1,3)], by = "IPDB_ID",type = "left")
@@ -128,4 +129,15 @@ for(r in c("sample","ECOREGION", "PROVINCE", "REALM", "EEZ", "fn100id", "fn500id
   write.stats(diffstats,filename=file.path("./",r,paste("DIPnet_structure_060315_",g,"_",r,".csv",sep="")),structure=T) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
   }
 }
+
+# Loop through hypotheses, calculating AMOVA
+amova_list<-list()
+for(h in c("Lat_Zone","VeronDivis","Kulbicki_b","Kulbicki_r","Bowen","Keith","ECOREGION", "PROVINCE","REALM")){
+  ipdb_trim<-ipdb[-which(is.na(ipdb[[h]])),]
+  hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb_trim,level1 = "sample",level2=h,model="raw",nperm=1)
+  amova_list[[h]]<-hierstats
+}
+  
+  
+
 
