@@ -38,11 +38,15 @@ ipdb<-read.table(ipdb_path,sep="\t",header=T,stringsAsFactors = F,quote="", na.s
 #read in geographical regionalizations from Treml
 spatial<-read.table(spatial_path, header=T, sep="\t",stringsAsFactors = F, na.strings=c("NA"," ",""), quote="")
 
+#read in geographical regionalizations from Beger
+spatial2<-read.table(spatial2_path, header=T,sep="\t", stringsAsFactors = F, na.strings=c("NA"," ",""), quote="")
+
 #read in ABGD groups
 abgd<-read.table(abgd_path, header=T, sep="\t", stringsAsFactors = F)
 
 #join spatial
 ipdb<-join(ipdb,spatial, by = "IPDB_ID",type = "left")
+ipdb<-join(ipdb,spatial2[,c(2,18:24)], by = "IPDB_ID", type = "left")
 
 #join ABGD
 ipdb<-join(ipdb,abgd[,c(1,3)], by = "IPDB_ID",type = "left")
@@ -110,10 +114,10 @@ write.stats(diffstats,filename="DIPnet_structure_ecoregions_PhiST_070215.csv",st
 
 # Loop through all regionalizations and calculate the statistics
 for(r in c("sample","ECOREGION", "PROVINCE", "REALM", "EEZ", "fn100id", "fn500id")){
-  divstats<-genetic.diversity.mtDNA.db(ipdb=ipdb, basic_diversity = T, sequence_diversity = T, coverage_calc = T, coverage_correction = T, minseqs = 6, minsamps = 3, mintotalseqs = 0, ABGD=F,regionalization = "sample", keep_all_gsls=F, mincoverage = 0.4, hill.number = 0)
+  divstats<-genetic.diversity.mtDNA.db(ipdb=ipdb, basic_diversity = T, sequence_diversity = T, coverage_calc = T, coverage_correction = T, minseqs = 6, minsamps = 3, mintotalseqs = 0, ABGD=F,regionalization = r, keep_all_gsls=F, mincoverage = 0.4, hill.number = 0)
   dir.create(file.path("./",r))
-  save(divstats,file=file.path("./",r,paste("DIPnet_stats_072015",r,".Rdata",sep="")))
-  write.stats(divstats,filename=file.path("./",r,paste("DIPnet_stats_072015_",r,".csv",sep="")),structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
+  save(divstats,file=file.path("./",r,paste("DIPnet_stats_Hill0_072115_",r,".Rdata",sep="")))
+  write.stats(divstats,filename=file.path("./",r,paste("DIPnet_stats_Hill0_072115_",r,".csv",sep="")),structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
   
 }
 
@@ -125,4 +129,15 @@ for(r in c("sample","ECOREGION", "PROVINCE", "REALM", "EEZ", "fn100id", "fn500id
   write.stats(diffstats,filename=file.path("./",r,paste("DIPnet_structure_060315_",g,"_",r,".csv",sep="")),structure=T) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
   }
 }
+
+# Loop through hypotheses, calculating AMOVA
+amova_list<-list()
+for(h in c("Lat_Zone","VeronDivis","Kulbicki_b","Kulbicki_r","Bowen","Keith","ECOREGION", "PROVINCE","REALM")){
+  ipdb_trim<-ipdb[-which(is.na(ipdb[[h]])),]
+  hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb_trim,level1 = "sample",level2=h,model="raw",nperm=1)
+  amova_list[[h]]<-hierstats
+}
+  
+  
+
 
