@@ -38,6 +38,9 @@ ipdb<-read.table(ipdb_path,sep="\t",header=T,stringsAsFactors = F,quote="", na.s
 #read in geographical regionalizations from Treml
 spatial<-read.table(spatial_path, header=T, sep="\t",stringsAsFactors = F, na.strings=c("NA"," ",""), quote="")
 
+#read in geographical regionalizations from Beger
+spatial2<-read.table(spatial2_path, header=T,sep=",", stringsAsFactors = F, na.strings=c("NA"," ",""), quote="")
+
 #read in ABGD groups
 abgd<-read.table(abgd_path, header=T, sep="\t", stringsAsFactors = F)
 
