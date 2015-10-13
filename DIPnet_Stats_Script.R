@@ -181,6 +181,7 @@ for(h in c("Lat_Zone","VeronDivis","Kulbicki_b","Kulbicki_r","Bowen","Keith","EC
     stat.table[which(stat.table$level1_k==0),]<-NA
 
   }
+    
   
 stat.list[[h]]<-stat.table
 }
