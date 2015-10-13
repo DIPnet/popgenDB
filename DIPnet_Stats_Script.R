@@ -130,6 +130,7 @@ for(r in c("sample","ECOREGION", "PROVINCE", "REALM", "EEZ", "fn100id", "fn500id
   }
 }
 
+<<<<<<< HEAD
 #remove anything not included in the ecoregions scheme (some dolphins, some COTS from Kingman and Madagascar(?), some A. nigros from Kiribati, som C. auriga from Fakareva, hammerheads from Western Australia, and West Africa, and some dolphins from the middle of the eastern tropical pacific
 
 ipdb_ecoregions<-ipdb[-which(is.na(ipdb$ECOREGION)),]
@@ -142,10 +143,17 @@ ipdb_ip<-ipdb_ecoregions[which(ipdb_ecoregions$REALM %in% c("Central Indo-Pacifi
 amova_list<-list()
 for(h in c("Lat_Zone","VeronDivis","Kulbicki_b","Kulbicki_r","Bowen","Keith","ECOREGION", "PROVINCE","REALM")){
   ipdb_trim<-ipdb_ip[-which(is.na(ipdb[[h]])),] # remove anything that has an NA for this hypothesis
+=======
+# Loop through hypotheses, calculating AMOVA
+amova_list<-list()
+for(h in c("Lat_Zone","VeronDivis","Kulbicki_b","Kulbicki_r","Bowen","Keith","ECOREGION", "PROVINCE","REALM")){
+  ipdb_trim<-ipdb[-which(is.na(ipdb[[h]])),]
+>>>>>>> 12b8318d92297cf9067d912c285d881c45fb5741
   hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb_trim,level1 = "sample",level2=h,model="raw",nperm=1)
   amova_list[[h]]<-hierstats
 }
   
+<<<<<<< HEAD
 
 #Summarize AMOVA results
 stat.list<-list()
@@ -188,4 +196,8 @@ FCT<-melted[which(melted$variable=="FCT"),]
 plot<-ggplot(data=FCT, aes(x=L1,y=value))
 plot<-plot + geom_boxplot() + ylim(c(-0.1,1))
   
+=======
+  
+
+>>>>>>> 12b8318d92297cf9067d912c285d881c45fb5741
 
