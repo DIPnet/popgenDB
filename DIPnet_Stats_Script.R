@@ -38,11 +38,15 @@ ipdb<-read.table(ipdb_path,sep="\t",header=T,stringsAsFactors = F,quote="", na.s
 #read in geographical regionalizations from Treml
 spatial<-read.table(spatial_path, header=T, sep="\t",stringsAsFactors = F, na.strings=c("NA"," ",""), quote="")
 
+#read in geographical regionalizations from Beger
+spatial2<-read.table(spatial2_path, header=T,sep="\t", stringsAsFactors = F, na.strings=c("NA"," ",""), quote="")
+
 #read in ABGD groups
 abgd<-read.table(abgd_path, header=T, sep="\t", stringsAsFactors = F)
 
 #join spatial
 ipdb<-join(ipdb,spatial, by = "IPDB_ID",type = "left")
+ipdb<-join(ipdb,spatial2[,c(2,18:24)], by = "IPDB_ID", type = "left")
 
 #join ABGD
 ipdb<-join(ipdb,abgd[,c(1,3)], by = "IPDB_ID",type = "left")
@@ -110,10 +114,10 @@ write.stats(diffstats,filename="DIPnet_structure_ecoregions_PhiST_070215.csv",st
 
 # Loop through all regionalizations and calculate the statistics
 for(r in c("sample","ECOREGION", "PROVINCE", "REALM", "EEZ", "fn100id", "fn500id")){
-  divstats<-genetic.diversity.mtDNA.db(ipdb=ipdb, basic_diversity = T, sequence_diversity = T, coverage_calc = T, coverage_correction = T, minseqs = 6, minsamps = 3, mintotalseqs = 0, ABGD=F,regionalization = "sample", keep_all_gsls=F, mincoverage = 0.4, hill.number = 0)
+  divstats<-genetic.diversity.mtDNA.db(ipdb=ipdb, basic_diversity = T, sequence_diversity = T, coverage_calc = T, coverage_correction = T, minseqs = 6, minsamps = 3, mintotalseqs = 0, ABGD=F,regionalization = r, keep_all_gsls=F, mincoverage = 0.4, hill.number = 0)
   dir.create(file.path("./",r))
-  save(divstats,file=file.path("./",r,paste("DIPnet_stats_072015",r,".Rdata",sep="")))
-  write.stats(divstats,filename=file.path("./",r,paste("DIPnet_stats_072015_",r,".csv",sep="")),structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
+  save(divstats,file=file.path("./",r,paste("DIPnet_stats_Hill0_072115_",r,".Rdata",sep="")))
+  write.stats(divstats,filename=file.path("./",r,paste("DIPnet_stats_Hill0_072115_",r,".csv",sep="")),structure=F) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
   
 }
 
@@ -125,4 +129,63 @@ for(r in c("sample","ECOREGION", "PROVINCE", "REALM", "EEZ", "fn100id", "fn500id
   write.stats(diffstats,filename=file.path("./",r,paste("DIPnet_structure_060315_",g,"_",r,".csv",sep="")),structure=T) # for an excel-readable csv. Ignore warnings. Note this function will not overwrite, it will append to existing files
   }
 }
+
+#remove anything not included in the ecoregions scheme (some dolphins, some COTS from Kingman and Madagascar(?), some A. nigros from Kiribati, som C. auriga from Fakareva, hammerheads from Western Australia, and West Africa, and some dolphins from the middle of the eastern tropical pacific
+
+ipdb_ecoregions<-ipdb[-which(is.na(ipdb$ECOREGION)),]
+
+#remove anything that doesn't occur in the 3 Indo-Pacific realms
+ipdb_ip<-ipdb_ecoregions[which(ipdb_ecoregions$REALM %in% c("Central Indo-Pacific","Western Indo-Pacific","Eastern Indo-Pacific")),]
+
+
+# Loop through hypotheses, calculating AMOVA
+amova_list<-list()
+for(h in c("Lat_Zone","VeronDivis","Kulbicki_b","Kulbicki_r","Bowen","Keith","ECOREGION", "PROVINCE","REALM")){
+  ipdb_trim<-ipdb_ip[-which(is.na(ipdb[[h]])),] # remove anything that has an NA for this hypothesis
+  hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb_trim,level1 = "sample",level2=h,model="raw",nperm=1)
+  amova_list[[h]]<-hierstats
+}
+  
+
+#Summarize AMOVA results
+stat.list<-list()
+for(h in c("Lat_Zone","VeronDivis","Kulbicki_b","Kulbicki_r","Bowen","Keith","ECOREGION", "PROVINCE","REALM")){
+
+  #Create an empty table the length of all the gsls in the dataset
+    stat.table<-data.frame(row.names=names(amova_list[[h]]),level1_k=integer(length(names(amova_list[[h]]))),level2_k=integer(length(names(amova_list[[h]]))),FCT=numeric(length(names(amova_list[[h]]))),FSC=numeric(length(names(amova_list[[h]]))),FST=numeric(length(names(amova_list[[h]]))))
+  
+  for(gsl in names(amova_list[[1]])){
+    # loop through all the gsls pulling out various stats from each one into a data table
+    
+    amova<-amova_list[[h]][[gsl]]
+  
+    #some tests to skip over non-existant of single level AMOVAs that don't have FCT  
+    if(is.null(amova)){next} # skip to the next gsl if this one has null results
+    if(grepl(pattern="fewer",x = amova[1],ignore.case = T)){next} # skip to the next gsl if this one has no results
+    if(length(amova$level2_names)<=1){next} # skip to the next gsl if level 2 of the AMOVA has 0 or 1 levels
+ 
+    #pull out the stats 
+    level1_k<-length(amova$level1_names) 
+    level2_k<-length(amova$level2_names)
+    FCT<-amova$FCT
+    FSC<-amova$FSC
+    FST<-amova$FST
+    
+    #tie it all up - place it in the appropriate line of the data frame
+    stats<-c(level1_k,level2_k,FCT,FSC,FST)
+    stat.table[gsl,]<-stats
+    
+    #all skipped gsls replaced with NA
+    stat.table[which(stat.table$level1_k==0),]<-NA
+
+  }
+  
+stat.list[[h]]<-stat.table
+}
+melted<-melt(stat.list)
+FCT<-melted[which(melted$variable=="FCT"),]
+
+plot<-ggplot(data=FCT, aes(x=L1,y=value))
+plot<-plot + geom_boxplot() + ylim(c(-0.1,1))
+  
 

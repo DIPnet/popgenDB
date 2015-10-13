@@ -486,8 +486,8 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
     sampN<-table(sp[[l1]])
     lowsamps<-names(sampN[sampN < minseqs])
     if(length(lowsamps)>0){sp<-sp[-which(sp[[l1]] %in% lowsamps),]}
-    if(length(sampN) - length(lowsamps) < minsamps){all.pops.table[[gsl]]<-paste("Fewer than", minsamps, "sampled populations after filtering. No stats calculated")
-                                                    paste("Fewer than", minsamps, "sampled populations after filtering. No stats calculated")
+    if(length(sampN) - length(lowsamps) < minsamps){all.pops.table[[gsl]]<-paste("fewer than", minsamps, "sampled populations after filtering. No stats calculated")
+                                                    cat("Fewer than", minsamps, "sampled populations after filtering. No stats calculated")
                                                     next}
     if(length(sp[,1])<mintotalseqs){all.pops.table[[gsl]]<-paste("fewer than",mintotalseqs,"samples left after filtering. No stats calculated")
                                     cat("fewer than",mintotalseqs,"samples left after filtering. No stats calculated")
