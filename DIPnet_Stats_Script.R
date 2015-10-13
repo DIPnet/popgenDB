@@ -84,7 +84,7 @@ divstats<-genetic.diversity.mtDNA.db(ipdb=ipdb, basic_diversity = T, sequence_di
 # nreps = number of resampling permutations for WC Theta, PhiST, Chi2, and NL dA (strataG package). This is working, but you will not currently see p-values in the output, so not much use for now
 # num.cores = number of computer cores to devote to computations for WC Theta, PhiST, Chi2, and NL dA (strataG package)
 # To be added: option to output square matrices with p-values.
-diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb, gdist = "PhiST", minseqs = 5, minsamps = 3, mintotalseqs = 0, nrep = 0, num.cores = 1, ABGD = F, regionalization = "sample")
+diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb, gdist = "PhiST", minseqs = 5, minsamps = 3, mintotalseqs = 0, nrep = 0, num.cores = 1, ABGD = F, regionalization = "ECOREGION")
 
 
 ###Hierarchical Genetic Structure Function###
@@ -105,8 +105,8 @@ write.stats(divstats,filename="DIPnet_stats_samples_060815.csv",structure=F) # f
 #write.stats(divstats,"DIPnet_stats_ecoregions_032415.csv",structure=F)
 
 #Save differentiation stats to files
-save(diffstats,file="DIPnet_structure_ecoregions_PhiST_070215.Rdata") # for an R object
-write.stats(diffstats,filename="DIPnet_structure_ecoregions_PhiST_070215.csv",structure=T) # for an excel-readable csv. Ignore warnings. structure=T for triangular matrices. Note this function will not overwrite, it will append to existing files
+save(diffstats,file="DIPnet_structure_ecoregions_PhiST_072215.Rdata") # for an R object
+write.stats(diffstats,filename="DIPnet_structure_ecoregions_PhiST_072215.csv",structure=T) # for an excel-readable csv. Ignore warnings. structure=T for triangular matrices. Note this function will not overwrite, it will append to existing files
 
 
 
