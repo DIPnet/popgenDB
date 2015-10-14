@@ -8,6 +8,8 @@ ipdb_path<-"~/github/IPDB/ipdb.txt"
 
 spatial_path<-"~/github/IPDB/ipdb_spatial.txt"
 
+spatial2_path<-"~/github/IPDB/ipdb_HypothesisRegionAssigned.txt"
+
 abgd_path<-"~/github/IPDB/ABGD_group_assignment_JCdistance_defaults.txt"
 
 working_directory<-"~/github/popgenDB/output"

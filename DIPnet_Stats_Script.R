@@ -25,10 +25,6 @@ source("../config.R")
 # source("DIPnet_Stats_Functions.R")
 # source("config.R")
 
-setwd(working_directory)
-
-
-
 ##READING IN THE DATA. ##
 #need to turn off the quoting with quote="" for it to read correctly. 
 
@@ -129,6 +125,8 @@ for(r in c("sample","ECOREGION", "PROVINCE", "REALM", "EEZ", "fn100id", "fn500id
 }
 
 
+#AMOVA Loops
+
 #remove anything not included in the ecoregions scheme (some dolphins, some COTS from Kingman and Madagascar(?), some A. nigros from Kiribati, som C. auriga from Fakareva, hammerheads from Western Australia, and West Africa, and some dolphins from the middle of the eastern tropical pacific
 
 ipdb_ecoregions<-ipdb[-which(is.na(ipdb$ECOREGION)),]
@@ -138,25 +136,35 @@ ipdb_ip<-ipdb_ecoregions[which(ipdb_ecoregions$REALM %in% c("Central Indo-Pacifi
 
 
 # Loop through hypotheses, calculating AMOVA
-hypotheses<-c("Lat_Zone","ECOREGION", "PROVINCE","REALM","Bowen","Keith","Kulbicki_r","Kulbicki_b", "VeronDivis")
+hypotheses<-c("ECOREGION", "PROVINCE","REALM","Bowen","Keith","Kulbicki_r","Kulbicki_b", "VeronDivis")
 amova_list<-list()
 
 for(h in hypotheses){
-  ipdb_trim<-ipdb[-which(is.na(ipdb[[h]])),]
-
-  hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb_trim,level1 = "sample",level2=h,model="raw",nperm=1)
+  hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb_ip,level1 = "sample",level2=h,model="none",nperm=1)
   amova_list[[h]]<-hierstats
 }
   
 
 #Summarize AMOVA results
-stat.list<-summarize_AMOVA(amova_list,"My_Hypothesis")
+amovastats<-summarize_AMOVA(amova_list,hypotheses,specieslist=unique(ipdb$Genus_species_locus))
 
 
+#write them to a spreadsheet
+library(xlsx)
+for(sheet in names(amovastats)){
+  write.xlsx(x=amovastats[[sheet]], file="FST_AMOVA.xlsx",sheetName=sheet,append=T)
+}
+
+save(amova_list,file="FST_raw_amova_output.R")
+save(amovastats,file="FST_table_amova_output.R")
+##Plotting
 
 #melt the list and pull out the FCT values
-melted<-melt(stat.list)
+library(reshape2)
+melted<-melt(amovastats)
 FCT<-melted[which(melted$variable=="FCT"),]
+FSC<-melted[which(melted$variable=="FSC"),]
+FST<-melted[which(melted$variable=="FST"),]
 
 # Calculate the number of regions in each hypothesis
 hyp_ip<-ipdb_ip[,names(ipdb_ip) %in% hypotheses]
@@ -169,9 +177,6 @@ plot<-ggplot(data=FCT, aes(x=factor(L1,hypotheses),y=value))
 plot<-plot + geom_boxplot(notch=T) + ylim(c(-0.1,1))+
   labs(x="Hypothesis", y=expression('F'[CT]), title="Regional Indo-Pacific Structure explained by Biogeographic Hypotheses") +
   scale_x_discrete(label=paste(names(k),"\nk = ",k))
-
-
-
 
 
 #get the means

@@ -416,7 +416,7 @@ return(all.pops.table)
 
 
 
-hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, level3=NULL, minseqs = 6, minsamps = 3, mintotalseqs = 0, ABGD = F, nperm=10, model="N",hypothesis_name = "My_Hypothesis"){
+hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, level3=NULL, minseqs = 6, minsamps = 3, mintotalseqs = 0, ABGD = F, nperm=10, model="N"){
   #add the ability to filter based on sample size at levels 2 and 3?
   
   ###Hierarchical Genetic Structure Function###
@@ -584,8 +584,8 @@ hierarchical.structure.mtDNA.db<-function(ipdb=ipdb, level1=NULL, level2=NULL, l
   
     
   }
-  all.pops.table2[[hypothesis_name]]<-all.pops.table
-  return(all.pops.table2)
+  
+  return(all.pops.table)
 }
 
 
@@ -702,44 +702,57 @@ write.stats<-function(x=divstats,filename=NULL,structure=F){
 # another function that uses sink()?
 
 
-# a function to summarize stats from a list of AMOVAs performed on multiple species with multiple hypotheses. Supply the hypothesis names in a vector as they were given to hierarchical.structure.mtdna.db()
+# a function to summarize stats from a list of AMOVAs performed on multiple species with multiple hypotheses. Supply the hypothesis names in a vector as they were given to hierarchical.structure.mtdna.db(). If keep = F, then it will remove gsls for which a hypothesis did not calculate FCT (single level and gsls without enough data)
 
-summarize_AMOVA<-function(amova_list=amova_list,hypotheses="My_Hypothesis") {
+summarize_AMOVA<-function(amova_list=amova_list,hypotheses="My_Hypothesis", keep=F, specieslist=NULL) {
   stat.list<-list()
   for(h in hypotheses){
     
     #Create an empty table the length of all the gsls in the dataset
-    stat.table<-data.frame(row.names=names(amova_list[[h]]),level1_k=integer(length(names(amova_list[[h]]))),level2_k=integer(length(names(amova_list[[h]]))),FCT=numeric(length(names(amova_list[[h]]))),FSC=numeric(length(names(amova_list[[h]]))),FST=numeric(length(names(amova_list[[h]]))))
+    len<-length(names(amova_list[[h]]))
+    stat.table<-data.frame(row.names=names(amova_list[[h]]),level1_k=integer(len),level2_k=integer(len),FCT=numeric(len),FSC=numeric(len),FST=numeric(len),level2_SSD=numeric(len),level1_SSD=numeric(len),error_SSD=numeric(len),total_SSD=numeric(len),level2_MSD=numeric(len),level1_MSD=numeric(len),error_MSD=numeric(len),total_MSD=numeric(len),level2_df=numeric(len),level1_df=numeric(len),error_df=numeric(len),total_df=numeric(len),level2_sigma2=numeric(len),level1_sigma2=numeric(len),error_sigma2=numeric(len),p_level2=numeric(len),p_level1=numeric(len))
     
-    for(gsl in names(amova_list[[1]])){
+
+    
+    for(gsl in specieslist){ #fix this later!
       # loop through all the gsls pulling out various stats from each one into a data table
       
       amova<-amova_list[[h]][[gsl]]
       
-      #some tests to skip over non-existant of single level AMOVAs that don't have FCT  
+      #some tests to skip over non-existant or single level AMOVAs that don't have FCT  
       if(is.null(amova)){next} # skip to the next gsl if this one has null results
       if(grepl(pattern="fewer",x = amova[1],ignore.case = T)){next} # skip to the next gsl if this one has no results
       if(length(amova$level2_names)<=1){next} # skip to the next gsl if level 2 of the AMOVA has 0 or 1 levels
       
       #pull out the stats 
+      
       level1_k<-length(amova$level1_names) 
       level2_k<-length(amova$level2_names)
       FCT<-amova$FCT
       FSC<-amova$FSC
       FST<-amova$FST
+      structure<-c(level1_k,level2_k,FCT,FSC,FST)
+      names(structure)<-c("level1_k","level2_k","FCT","FSC","FST")
+      amova_table<-unlist(amova$raw_amova_output$tab)
+      names(amova_table)<-c("level2_SSD","level1_SSD","error_SSD","total_SSD","level2_MSD","level1_MSD","error_MSD","total_MSD","level2_df","level1_df","error_df","total_df")
+      var_comp<-unlist(amova$raw_amova_output$varcomp)
+      names(var_comp)<-c("level2_sigma2","level1_sigma2","error_sigma2","p_level2","p_level1","p_value3")
+      
       
       #tie it all up - place it in the appropriate line of the data frame
-      stats<-c(level1_k,level2_k,FCT,FSC,FST)
+      stats<-c(level1_k,level2_k,FCT,FSC,FST,amova_table,var_comp[1:5])
       stat.table[gsl,]<-stats
       
       #all skipped gsls replaced with NA
       stat.table[which(stat.table$level1_k==0),]<-NA
+      #and they are removed if keep=F
+      if(keep==F){stat.table<-stat.table[which(complete.cases(stat.table)),]}
       
     }
     
-    
     stat.list[[h]]<-stat.table
   }
+  
   return(stat.list)
 }
 
