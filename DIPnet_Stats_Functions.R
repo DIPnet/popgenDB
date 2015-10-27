@@ -702,15 +702,15 @@ write.stats<-function(x=divstats,filename=NULL,structure=F){
 # another function that uses sink()?
 
 
-# a function to summarize stats from a list of AMOVAs performed on multiple species with multiple hypotheses. Supply the hypothesis names in a vector as they were given to hierarchical.structure.mtdna.db(). If keep = F, then it will remove gsls for which a hypothesis did not calculate FCT (single level and gsls without enough data)
+# a function to summarize stats from a list of AMOVAs performed on multiple species with multiple hypotheses. Supply the hypothesis names in a vector as they were given to hierarchical.structure.mtdna.db(). If keep_all = F, then it will remove gsls for which a hypothesis did not calculate FCT (single level and gsls without enough data)
 
-summarize_AMOVA<-function(amova_list=amova_list,hypotheses="My_Hypothesis", keep=F, specieslist=NULL) {
+summarize_AMOVA<-function(amova_list=amova_list,hypotheses="My_Hypothesis", keep_all=F, specieslist=NULL) {
   stat.list<-list()
   for(h in hypotheses){
     
     #Create an empty table the length of all the gsls in the dataset
     len<-length(names(amova_list[[h]]))
-    stat.table<-data.frame(row.names=names(amova_list[[h]]),level1_k=integer(len),level2_k=integer(len),FCT=numeric(len),FSC=numeric(len),FST=numeric(len),level2_SSD=numeric(len),level1_SSD=numeric(len),error_SSD=numeric(len),total_SSD=numeric(len),level2_MSD=numeric(len),level1_MSD=numeric(len),error_MSD=numeric(len),total_MSD=numeric(len),level2_df=numeric(len),level1_df=numeric(len),error_df=numeric(len),total_df=numeric(len),level2_sigma2=numeric(len),level1_sigma2=numeric(len),error_sigma2=numeric(len),p_level2=numeric(len),p_level1=numeric(len))
+    stat.table<-data.frame(row.names=names(amova_list[[h]]),level1_k=integer(len),level2_k=integer(len),FCT=numeric(len),FSC=numeric(len),FST=numeric(len),level2_SSD=numeric(len),level1_SSD=numeric(len),error_SSD=numeric(len),total_SSD=numeric(len),level2_MSD=numeric(len),level1_MSD=numeric(len),error_MSD=numeric(len),total_MSD=numeric(len),level2_df=numeric(len),level1_df=numeric(len),error_df=numeric(len),total_df=numeric(len),level2_sigma2=numeric(len),level1_sigma2=numeric(len),error_sigma2=numeric(len),p_level2=numeric(len),p_level1=numeric(len), BIC=numeric(len))
     
 
     
@@ -737,16 +737,18 @@ summarize_AMOVA<-function(amova_list=amova_list,hypotheses="My_Hypothesis", keep
       names(amova_table)<-c("level2_SSD","level1_SSD","error_SSD","total_SSD","level2_MSD","level1_MSD","error_MSD","total_MSD","level2_df","level1_df","error_df","total_df")
       var_comp<-unlist(amova$raw_amova_output$varcomp)
       names(var_comp)<-c("level2_sigma2","level1_sigma2","error_sigma2","p_level2","p_level1","p_value3")
+      BIC<-level1_k * log(amova_table["level2_SSD"]+amova_table["error_SSD"]) + level2_k*log(level1_k)
       
+      # TO ADD - use merge to create stats instead of c so that multiple levels can be summarized
       
       #tie it all up - place it in the appropriate line of the data frame
-      stats<-c(level1_k,level2_k,FCT,FSC,FST,amova_table,var_comp[1:5])
+      stats<-c(level1_k,level2_k,FCT,FSC,FST,amova_table,var_comp[1:5], BIC)
       stat.table[gsl,]<-stats
       
       #all skipped gsls replaced with NA
       stat.table[which(stat.table$level1_k==0),]<-NA
-      #and they are removed if keep=F
-      if(keep==F){stat.table<-stat.table[which(complete.cases(stat.table)),]}
+      #and they are removed if keep_all=F
+      if(keep_all==F){stat.table<-stat.table[which(complete.cases(stat.table)),]}
       
     }
     
@@ -755,4 +757,9 @@ summarize_AMOVA<-function(amova_list=amova_list,hypotheses="My_Hypothesis", keep
   
   return(stat.list)
 }
+
+
+
+
+
 

@@ -184,3 +184,38 @@ by(data=FCT$value,INDICES =as.factor(FCT$L1),FUN=mean, na.rm=T)
 
 
 
+# Make pivot tables of each regionalization
+
+  ipdb_e<-dcast(ipdb_ip, Genus_species_locus ~ VeronDivis, fun.aggregate=length)
+  write.xlsx(x=ipdb_e, file="Regionalizations.xlsx",sheetName="VeronDivis",append=T)
+
+
+# Measure support for each hypothesis:
+  # get the values for each hypothesis for a given criterion from amovastats
+  criterion<-"BIC"
+  maxlength<-max(sapply(amovastats,function(x) length(x[[1]])))
+  crit_df<-data.frame(setNames(replicate(maxlength,numeric(0), simplify = F),nm=row.names(amovastats[["PROVINCE"]]))) # create an empty data frame with row names from the hypothesis with the most values
+  for(h in names(amovastats)){
+    crit_df<-merge(crit_df,t(amovastats[[h]][criterion]),all=T,sort=F)
+  }
+  row.names(crit_df)<-names(amovastats)
+  
+  crit_rank<-as.data.frame(sapply(crit_df,rank,na.last="keep",ties.method="average"))
+  row.names(crit_rank)<-names(amovastats)
+  
+  #take a look by hypothesis if you want
+  #tcrit_rank<-as.data.frame(t(crit_rank))
+  #tcrit_rank[which(tcrit_rank>0),]
+  
+  
+
+  # remove gsls with more than 3 missing models
+  crit_rank<-crit_rank[, colSums(is.na(crit_rank)) < nrow(crit_rank)-5]
+ 
+  plot<-ggplot(data=as.data.frame(unlist(bestmodel)), aes(x=unlist(bestmodel),y=(..count..)/sum(..count..) ))
+  plot<-plot+geom_histogram()
+  
+  
+  bestmodel<-sapply(crit_rank,function(x) which(x==min(x,na.rm = T)))
+  hist(unlist(bestmodel),freq=F)
+  
