@@ -127,15 +127,15 @@ for(r in c("sample","ECOREGION", "PROVINCE", "REALM", "EEZ", "fn100id", "fn500id
 
 #AMOVA Loops
 
-#remove anything not included in the ecoregions scheme (some dolphins, some COTS from Kingman and Madagascar(?), some A. nigros from Kiribati, som C. auriga from Fakareva, hammerheads from Western Australia, and West Africa, and some dolphins from the middle of the eastern tropical pacific
+## remove anything not included in the ecoregions scheme (some dolphins, some COTS from Kingman and Madagascar(?), some A. nigros from Kiribati, som C. auriga from Fakareva, hammerheads from Western Australia, and West Africa, and some dolphins from the middle of the eastern tropical pacific
 
 ipdb_ecoregions<-ipdb[-which(is.na(ipdb$ECOREGION)),]
 
-#remove anything that doesn't occur in the 3 Indo-Pacific realms
+## remove anything that doesn't occur in the 3 Indo-Pacific realms
 ipdb_ip<-ipdb_ecoregions[which(ipdb_ecoregions$REALM %in% c("Central Indo-Pacific","Western Indo-Pacific","Eastern Indo-Pacific")),]
 
 
-# Loop through hypotheses, calculating AMOVA
+## Loop through hypotheses, calculating AMOVA
 hypotheses<-c("ECOREGION", "PROVINCE","REALM","Bowen","Keith","Kulbicki_r","Kulbicki_b", "VeronDivis")
 amova_list<-list()
 
@@ -145,11 +145,11 @@ for(h in hypotheses){
 }
   
 
-#Summarize AMOVA results
+## Summarize AMOVA results
 amovastats<-summarize_AMOVA(amova_list,hypotheses,specieslist=unique(ipdb$Genus_species_locus))
 
 
-#write them to a spreadsheet
+## write them to a spreadsheet
 library(xlsx)
 for(sheet in names(amovastats)){
   write.xlsx(x=amovastats[[sheet]], file="FST_AMOVA.xlsx",sheetName=sheet,append=T)
@@ -157,21 +157,26 @@ for(sheet in names(amovastats)){
 
 save(amova_list,file="FST_raw_amova_output.R")
 save(amovastats,file="FST_table_amova_output.R")
-##Plotting
 
-#melt the list and pull out the FCT values
+
+
+
+
+#Plotting mean FCTs
+
+## melt the list and pull out the FCT values
 library(reshape2)
 melted<-melt(amovastats)
 FCT<-melted[which(melted$variable=="FCT"),]
 FSC<-melted[which(melted$variable=="FSC"),]
 FST<-melted[which(melted$variable=="FST"),]
 
-# Calculate the number of regions in each hypothesis
+## Calculate the number of regions in each hypothesis
 hyp_ip<-ipdb_ip[,names(ipdb_ip) %in% hypotheses]
 k<-sapply(X=hyp_ip,FUN= function(x) length(unique(x))) 
 k<-k[order(match(names(k),hypotheses))] # reorder this vector to match the order in the hypotheses vector 
 
-#plot in ggplot2
+## plot in ggplot2
 library(ggplot2)
 plot<-ggplot(data=FCT, aes(x=factor(L1,hypotheses),y=value))
 plot<-plot + geom_boxplot(notch=T) + ylim(c(-0.1,1))+
@@ -179,7 +184,7 @@ plot<-plot + geom_boxplot(notch=T) + ylim(c(-0.1,1))+
   scale_x_discrete(label=paste(names(k),"\nk = ",k))
 
 
-#get the means
+## get the means
 by(data=FCT$value,INDICES =as.factor(FCT$L1),FUN=mean, na.rm=T)
 
 
@@ -190,8 +195,10 @@ by(data=FCT$value,INDICES =as.factor(FCT$L1),FUN=mean, na.rm=T)
   write.xlsx(x=ipdb_e, file="Regionalizations.xlsx",sheetName="VeronDivis",append=T)
 
 
+  
+  
 # Measure support for each hypothesis:
-  # get the values for each hypothesis for a given criterion from amovastats
+## get the values for each hypothesis for a given criterion from amovastats
   criterion<-"BIC"
   maxlength<-max(sapply(amovastats,function(x) length(x[[1]])))
   crit_df<-data.frame(setNames(replicate(maxlength,numeric(0), simplify = F),nm=row.names(amovastats[["PROVINCE"]]))) # create an empty data frame with row names from the hypothesis with the most values
@@ -203,19 +210,20 @@ by(data=FCT$value,INDICES =as.factor(FCT$L1),FUN=mean, na.rm=T)
   crit_rank<-as.data.frame(sapply(crit_df,rank,na.last="keep",ties.method="average"))
   row.names(crit_rank)<-names(amovastats)
   
-  #take a look by hypothesis if you want
+## remove gsls with more than 3 missing models
+  crit_rank<-crit_rank[, colSums(is.na(crit_rank)) < nrow(crit_rank)-5]  
+
+## choose the best hypothesis or set of hypotheses for each species  
+  best_hypothesis<-sapply(crit_rank,function(x){row.names(crit_rank)[which(x==min(x,na.rm=T)) ]})
+ 
+   #take a look by hypothesis if you want
   #tcrit_rank<-as.data.frame(t(crit_rank))
   #tcrit_rank[which(tcrit_rank>0),]
   
-  
+  best_hypothesis_m<-melt(best_hypothesis)
+  acast(best_hypothesis_m, L1~value, value.var="value")
 
-  # remove gsls with more than 3 missing models
-  crit_rank<-crit_rank[, colSums(is.na(crit_rank)) < nrow(crit_rank)-5]
  
-  plot<-ggplot(data=as.data.frame(unlist(bestmodel)), aes(x=unlist(bestmodel),y=(..count..)/sum(..count..) ))
-  plot<-plot+geom_histogram()
-  
-  
-  bestmodel<-sapply(crit_rank,function(x) which(x==min(x,na.rm = T)))
-  hist(unlist(bestmodel),freq=F)
+  plot<-ggplot(data=as.data.frame(unlist(best_hypothesis)), aes(x=unlist(best_hypothesis),y=(..count..)/sum(..count..) ))
+  plot<-plot+geom_histogram() + labs(x="Hypothesis",y="Proportion of Species", title="Proportional Support for Biogeographic Hypotheses based on BIC")
   
