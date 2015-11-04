@@ -1,0 +1,124 @@
+---
+title: "Playing with AMOVA results"
+author: "Eric D. Crandall"
+date: "November 4, 2015"
+output: html_document
+---
+# Load the AMOVA results
+And the trimmed database (IP data only)
+```{r}
+load("~/github/popgenDB/output/FST_table_amova_output.R")
+load("~/github/popgenDB/output/ipdb_ip.R")
+hypotheses<-c("ECOREGION", "PROVINCE","REALM","Bowen","Keith","Kulbicki_r","Kulbicki_b", "VeronDivis")
+
+```
+
+# Plot Mean FCTs
+
+```{r}
+# melt the list and pull out the FCT values
+library(reshape2)
+melted<-melt(amovastats)
+FCT<-melted[which(melted$variable=="FCT"),]
+FSC<-melted[which(melted$variable=="FSC"),]
+FST<-melted[which(melted$variable=="FST"),]
+
+# Calculate the number of regions in each hypothesis
+hyp_ip<-ipdb_ip[,names(ipdb_ip) %in% hypotheses]
+k<-sapply(X=hyp_ip,FUN= function(x) length(unique(x))) 
+k<-k[order(match(names(k),hypotheses))] # reorder this vector to match the order in the hypotheses vector
+k
+
+## get the means
+by(data=FCT$value,INDICES =as.factor(FCT$L1),FUN=mean, na.rm=T)
+```
+
+## Plot them in ggplot2
+
+```{r}
+library(ggplot2)
+plot<-ggplot(data=FCT, aes(x=factor(L1,hypotheses),y=value))
+plot<-plot + geom_boxplot(notch=T) + ylim(c(-0.1,1))+
+  labs(x="Hypothesis", y=expression('F'[CT]), title="Regional Indo-Pacific Structure explained by Biogeographic Hypotheses") +
+  scale_x_discrete(label=paste(names(k),"\nk = ",k))
+plot
+```
+
+# Make pivot tables of each regionalization
+
+```{r, eval=F}
+ipdb_e<-dcast(ipdb_ip, Genus_species_locus ~ VeronDivis, fun.aggregate=length)
+write.xlsx(x=ipdb_e, file="Regionalizations.xlsx",sheetName="VeronDivis",append=T)
+```
+
+# Measure support for each hypothesis
+
+Get the values for each hypothesis for a given criterion - here I use BIC - and rank them for each species, then choose the "best" hypothesis for each species based on the criterion.
+```{r}
+criterion<-"BIC"
+# find the maximum number of species from any of the 8 hypotheses
+maxlength<-max(sapply(amovastats,function(x) length(x[[1]]))) 
+# create an empty data frame with row names from the hypothesis with the most values
+crit_df<-data.frame(setNames(replicate(maxlength,numeric(0), simplify = F),nm=row.names(amovastats[["PROVINCE"]]))) 
+
+#Loop through the hypotheses, pulling out the values for criterion,transpose it, and then merge these values into the dataframe from the previous hypothesis 
+for(h in names(amovastats)){
+  crit_df<-merge(crit_df,t(amovastats[[h]][criterion]),all=T,sort=F)
+}
+#get the hypothesis names in there
+row.names(crit_df)<-names(amovastats)
+
+#rank the hypotheses for each species
+crit_rank<-as.data.frame(sapply(crit_df,rank,na.last="keep",ties.method="average"))
+row.names(crit_rank)<-names(amovastats)
+
+## remove gsls with more than 3 missing models
+crit_rank<-crit_rank[, colSums(is.na(crit_rank)) < nrow(crit_rank)-5]  
+
+## choose the best hypothesis or set of hypotheses for each species  
+best_hypothesis<-sapply(crit_rank,function(x){row.names(crit_rank)[which(x==min(x,na.rm=T)) ]})
+```
+
+## Make a bar graph of best support for each hypothesis among species
+```{r}
+barplot<-ggplot(data=as.data.frame(unlist(best_hypothesis)), aes(x=unlist(best_hypothesis),y=(..count..)/sum(..count..) ))
+barplot<-barplot+geom_histogram() + labs(x="Hypothesis",y="Proportion of Species", title="Proportional Support for Biogeographic Hypotheses based on BIC")
+barplot
+```
+
+## Calculate relative probability from Johnson and Omland 2004
+```{r}
+# lookup the minimum BIC value for each species (which.min works better here, because it returns only the first instance of the minimum value)
+minBIC<-sapply(crit_df,function(x){x[which.min(x)]}) 
+
+#J&O box 4 eqn 1. scale() seems to be the way to go here, using the minBIC as the centering vector
+crit_df_deltaI<-scale(crit_df, center=minBIC, scale=F) 
+
+#J&O box 4 eqn 4. numerator, plus make it a data frame
+crit_df_deltaI_b<-as.data.frame(exp(-0.5*crit_df_deltaI)) 
+
+#J&O box 4 eqn 4. denominator
+crit_df_deltaI_sums<-sapply(crit_df_deltaI_b,sum,na.rm=T) 
+
+# this time use the scale argument of scale to divide each column by the corresponding sum
+crit_df_relative_prob<-scale(crit_df_deltaI_b,center=F,scale=crit_df_deltaI_sums) 
+```
+
+## Make a heatmap of relative probability of each hypothesis
+```{r}
+#melt for ggplot2
+relprob<-melt(crit_df_relative_prob)
+colnames(relprob)<-c("Hypothesis","Species","Relative_Probability")
+
+#baseplot
+rp<-ggplot(relprob,aes(y=Species,x=Hypothesis,fill=Relative_Probability))
+
+#add geom_tile, turn the x-axis elements by 90 degrees, reverse the names on the y-axis, and use a diverging color scheme to highlight hypotheses with >50% rel prob.
+rp<-rp+geom_tile()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ylim(rev(levels(relprob$Species)))+
+  scale_fill_gradient2(low = "blue", mid = "white",
+                       high = "red", midpoint = 0.5, space = "rgb",
+                       na.value = "grey50", guide = "colourbar")
+rp
+```
