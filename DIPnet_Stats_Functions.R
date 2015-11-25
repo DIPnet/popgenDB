@@ -125,7 +125,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
     }
     
     ##COVERAGE CALCULATION##
-    
+  if(coverage_calc == T){  
     cat("Calculating Coverage \n")
     #list to hold frequency distribution of haplotypes for coverage adjustments
     hap_freq_dist<-list()  
@@ -141,7 +141,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
         pop.data[p, "CoverageforActualSampleSize"] <- coverage
       }
     }
-    
+  }
     
     ##COVERAGE STANDARDIZED DIVERSITY##
     if(coverage_correction == T){
@@ -758,6 +758,17 @@ summarize_AMOVA<-function(amova_list=amova_list,hypotheses="My_Hypothesis", keep
   return(stat.list)
 }
 
+# A function to summarize diversity statistics calculated by genetic.diversity.mtDNA.db(). 
+# Makes a dataframe with species as columns and whatever regionalization you chose as rows
+# With whatever statistics (stat) you choose in each cell
+summarize_divstats<-function(stat,divstats=divstats){
+  df<-divstats[[1]]["popname"]
+  for(gsl in names(divstats)){
+    df<-merge(df,divstats[[gsl]][c("popname",stat)],all=T,by="popname")
+    names(df)[length(names(df))]<-gsl #name this column for the species
+  }
+  return(df)
+}
 
 
 
