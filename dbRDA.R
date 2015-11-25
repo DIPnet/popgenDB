@@ -16,7 +16,7 @@ Linkia<-(diffstats$Linckia_laevigata_CO1)
 
 #PRINCIPAL COORDINATES OF GENETIC DISTANCE MATRIX
 PhiSt.pcoa<-cmdscale(Linkia, k=dim(as.matrix(Linkia))[1] - 1, eig=TRUE, add=TRUE)   #k = 23 for Linckia: 24 sites    #add=TRUE sets the Cailliez correction to avoid negative eigenvalues
-PhiSt.scores<-PhiSt.pcoa$points
+PhiSt.scores<-PhiSt.pcoa$points  
 
 #CREATE DISTANCE MATRIX FOR SPATIAL DATA AND FIND PRINCIPAL COORDINATES
 #This is VERY HACKY. We obviously want much more sophisticated spatial predictors!! Here I am just yanking out longs and lats for representative pops in the ecoregion
