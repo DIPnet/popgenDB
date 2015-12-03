@@ -7,16 +7,20 @@ library(labdsv)
 library(vegan)   #for sites (rows) by species (columns) community analysis
 library(bipartite)
 library(ggplot2)
+library(reshape2)
 minSamp<-3
 
-#load data from latest spatial ipdb (35,897 samples, dated 5June2015)
-#DP.datfile<-'C:/etreml/DIPnet/IPDB/ipdb_sp.tsv'
-#dat<-read.table(DP.datfile, header = TRUE, sep = "\t", stringsAsFactors=F,na.strings=c("","NA","#N/A"),quote="",comment.char="",strip.white=T,fill=T)
 
+regionalizations<-c("ECOREGION", "PROVINCE", "REALM", "EEZ","Bowen","Keith","Kulbicki_r","Kulbicki_b", "VeronDivis")
+
+# Make a new regionalization out of VeronDivis that lumps India and Red Sea into Indian Ocean
+ipdb$VeronDivis2<-ipdb$VeronDivis
+ipdb$VeronDivis2[which(ipdb$VeronDivis=="India")]<-"Indian Ocean"
+ipdb$VeronDivis2[which(ipdb$VeronDivis=="Red Sea Plus")]<-"Indian Ocean"
 
 #using the ipdb object from DIPnet_Stats_Script.R
-summary(ipdb)
-reg<-'VeronDivis2'                                     # set region of interest
+#summary(ipdb)
+#reg<-'VeronDivis'                                     # set region of interest
 #length(unique(ipdb$fn500id))                         # 238 
 #length(unique(ipdb$fn100id))                         # 571 
 #length(unique(ipdb$VeronDivis))                      # 17
@@ -55,15 +59,15 @@ for (r in regIDs) {                                 # for each region
 
 #sort regSp.mat into upper left
 regSp.mat[is.na(regSp.mat)]<-0
-labdsv::abuocc(regSp.mat,minabu=minSamp,panel=2)    # species/reg
+    # species/reg
 
 #play with vegan
-reg.dis<-vegdist(regSp.mat)
-reg.mds0<-isoMDS(reg.dis)
-stressplot(reg.mds0,reg.dis)
-nestedchecker(regSp.mat)
-reg.temp<-nestedtemp(regSp.mat)
-plot(reg.temp,kind='incidence', names=TRUE)
+#reg.dis<-vegdist(regSp.mat)
+#reg.mds0<-isoMDS(reg.dis)
+#stressplot(reg.mds0,reg.dis)
+#nestedchecker(regSp.mat)
+#reg.temp<-nestedtemp(regSp.mat)
+#plot(reg.temp,kind='incidence', names=TRUE)
 
 #test nestedness (from LL)
 #reg.nested<-nestednodf(regSp.mat, order=TRUE, weight=TRUE)
@@ -77,10 +81,103 @@ dim(reg.nr$nested.matrix)
 reg.nr.mat<-reg.nr$nested.matrix
 reg.nr.mat.na<-reg.nr.mat
 reg.nr.mat.na[reg.nr.mat.na==0]<-NA
-heatmap(reg.nr.mat.na, Rowv=NA, Colv=NA, col=heat.colors(256))
+
+#heatmap with GGplot
+
+reg.nr.mat.melt<-melt(reg.nr.mat.na)
+colnames(reg.nr.mat.melt)<-c("Region","Species","n")
+reg.nr.mat.melt$n[which(reg.nr.mat.melt$n>200)]<-200
+
+pdf(file = paste(reg,".pdf",sep=""),paper = "letter")
+
+labdsv::abuocc(regSp.mat,minabu=minSamp,panel=2)
+
+region_n<-ggplot(reg.nr.mat.melt,aes(y=Region,x=Species,fill=n))
+region_n<-region_n+geom_tile()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ylim(levels(reg.nr.mat.melt$Region))+xlim(levels(reg.nr.mat.melt$Species)[1:50])+
+  scale_fill_gradient(low = "white", high = "red", space = "Lab",
+                      na.value = "grey50", guide = "colourbar")
+region_n
+dev.off()
 
 
-heatmap(reg.nr.mat.na[,1:50], Rowv=NA, Colv=NA, col=heat.colors(256))
+#Pick out species with complete samples across a given set of regions from Veron
+IP<-c("Indian Ocean","Coral Triangle","Central Pacific","French Polynesia","Northern South China Sea", "Eastern Indian Ocean")  
+
+reg.IP<-reg.nr.mat.na[which(rownames(reg.nr.mat.na) %in% IP),]
+reg.IP<-t(reg.IP)
+reg.IP<-reg.IP[which(complete.cases(reg.IP)),]
+# leaves only 3 species, two of which (N. albicilla and A. plancii) likely consist of two cryptic species)
+
+# Indian Ocean Coral Triangle Central Pacific French Polynesia Eastern Indian Ocean
+# Acanthaster_planci_CO1          104             10              26               22                   21
+# Nerita_plicata_CO1              125            104             242              118                   36
+# Nerita_albicilla_CO1            127             99             151               30                   59
+
+#take Eastern Indian Ocean out - we get 11 datasets (two of which are Stenella)
+IP<-c("Indian Ocean","Coral Triangle","Central Pacific","French Polynesia","Northern South China Sea")  
+reg.IP<-reg.nr.mat.na[which(rownames(reg.nr.mat.na) %in% IP),]
+reg.IP<-t(reg.IP)
+reg.IP<-reg.IP[which(complete.cases(reg.IP)),]
+
+# Indian Ocean Coral Triangle Central Pacific French Polynesia Northern South China Sea
+# Acanthaster_planci_CO1              104             10              26               22                        6
+# Panulirus_penicillatus_CO1           26              4             149              120                       13
+# Stenella_longirostris_CR             15             12              16               50                        4
+# Stenella_longirostris_CYB            15             13              15               47                        4
+# Nerita_plicata_CO1                  125            104             242              118                       30
+# Nerita_albicilla_CO1                127             99             151               30                       51
+# Tripneustes_gratilla_CO1             24            346              31               10                       10
+# Naso_unicornis_CR                    21              3              62               18                        1
+# Scarus_psittacus_CR                  20              2              21               16                       12
+# Diadema_savignyi_A68                 14             10               9               23                       12
+# Dascyllus_aruanus_CYB                52             64              38               24                       52
+
+# remove N South China Sea
+IP<-c("Indian Ocean","Coral Triangle","Central Pacific","French Polynesia")  
+reg.IP<-reg.nr.mat.na[which(rownames(reg.nr.mat.na) %in% IP),]
+reg.IP<-t(reg.IP)
+reg.IP<-reg.IP[which(complete.cases(reg.IP)),]
+
+# Indian Ocean Coral Triangle Central Pacific French Polynesia
+# Acanthaster_planci_CO1              104             10              26               22
+# Panulirus_penicillatus_CO1           26              4             149              120
+# Stenella_longirostris_CR             15             12              16               50
+# Stenella_longirostris_CYB            15             13              15               47
+# Nerita_plicata_CO1                  125            104             242              118
+# Nerita_albicilla_CO1                127             99             151               30
+# Tripneustes_gratilla_CO1             24            346              31               10
+# Naso_unicornis_CR                    21              3              62               18
+# Scarus_psittacus_CR                  20              2              21               16
+# Diadema_savignyi_A68                 14             10               9               23
+# Cephalopholis_argus_CYB             104             23              79              142
+# Dascyllus_aruanus_CYB                52             64              38               24
+# Dascyllus_trimaculatus_CR            18             65              41                9
+# Naso_brevirostris_CR                 19              8              30                7
+
+
+# add Hawaii 
+IP<-c("Indian Ocean","Coral Triangle","Central Pacific","French Polynesia", "Hawaii")  
+reg.IP<-reg.nr.mat.na[which(rownames(reg.nr.mat.na) %in% IP),]
+reg.IP<-t(reg.IP)
+reg.IP<-reg.IP[which(complete.cases(reg.IP)),]
+
+# Indian Ocean Coral Triangle Central Pacific French Polynesia Hawaii
+# Acanthaster_planci_CO1              104             10              26               22     13
+# Panulirus_penicillatus_CO1           26              4             149              120    331
+# Stenella_longirostris_CR             15             12              16               50     37
+# Stenella_longirostris_CYB            15             13              15               47     36
+# Tripneustes_gratilla_CO1             24            346              31               10     10
+# Naso_unicornis_CR                    21              3              62               18     24
+# Scarus_psittacus_CR                  20              2              21               16     20
+# Cephalopholis_argus_CYB             104             23              79              142    236
+
+
+
+#Heatmaps from package stats
+#heatmap(reg.nr.mat.na, Rowv=NA, Colv=NA, col=heat.colors(256))
+#heatmap(reg.nr.mat.na[,1:50], Rowv=NA, Colv=NA, col=heat.colors(256))
 
 #sp.abun<-colSums(reg.nr.mat.na, na.rm=T)
 
