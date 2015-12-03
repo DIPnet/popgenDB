@@ -102,7 +102,7 @@ region_n
 dev.off()
 
 
-#Pick out species with complete samples across a given set of regions from Veron
+#Pick out species with complete samples across a given set of regions from Veron (but with Red Sea and India lumped into "Indian Ocean")
 IP<-c("Indian Ocean","Coral Triangle","Central Pacific","French Polynesia","Northern South China Sea", "Eastern Indian Ocean")  
 
 reg.IP<-reg.nr.mat.na[which(rownames(reg.nr.mat.na) %in% IP),]
