@@ -1,0 +1,223 @@
+---
+title: "Multiple_Co-Inertia_Analysis"
+author: "Eric D. Crandall"
+date: "December 8, 2015"
+output: html_document
+---
+
+I'm going to start building a script to perform Multiple Co-Inertia Analysis as described in [Laloe et al 2007].  There is an example given in the [adegenet documentation] for the dataset *microbov*.  
+
+
+## Importing the data
+
+First, build the ipdb object using code from DIPnet_Stats_Script.R
+```{r import, echo = F, message=F, warning=F}
+setwd("~/github/popgenDB/output")
+
+#Load libraries and source the functions
+library(seqinr)  #might have to download .tgz file directly from CRAN site and install locally, not directly from CRAN repository
+library(ape)  
+library(pegas)
+library(mmod)
+library(adegenet)
+library(plyr)
+library(strataG)
+##Do the first time to install iNEXT##
+# install.packages('devtools')
+# library(devtools)
+# install_github('JohnsonHsieh/iNEXT')
+library(iNEXT)
+
+#set the working directory and source stuff
+
+source("../DIPnet_Stats_Functions.R")
+source("../config.R")
+# source("DIPnet_Stats_Functions.R")
+# source("config.R")
+
+##READING IN THE DATA. ##
+#need to turn off the quoting with quote="" for it to read correctly. 
+
+ipdb<-read.table(ipdb_path,sep="\t",header=T,stringsAsFactors = F,quote="", na.strings=c("NA"," ","")) 
+
+
+#read in geographical regionalizations from Treml
+spatial<-read.table(spatial_path, header=T, sep="\t",stringsAsFactors = F, na.strings=c("NA"," ",""), quote="")
+
+#read in geographical regionalizations from Beger
+spatial2<-read.table(spatial2_path, header=T,sep="\t", stringsAsFactors = F, na.strings=c("NA"," ",""), quote="")
+
+#read in ABGD groups
+abgd<-read.table(abgd_path, header=T, sep="\t", stringsAsFactors = F)
+
+#join spatial
+ipdb<-join(ipdb,spatial, by = "IPDB_ID",type = "left")
+ipdb<-join(ipdb,spatial2[,c(2,18:24)], by = "IPDB_ID", type = "left")
+
+#join ABGD
+ipdb<-join(ipdb,abgd[,c(1,3)], by = "IPDB_ID",type = "left")
+
+#CHECK FOR DUPLICATES
+#dups<-ipdb[duplicated(ipdb),]
+#ipdb<-ipdb[!duplicated(ipdb),]  #remove duplicates if you need to
+
+#the following IDs should be removed if not using the ABGD dataset per Libby Liggins and Michelle Gaither. They are highly divergent individuals, likely to be due to hybridization, cryptic species etc.
+drops <- c("Acanthurus_sohal_CO1_A8","Acanthurus_sohal_CO1_RS3407","Acanthurus_sohal_CO1_RS3406","Linckia_laevigata_CO1_2130.14","Linckia_laevigata_CO1_1195.01","Linckia_laevigata_CO1_1195.02","Labroides_dimidiatus_CR_LB10","Labroides_dimidiatus_CR_LB01","Labroides_dimidiatus_CR_LB02","Labroides_dimidiatus_CR_LB09","Labroides_dimidiatus_CR_LP03","Labroides_dimidiatus_CR_LP01","Labroides_dimidiatus_CR_LP04","Labroides_dimidiatus_CR_LP02","Katsuwonus_pelamis_CR_3637_01","Katsuwonus_pelamis_CR_3637_1","Periclimenes_soror_CO1_2227.07","Periclimenes_soror_CO1_2227.01","Periclimenes_soror_CO1_2227.02","Periclimenes_soror_CO1_2227.11","Periclimenes_soror_CO1_2227.12","Periclimenes_soror_CO1_2227.1","Periclimenes_soror_CO1_2227.16","Lutjanus_kasmira_CYB_Lka_OK4", "Lutjanus_kasmira_CYB_Lka_OK3", "Acanthurus_leucosternon_CYB_Aleu101","Acanthurus_leucosternon_CYB_Aleu104","Acanthurus_leucosternon_CYB_Aleu105","Acanthurus_leucosternon_CYB_Aleu37","Acanthurus_leucosternon_CYB_Aleu39","Acanthurus_leucosternon_CYB_Aleu40","Acanthurus_leucosternon_CYB_Aleu41","Acanthurus_leucosternon_CYB_Aleu42","Acanthurus_leucosternon_CYB_Aleu43","Acanthurus_leucosternon_CYB_Aleu44","Acanthurus_leucosternon_CYB_Aleu45","Acanthurus_leucosternon_CYB_Aleu48","Acanthurus_leucosternon_CYB_Aleu50","Acanthurus_leucosternon_CYB_Aleu51","Acanthurus_leucosternon_CYB_Aleu52","Acanthurus_leucosternon_CYB_Aleu98","Acanthurus_leucosternon_CYB_Aleu99","Acanthurus_leucosternon_CYB_HYB02","Acanthurus_leucosternon_CYB_HYB13","Acanthurus_leucosternon_CYB_Leucoxnigri03","Acanthurus_lineatus_CO1_RS6069","Acanthurus_lineatus_CO1_RS6070","Acanthurus_lineatus_CO1_RS6072","Acanthurus_lineatus_CO1_RS6073","Acanthurus_lineatus_CO1_RS6074","Acanthurus_lineatus_CO1_RS6075","Acanthurus_lineatus_CO1_RS6076","Acanthurus_lineatus_CO1_RS6289","Acanthurus_lineatus_CO1_RS6290","Acanthurus_lineatus_CO1_RS6291","Acanthurus_nigricans_CYB_Aac38_NA","Acanthurus_nigricans_CYB_Aac39_KAHY01","Acanthurus_nigricans_CYB_Aac40_KAHY02","Acanthurus_nigricans_CYB_Aac41_KAHY03","Acanthurus_nigricans_CYB_Aac42_KAHY04","Acanthurus_nigricans_CYB_Aac43_KAHY05","Acanthurus_nigricans_CYB_Aac44_KAHY06","Acanthurus_nigricans_CYB_Aleu100","Acanthurus_nigricans_CYB_Aleu102","Acanthurus_nigricans_CYB_Aleu103","Acanthurus_nigricans_CYB_Aleu106","Acanthurus_nigricans_CYB_Aleu36","Acanthurus_nigricans_CYB_Aleu38","Acanthurus_nigricans_CYB_Aleu46","Acanthurus_nigricans_CYB_Aleu47","Acanthurus_nigricans_CYB_Aleu49","Acanthurus_nigricans_CYB_Aleu95","Acanthurus_nigricans_CYB_Aleu96","Acanthurus_nigricans_CYB_Aleu97","Acanthurus_nigricans_CYB_Ani339","Acanthurus_nigricans_CYB_HYB01","Acanthurus_nigricans_CYB_HYB04","Acanthurus_nigricans_CYB_HYB05","Acanthurus_nigricans_CYB_HYB10","Acanthurus_nigricans_CYB_HYB11","Acanthurus_nigricans_CYB_HYB12","Acanthurus_nigricans_CYB_Leucoxnigri01","Acanthurus_nigricans_CYB_OBU236","Acanthurus_sohal_CO1_RS5875","Amphiprion_bicinctus_CO1_RS6015","Amphiprion_bicinctus_CO1_RS6016","Amphiprion_bicinctus_CO1_RS6196","Amphiprion_bicinctus_CO1_RS6197","Amphiprion_bicinctus_CO1_RS6198","Amphiprion_bicinctus_CO1_RS6199","Chaetodon_lunula_CO1_RS6210","Chaetodon_trifasciatus_CO1_RS6211","Chaetodon_trifasciatus_CO1_RS6212","Cirrhitichthys_oxycephalus_CO1_RS6248","Dascyllus_marginatus_CO1_RS5942","Diadema_paucispinum_A68_DS__0031","Diadema_paucispinum_A68_DS__0055","Diadema_savignyi_A68_DOK_0110","Diadema_savignyi_A68_DS__0081","Diadema_setosum_A68_DS__0080","Diadema_setosum_A68_SETO0001","Mulloidichthys_hybrid_A68_MHX_0247","Mulloidichthys_hybrid_CR_MHX_0247")
+ipdb<-ipdb[ipdb$IPDB_ID %in% drops == FALSE, ] 
+
+```
+
+With some futzing I was able to make the adegenet example work on the microbov dataset - main difference is that `nsamp` needs to come from `kx$blo` because the allelic frequency table is now just a matrix, not a list of objects.  
+
+## Making the Genind object
+So it seems like the easiest thing wil be to make a genpop object where each 'locus' is a species, the alleles are haplotypes and the populations are populations. To do this I will use `genpop()` and I need to give it a table with species/gsls as columns and populations as rows.   Start with one gsl:
+
+```{r make_genpop1, echo=F}
+# Start with a single species
+regionalization<-"VeronDivis"
+gsl<-"Nerita_plicata_CO1"
+sp<-ipdb[which(ipdb$Genus_species_locus==gsl),]
+    sp$sample<-paste(sp$locality,round(sp$decimalLatitude, digits=0),round(sp$decimalLongitude, digits=0),sep="_")  #sets up a variable that matches assignsamp function outcome
+    sp<-sp[order(sp$sample),]
+#convert database format to seqinr format
+spseqs<-seqinr::as.alignment(nb=length(sp[,1]),nam=sp$materialSampleID, seq=sp$sequence)
+#convert seqinr format to DNAbin format
+spseqsbin<-as.DNAbin(spseqs)
+#convert DNAbin format to genind format
+spseqs.genind<-as.genind.DNAbin(x = spseqsbin, pops = sp[[regionalization]])
+#name the locus after the gsl
+levels(spseqs.genind@loc.fac)<-gsl
+# convert genind format to genpop format
+spseqs.genpop<-genind2genpop(spseqs.genind)
+spseqs.genpop
+```
+
+
+Extending this to multiple gsls means we have to loop through them, converting them from the ipdb database format through seqinr, DNAbin, genind and genpop format. We rename the alleles of each gsl so its clear that they came from that species, then we can cbind them into a single table that can be turned into a genind object that will see the gsls as loci:    
+
+```{r make_genpop2, echo=F, message=F, warning=F}
+#here's a set of gsls to use
+mcoi_set<-c("Nerita_plicata_CO1","Nerita_albicilla_CO1","Tripneustes_gratilla_CO1","Naso_unicornis_CR","Dascyllus_aruanus_CYB","Dascyllus_trimaculatus_CR","Acanthaster_planci_CO1","Panulirus_penicillatus_CO1","Stenella_longirostris_CYB","Stenella_longirostris_CR","Scarus_psittacus_CR","Diadema_savignyi_A68","Cephalopholis_argus_CYB", "Naso_brevirostris_CR")
+
+#and a set of Veron's regions from which all have been sampled (see ipdb2RegionSumaries__ET.R)
+regions<-c("Indian Ocean", "Coral Triangle","Central Pacific","French Polynesia")
+
+#using this regionalization
+regionalization<-"VeronDivis"
+
+#create an empty matrix
+bigtab<-matrix(nrow=length(regions))
+
+# loop through the gsls
+for(gsl in mcoi_set){ #gsl<-"Nerita_plicata_CO1"
+  sp<-ipdb[which(ipdb$Genus_species_locus==gsl),]
+  sp$sample<-paste(sp$locality,round(sp$decimalLatitude, digits=0),round(sp$decimalLongitude, digits=0),sep="_")  #sets up a variable that matches assignsamp function outcome
+  sp<-sp[order(sp$sample),]
+  #convert database format to seqinr format
+  spseqs<-seqinr::as.alignment(nb=length(sp[,1]),nam=sp$materialSampleID, seq=sp$sequence)
+  #convert seqinr format to DNAbin format
+  spseqsbin<-as.DNAbin(spseqs)
+  #convert DNAbin format to genind format
+  spseqs.genind<-as.genind.DNAbin(x = spseqsbin, pops = sp[[regionalization]])
+  # convert genind format to genpop format
+  spseqs.genpop<-genind2genpop(spseqs.genind)
+  
+  #subset to just the co-sampled regions of interest
+  spseqs.genpop.subset<-spseqs.genpop[regions,]
+  #name the locus after the gsl
+  colnames(spseqs.genpop.subset@tab)<-gsub("L1",gsl,colnames(spseqs.genpop.subset@tab))
+  #cbind the matrices together
+  bigtab<-cbind(bigtab,spseqs.genpop.subset@tab)
+}
+#create a genpop object from this
+gsl_genpop<-genpop(tab=bigtab)
+#it reads an empty locus from that initialized matrix for some reason, so drop it
+gsl_genpop<-gsl_genpop[,-1]
+
+gsl_genpop
+```
+
+## Converting to ktab format
+
+Now I just follow the example in the [adegenet documentation] - Page 103 of the current version (search for microbov)
+
+```{r ktab, echo=F}
+freqs.come.out<-makefreq(gsl_genpop)
+
+#make a ktable object
+gsl_ktab <- ktab.data.frame(data.frame(freqs.come.out),gsl_genpop@loc.n.all)
+
+summary(gsl_ktab)
+```
+
+## perform %PCA on each genus-species-locus (gsl) combination
+These PCAs are all on different axes from one another. The numbers correspond to haplotypes.  
+
+```{r PCA, echo=F}
+kpca <- list()
+ngsl<-length(locNames(gsl_genpop))
+for(i in 1:ngsl) {
+  kpca[[i]] <- dudi.pca(gsl_ktab[[i]],scannf=FALSE,nf=2,center=TRUE,scale=FALSE)
+}
+
+
+
+# display %PCA
+nsamp<-gsl_ktab$blo
+col = c("red","purple","blue","deepskyblue4")
+
+par(mfrow=c(2,2))
+for(i in 1:ngsl) {
+s.multinom(kpca[[i]]$c1,gsl_ktab[[i]],n.sample=nsamp[i],labelcat=as.character(1:nsamp[i]),coulrow=col,sub=locNames(gsl_genpop)[i])
+add.scatter.eig(kpca[[i]]$eig,3,xax=1,yax=2,posi="top")
+}
+```
+
+## Perform Multiple co-inertia analysis
+This is the "reference typology" meaning the consensus PCA of all gsls, showing the relationship of co-sampled populations.  
+
+```{r mcoi, echo=F}
+gsl_ktab_cent <- gsl_ktab
+for(i in 1:ngsl) {
+  gsl_ktab_cent[[i]] <- as.data.frame(scalewt(gsl_ktab[[i]],center=TRUE,scale=FALSE))
+}
+mcoa1 <- mcoa(gsl_ktab_cent,scannf=FALSE,nf=3, option="uniform")
+
+# reference typology
+par(mfrow=c(1,1))
+s.label(mcoa1$SynVar,lab=popNames(gsl_genpop),sub="Reference typology",csub=1.5)
+add.scatter.eig(mcoa1$pseudoeig,nf=3,xax=1,yax=2,posi="bottomright")
+
+# typologial values
+tv <- mcoa1$cov2
+tv <- apply(tv,2,function(c) c/sum(c))*100
+rownames(tv) <- locNames(gsl_genpop)
+tv <- tv[order(locNames(gsl_genpop)),]
+```
+
+## Coordinated %PCA
+These plots show how much each marker departs from the reference typology (i.e. they are on the same set of axes at the same scale as the reference typology). The eigenvalues are not true eigenvalues but the variances explained by each axis.
+
+```{r coordinatedPCOA, echo=F}
+mcoa.axes <- split(mcoa1$axis, gsl_genpop@loc.fac)
+mcoa.coord <- split(mcoa1$Tli,mcoa1$TL[,1])
+var.coord <- lapply(mcoa.coord,function(e) apply(e,2,var))
+
+par(mfrow=c(2,2))
+
+for(i in 1:ngsl) {
+s.multinom(mcoa.axes[[i]][,1:2],gsl_ktab[[i]],n.sample=nsamp[i],labelcat=as.character(1:nsamp[i]),coulrow=col,sub=locNames(gsl_genpop)[i])
+add.scatter.eig(var.coord[[i]],2,xax=1,yax=2,posi="top")
+}
+
+
+
+```
+
+## Still to do
+  * Cohesion plots
+  * Try different regionalizations, gsl sets.
+  * Re-read [Laloe et al 2007]
+
+[Laloe et al 2007]: http://gse-journal.org/articles/gse/abs/2007/05/g06098/g06098.html
+[adegenet documentation]: https://cran.r-project.org/web/packages/adegenet/adegenet.pdf
