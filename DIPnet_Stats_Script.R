@@ -1,29 +1,30 @@
 # Eric Crandall March 2015 - These commands should be helpful in running the scripts in DIPnet_Stats_Functions.R
 # Relevant Links:
 # Interesting discussion about calculating Fst in R: http://www.molecularecologist.com/2012/05/calculating-pair-wise-unbiased-fst-with-r/
-
+#Command to install all packages except iNext: install.packages(c("seqinr","ape","pegas","heirfstat,"mmod","adegenet","plyr","strataG"))
+##To install iNEXT##
+# install.packages('devtools')
+# library(devtools)
+# install_github('JohnsonHsieh/iNEXT')
 setwd("~/github/popgenDB/output")
 
 #Load libraries and source the functions
 library(seqinr)  #might have to download .tgz file directly from CRAN site and install locally, not directly from CRAN repository
 library(ape)  
 library(pegas)
+library(hierfstat)
 library(mmod)
 library(adegenet)
 library(plyr)
 library(strataG)
-##Do the first time to install iNEXT##
-# install.packages('devtools')
-# library(devtools)
-# install_github('JohnsonHsieh/iNEXT')
 library(iNEXT)
 
 #set the working directory and source stuff
 
-source("../DIPnet_Stats_Functions.R")
-source("../config.R")
-# source("DIPnet_Stats_Functions.R")
-# source("config.R")
+source("DIPnet_Stats_Functions.R")
+source("config.R")
+# source("../DIPnet_Stats_Functions.R")
+# source("../config.R")
 
 ##READING IN THE DATA. ##
 #need to turn off the quoting with quote="" for it to read correctly. 

@@ -68,12 +68,13 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
     #convert to gtypes format (strataG)
     seqs<-sp$sequence
     names(seqs)<-sp$materialSampleID
-    gseqs<-as.dna.seq(seqs)
-    gseqhaps<-label.haplotypes(gseqs,prefix="H")
-    seq.gtype<-gtypes(gen.data=data.frame(sp$materialSampleID,sp[[regionalization]],gseqhaps$haps),id.col=1,strata.col=2,locus.col=3,dna.seq=gseqhaps$hap.seqs)
+    gseqhaps<-labelHaplotypes(spseqsbin,prefix="H")
+    sp.df<-as.data.frame(cbind(sp$materialSampleID,sp[,regionalization], gseqhaps$haps))
+    colnames(sp.df)<-c("materialSampleID", "sample", "haplotype")
+    seq.gtype <- df2gtypes(sp.df, ploidy = 1, id.col=1,strata.col=2, sequences = gseqhaps$hap.seqs)
     
     #convert to a data-frame format that works for hierfstat
-    spseqs_wc<-as.data.frame(seq.gtype$genotypes)
+    spseqs_wc<-cbind(seq.gtype@strata,seq.gtype@loci)
     spseqs_wc$dummy<-1 #You need to have two loci for betai_haploid to work, this is a dummy matrix of 1s
     
     #Set up the pop.data data frame
@@ -87,15 +88,16 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
       cat("Calculating Basic Diversity Statistics: Haplotype diversity, Shannon-Wiener diversity, Effective Number of Haps, Local FST \n")
 
       for (p in 1:length(populations)) {
-        singlepop<-subset(seq.gtype,strata=populations[p])
-        pop.data[p, "UniqHapNum"]<-num.alleles(singlepop)
+        singlepop<-seq.gtype[,,populations[p]]
+        pop.data[p, "UniqHapNum"]<-length(alleleNames(singlepop)$haplotype)
       #Haplotype Diversity  
-        pop.data[p, "HaploDiv"]<-haplotypic.diversity(singlepop) #haplotypic diversity from StrataG package (with sample size correction)
+        pop.data[p, "HaploDiv"]<-exptdHet(singlepop) #haplotypic diversity from StrataG package (with sample size correction)
       #Shannon-Wiener Diversity
-        pop.data[p, "SWdiversity"]<-shannon.wiener.diversity(singlepop$genotypes[,2]) #Shannon-Wiener Diversity based on the modified diversity function below
+        pop.data[p, "SWdiversity"]<-shannon.wiener.diversity(singlepop@loci$haplotype) #Shannon-Wiener Diversity based on the modified diversity function below
       #Effective number of haplotpyes
-        pop.data[p, "EffNumHaplos"]<-1/(1-uncorrected.diversity(singlepop$genotypes[,2])) #No sample size correction - based on Crow & Kimura 1964, eq 21. See also Jost 2008 eq 5
+        pop.data[p, "EffNumHaplos"]<-1/(1-uncorrected.diversity(singlepop@loci$haplotype)) #No sample size correction - based on Crow & Kimura 1964, eq 21. See also Jost 2008 eq 5
       }
+######EDC 7/28/16 - I've brought the code in line with updates mostly to StrataG up to this line######
       
       #local Fst (Beta of Weir and Hill 2002 NOT of Foll and Gaggiotti 2006)
       betaWH<-betai_haploid(spseqs_wc)
