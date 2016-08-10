@@ -96,7 +96,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
         pop.data[p, "SWdiversity"]<-shannon.wiener.diversity(singlepop@loci$haplotype) #Shannon-Wiener Diversity based on the modified diversity function below
       #Effective number of haplotpyes
         pop.data[p, "EffNumHaplos"]<-1/(1-uncorrected.diversity(singlepop@loci$haplotype)) #No sample size correction - based on Crow & Kimura 1964, eq 21. See also Jost 2008 eq 5
-      }
+     # }
 ######EDC 7/28/16 - I've brought the code in line with updates mostly to StrataG up to this line######
       
       #local Fst (Beta of Weir and Hill 2002 NOT of Foll and Gaggiotti 2006)
@@ -118,8 +118,8 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
         pop.data[p, "NucDivLocus"] <- nuc.div( singlepop, variance = FALSE, pairwise.deletion = FALSE)[1]* nchar(sp$sequence[1])
         pop.data[p, "NucDivLocusVAR"] <- nuc.div( singlepop, variance = TRUE, pairwise.deletion = FALSE)[2]* nchar(sp$sequence[1])
         #thetaS - based on Watterson 1975
-        pop.data[p, "ThetaS"] <- theta.s(s=length(seg.sites(singlepop)),n=pop.data[p,"sampleN"])
-        pop.data[p, "ThetaSVAR"] <- theta.s(s=length(seg.sites(singlepop)),n=pop.data[p,"sampleN"], variance=TRUE)[2]
+        pop.data[p, "ThetaS"] <- theta.s(x=length(seg.sites(singlepop)),n=pop.data[p,"sampleN"])
+        pop.data[p, "ThetaSVAR"] <- theta.s(x=length(seg.sites(singlepop)),n=pop.data[p,"sampleN"], variance=TRUE)[2]
         tajD<-tajima.test(singlepop)
         pop.data[p, "TajD"] <- tajD[[1]]
         pop.data[p, "TajDp"] <- tajD[[3]] #Pval.beta - p-value assuming that D follows a beta distribution (Tajima, 1989)
