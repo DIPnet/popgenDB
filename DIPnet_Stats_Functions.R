@@ -359,9 +359,10 @@ pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei GST", "Hedrick G
     #convert to gtypes format (strataG)
     seqs<-sp$sequence
     names(seqs)<-sp$materialSampleID
-    gseqs<-as.dna.seq(seqs)
-    gseqhaps<-label.haplotypes(gseqs,prefix="H")
-    seq.gtype<-gtypes(gen.data=data.frame(sp$materialSampleID,sp[[regionalization]],gseqhaps$haps),id.col=1,strata.col=2,locus.col=3,dna.seq=gseqhaps$hap.seqs)
+    gseqhaps<-labelHaplotypes(spseqsbin,prefix="H")
+    sp.df<-as.data.frame(cbind(sp$materialSampleID,sp[,regionalization], gseqhaps$haps))
+    colnames(sp.df)<-c("materialSampleID", "sample", "haplotype")
+    seq.gtype <- df2gtypes(sp.df, ploidy = 1, id.col=1,strata.col=2, sequences = gseqhaps$hap.seqs)
     
     #DIFFERENTIATION STATS CALCULATION
     cat("Calculating", gdist)
