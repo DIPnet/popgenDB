@@ -132,8 +132,8 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
     #list to hold frequency distribution of haplotypes for coverage adjustments
     hap_freq_dist<-list()  
     for (p in 1:length(populations)) {
-      singlepop<-subset(seq.gtype, strata = populations[p])
-      hapfreq<-table(singlepop$genotypes[,2])
+      singlepop<-seq.gtype[,,populations[p]]
+      hapfreq<-table(singlepop@loci)
       hap_freq_dist[p][[1]]<-hapfreq
       f1<-length(which(hap_freq_dist[[p]]==1))
       f2<-length(which(hap_freq_dist[[p]]==2))
