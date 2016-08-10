@@ -103,7 +103,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
       betaWH<-betai_haploid(spseqs_wc)
       pop.data$localFST<-betaWH$betaiov
     }
-    
+  } 
     #SEQUENCE-BASED DIVERSITY STATS CALCULATION
     
     if(sequence_diversity == T){
@@ -154,7 +154,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
       hap_freq_dist[singlehap.pops]<-lapply(1:length(singlehap.pops),function(x) c(1,1))
       
       #calculate coverage and "species" (haplotype) richness
-      coverage <- iNEXT(hap_freq_dist, q=c(hill.number))
+      coverage <- iNEXT(hap_freq_dist, q=hill.number)
       #create vector to hold max SC (species coverage) values and loop through list of dataframes
       max_coverage<-vector()
       for (p in 1:length(populations)) {
@@ -772,8 +772,4 @@ summarize_divstats<-function(stat,divstats=divstats){
   }
   return(df)
 }
-
-
-
-
 
