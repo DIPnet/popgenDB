@@ -97,8 +97,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
       #Effective number of haplotpyes
         pop.data[p, "EffNumHaplos"]<-1/(1-uncorrected.diversity(singlepop@loci$haplotype)) #No sample size correction - based on Crow & Kimura 1964, eq 21. See also Jost 2008 eq 5
      # }
-######EDC 7/28/16 - I've brought the code in line with updates mostly to StrataG up to this line######
-      
+
       #local Fst (Beta of Weir and Hill 2002 NOT of Foll and Gaggiotti 2006)
       betaWH<-betai_haploid(spseqs_wc)
       pop.data$localFST<-betaWH$betaiov
@@ -385,28 +384,31 @@ pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei GST", "Hedrick G
     
     #Weir-Cockerhams (1984) theta - StrataG package (also commented code for hierfstat package - results are the same)
     if(gdist=="WC Theta"){
-      pairwise<-pairwise.test(seq.gtype,stats="fst",nrep=nrep,num.cores=num.cores,quietly=T)
-      diffs<-as.dist(t(pairwise$pair.mat$Fst))
+      pairwise<-pairwiseTest(seq.gtype,stats="fst",nrep=nrep,num.cores=num.cores,quietly=T)
+      pairwise$pair.mat$Fst[upper.tri(pairwise$pair.mat$Fst)]<-0
+      diffs<-as.dist(pairwise$pair.mat$Fst)
     }
     
     
     #PhiST - Excoffier et al. 1992 - StrataG package
     if(gdist=="PhiST"){
-      pairwise<-pairwise.test(seq.gtype,stats="phist",nrep=nrep,num.cores=num.cores,quietly=T)
-      diffs<-as.dist(t(pairwise$pair.mat$PHIst))
+      pairwise<-pairwiseTest(seq.gtype,stats="phist",nrep=nrep,num.cores=num.cores,quietly=T)
+      pairwise$pair.mat$Fst[upper.tri(pairwise$pair.mat$PHIst)]<-0
+      diffs<-as.dist(pairwise$pair.mat$PHIst)
     }
     
     #ChiSq - Raymond and Rousset 1995? I think? - StrataG package
     if(gdist=="Chi2"){
-      pairwise<-pairwise.test(seq.gtype,stats="Chi2",nrep=nrep,num.cores=num.cores,quietly=T)
-      diffs<-as.dist(t(pairwise$pair.mat$Chi2))
+      pairwise<-pairwiseTest(seq.gtype,stats="Chi2",nrep=nrep,num.cores=num.cores,quietly=T)
+      pairwise$pair.mat$Fst[upper.tri(pairwise$pair.mat$Chi2)]<-0
+      diffs<-as.dist(pairwise$pair.mat$Chi2)
     }
     
     #neis dA Nei and Li 1979 - net divergence (within pop divergence removed) - StrataG package
     if(gdist=="NL dA") {
-      nucdiv<-nucleotide.divergence(seq.gtype)
+      nucdiv<-nucleotideDivergence(seq.gtype)
       diffs<-matrix(nrow=nrow(pop.data),ncol=nrow(pop.data))
-      diffs[lower.tri(diffs)]<-nucdiv$between$dA
+      diffs[lower.tri(diffs)]<-nucdiv$haplotype$between$dA
       diffs<-as.dist(diffs)
       attr(diffs, "Labels") <- names(sampN)
     }
