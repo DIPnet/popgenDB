@@ -70,6 +70,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
     names(seqs)<-sp$materialSampleID
     gseqhaps<-labelHaplotypes(spseqsbin,prefix="H")
     sp.df<-as.data.frame(cbind(sp$materialSampleID,sp[,regionalization], gseqhaps$haps))
+    sp.df<-sp.df[which(!is.na(gseqhaps$haps)),]
     colnames(sp.df)<-c("materialSampleID", "sample", "haplotype")
     seq.gtype <- df2gtypes(sp.df, ploidy = 1, id.col=1,strata.col=2, sequences = gseqhaps$hap.seqs)
     
@@ -360,6 +361,7 @@ pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei GST", "Hedrick G
     names(seqs)<-sp$materialSampleID
     gseqhaps<-labelHaplotypes(spseqsbin,prefix="H")
     sp.df<-as.data.frame(cbind(sp$materialSampleID,sp[,regionalization], gseqhaps$haps))
+    sp.df<-sp.df[which(!is.na(gseqhaps$haps)),]
     colnames(sp.df)<-c("materialSampleID", "sample", "haplotype")
     seq.gtype <- df2gtypes(sp.df, ploidy = 1, id.col=1,strata.col=2, sequences = gseqhaps$hap.seqs)
     
