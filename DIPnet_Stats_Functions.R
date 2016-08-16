@@ -78,10 +78,12 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
     spseqs_wc<-cbind(seq.gtype@strata,seq.gtype@loci)
     spseqs_wc$dummy<-1 #You need to have two loci for betai_haploid to work, this is a dummy matrix of 1s
     
-    #Set up the pop.data data frame
-    pop.data<-data.frame(popname=sort(unique(sp[[regionalization]])),sampleN=as.integer(table(sp[[regionalization]])) )
-    
-    populations<-as.character(sort(unique(sp[[regionalization]])))  #Returns in same order as used to create pop.data
+    #Set up the pop.data data frame from seq.gtype, not from sp
+    pop.data<-data.frame(popname=sort(unique(seq.gtype@strata)) )
+
+    #loop through the populations in seq.gtype
+    populations<-as.character(unique(seq.gtype@strata))
+
     
     #BASIC DIVERSITY STATS CALCULATION
     
@@ -90,6 +92,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
 
       for (p in 1:length(populations)) {
         singlepop<-seq.gtype[,,populations[p]]
+        pop.data[p, "sampleN"]<-length(indNames(singlepop))
         pop.data[p, "UniqHapNum"]<-length(alleleNames(singlepop)$haplotype)
       #Haplotype Diversity  
         pop.data[p, "HaploDiv"]<-exptdHet(singlepop) #haplotypic diversity from StrataG package (with sample size correction)
@@ -97,12 +100,12 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
         pop.data[p, "SWdiversity"]<-shannon.wiener.diversity(singlepop@loci$haplotype) #Shannon-Wiener Diversity based on the modified diversity function below
       #Effective number of haplotpyes
         pop.data[p, "EffNumHaplos"]<-1/(1-uncorrected.diversity(singlepop@loci$haplotype)) #No sample size correction - based on Crow & Kimura 1964, eq 21. See also Jost 2008 eq 5
-     # }
+      }
 
       #local Fst (Beta of Weir and Hill 2002 NOT of Foll and Gaggiotti 2006)
       betaWH<-betai_haploid(spseqs_wc)
       pop.data$localFST<-betaWH$betaiov
-    }
+
   } 
     #SEQUENCE-BASED DIVERSITY STATS CALCULATION
     
@@ -142,8 +145,8 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
       if(coverage_calc == T){
         pop.data[p, "CoverageforActualSampleSize"] <- coverage
       }
-    }
-  }
+    } 
+  } #end coverage calc
     
     ##COVERAGE STANDARDIZED DIVERSITY##
     if(coverage_correction == T){
@@ -152,24 +155,24 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
       singlehap.pops<-which(sapply(hap_freq_dist,length)==1)
       #replace these entries with c(1,1) just as a placeholder so iNEXT will work
       hap_freq_dist[singlehap.pops]<-lapply(1:length(singlehap.pops),function(x) c(1,1))
-      
+      names(hap_freq_dist) <- populations # Place population names as list names
       #calculate coverage and "species" (haplotype) richness
       coverage <- iNEXT(hap_freq_dist, q=hill.number)
       #create vector to hold max SC (species coverage) values and loop through list of dataframes
       max_coverage<-vector()
       for (p in 1:length(populations)) {
         #coverage[3][[1]][[1]][7]   #[3] list of results; [[1]][p] population p; [7] is SC
-        max_coverage<-(c(max_coverage, max(coverage[3][[1]][[p]][7])))
+        max_coverage<-(c(max_coverage, max(coverage[[2]][[p]][,7])))
       }
       min_SC<-min(max_coverage) #this is the smallest value of maximal coverage achievable across the sampled popualations
       rm(max_coverage)
       #Loop through the dataframes from the coverage output (again), extract the row with the max SC < min_SC and add to temporary dataframe
       SC_standardized_res<-data.frame()
       for (p in 1:length(populations)) {
-        popdataframe<-coverage[3][[1]][[p]]
+        popdataframe<-coverage[[2]][[p]]
         popdataframe<-subset(popdataframe, SC<=min_SC)
         ifelse(nrow(popdataframe)==0,
-               SC_standardized_res<-rbind(SC_standardized_res, coverage[3][[1]][[p]][1,]),
+               SC_standardized_res<-rbind(SC_standardized_res, coverage[[2]][[p]][1,]),
                SC_standardized_res<-rbind(SC_standardized_res, popdataframe[nrow(popdataframe),])  )
         #m is interpolated sample size, qD is diversity, SC is coverage - see iNEXT documentation
         #pop.data[p, "HaploSimplification"] <- "Orig_haplos"
@@ -233,7 +236,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
         max_coverage<-vector()
         for (p in 1:length(populations)) {
           #coverage[3][[1]][[1]][7]   #[3] list of results; [[1]][p] population p; [7] is SC
-          max_coverage<-(c(max_coverage, max(TVcoverage[3][[1]][[p]][7])))
+          max_coverage<-(c(max_coverage, max(TVcoverage[[2]][[p]][,7])))
         }
         
         
@@ -242,10 +245,10 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
         #Loop through the dataframes from the coverage output (again), extract the row with the max SC < min_SC and add to temporary dataframe
         SC_TV_standardized_res<-data.frame()
         for (p in 1:length(populations)) {
-          popdataframe<-TVcoverage[3][[1]][[p]]
+          popdataframe<-TVcoverage[[2]][[p]]
           popdataframe<-subset(popdataframe, SC<=min_SC)
           ifelse(nrow(popdataframe)==0,
-                 SC_TV_standardized_res<-rbind(SC_TV_standardized_res, TVcoverage[3][[1]][[p]][1,]),
+                 SC_TV_standardized_res<-rbind(SC_TV_standardized_res, TVcoverage[[2]][[p]][1,]),
                  SC_TV_standardized_res<-rbind(SC_TV_standardized_res, popdataframe[nrow(popdataframe),])  )
           #m is interpolated sample size, qD is diversity, SC is coverage - see iNEXT documentation
           
