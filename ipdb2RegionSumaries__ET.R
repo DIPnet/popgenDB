@@ -13,6 +13,8 @@ minSamp<-3
 
 regionalizations<-c("ECOREGION", "PROVINCE", "REALM", "EEZ","Bowen","Keith","Kulbicki_r","Kulbicki_b", "VeronDivis")
 
+reg<-"ECOREGION"
+
 # Make a new regionalization out of VeronDivis that lumps India and Red Sea into Indian Ocean
 ipdb$VeronDivis2<-ipdb$VeronDivis
 ipdb$VeronDivis2[which(ipdb$VeronDivis=="India")]<-"Indian Ocean"
@@ -57,7 +59,7 @@ for (r in regIDs) {                                 # for each region
 # Qsp<-ipdb[(ipdb$Genus_spec=='Cephalopholis_argus_CO1' & ipdb$ECO_CODE==20088),]
 # length(Qsp[,1])
 
-#sort regSp.mat into upper left
+#remove NAs
 regSp.mat[is.na(regSp.mat)]<-0
     # species/reg
 
@@ -74,6 +76,7 @@ regSp.mat[is.na(regSp.mat)]<-0
 #plot(reg.nested) #weird
 #reg.nested$statistic[3]
 
+#sort regSp.mat into upper left
 reg.nr<-bipartite::nestedrank(regSp.mat, method="NODF", return.matrix=TRUE)
 dim(reg.nr$nested.matrix)
 

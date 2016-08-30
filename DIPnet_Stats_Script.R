@@ -22,10 +22,10 @@ library(iNEXT)
 
 #set the working directory and source stuff
 
-source("DIPnet_Stats_Functions.R")
-source("config.R")
-# source("../DIPnet_Stats_Functions.R")
-# source("../config.R")
+#source("DIPnet_Stats_Functions.R")
+#source("config.R")
+source("../DIPnet_Stats_Functions.R")
+source("../config.R")
 
 ##READING IN THE DATA. ##
 #need to turn off the quoting with quote="" for it to read correctly. 
