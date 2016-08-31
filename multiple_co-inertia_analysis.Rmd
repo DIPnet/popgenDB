@@ -97,7 +97,7 @@ Extending this to multiple gsls means we have to loop through them, converting t
 
 ```{r make_genpop2, echo=F, message=F, warning=F}
 #here's a set of gsls to use
-#mcoi_set<-c("Nerita_plicata_CO1","Nerita_albicilla_CO1","Tripneustes_gratilla_CO1","Dascyllus_aruanus_CYB","Acanthaster_planci_CO1","Panulirus_penicillatus_CO1","Stenella_longirostris_CR","Scarus_psittacus_CR","Diadema_savignyi_A68")
+#mcoi_set<-c("Nerita_plicata_CO1","Nerita_albicilla_CO1","Tripneustes_gratilla_CO1","Dascyllus_aruanus_CYB","Acanthaster_planci_CO1","Panulirus_penicillatus_CO1","Stenella_longirostris_CR","Scarus_psittacus_CR","Diadema_savignyi_A68","Naso_unicornis_CR")
 #mcoi_set<-c("Nerita_albicilla_CO1", "Holothuria_atra_CO1", "Linckia_laevigata_CO1", "Tridacna_maxima_CO1", "Tridacna_crocea_CO1")
 mcoi_set<-c("Acanthaster_planciPac_CR", "Nerita_albicilla_CO1", "Holothuria_atra_CO1", "Linckia_laevigata_CO1", "Tridacna_maxima_CO1", "Tridacna_crocea_CO1", "Tridacna_squamosa_CO1", "Caesio_cuning_CR", "Haptosquilla_glyptocercus_CO1", "Haptosquilla_pulchella_CO1", "Gonodactylellus_viridis_CO1")
 

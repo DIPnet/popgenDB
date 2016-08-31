@@ -13,6 +13,7 @@ minSamp<-3
 
 regionalizations<-c("ECOREGION", "PROVINCE", "REALM", "EEZ","Bowen","Keith","Kulbicki_r","Kulbicki_b", "VeronDivis")
 
+#set the regionalization
 reg<-"ECOREGION"
 
 # Make a new regionalization out of VeronDivis that lumps India and Red Sea into Indian Ocean
@@ -39,6 +40,7 @@ regSp.mat<-matrix(data=0,nrow=reg.num,ncol=sp.num)
 colnames(regSp.mat)<-spNames
 rownames(regSp.mat)<-regIDs
 
+#create a matrix of the number of samples by region in your chosen regionalization
 i<-1;j<-1;                                          # row/col index
 for (r in regIDs) {                                 # for each region
   sub<-ipdb[ipdb[,reg]==r,]
