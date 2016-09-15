@@ -99,7 +99,7 @@ genetic.diversity.mtDNA.db<-function(ipdb=ipdb, basic_diversity = T, sequence_di
         pop.data[p, "EffNumHaplos"]<-1/(1-uncorrected.diversity(singlepop@loci$haplotype)) #No sample size correction - based on Crow & Kimura 1964, eq 21. See also Jost 2008 eq 5
      # }
 
-      #local Fst (Beta of Weir and Hill 2002 NOT of Foll and Gaggiotti 2006)
+      #local Fst (Beta of Weir and Hill 2002 - equation 8 NOT of Foll and Gaggiotti 2006)
       betaWH<-betai_haploid(spseqs_wc)
       pop.data$localFST<-betaWH$betaiov
     }
