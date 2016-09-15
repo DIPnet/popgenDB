@@ -13,6 +13,9 @@ minSamp<-3
 
 regionalizations<-c("ECOREGION", "PROVINCE", "REALM", "EEZ","Bowen","Keith","Kulbicki_r","Kulbicki_b", "VeronDivis")
 
+#set the regionalization
+reg<-"ECOREGION"
+
 # Make a new regionalization out of VeronDivis that lumps India and Red Sea into Indian Ocean
 ipdb$VeronDivis2<-ipdb$VeronDivis
 ipdb$VeronDivis2[which(ipdb$VeronDivis=="India")]<-"Indian Ocean"
@@ -37,6 +40,7 @@ regSp.mat<-matrix(data=0,nrow=reg.num,ncol=sp.num)
 colnames(regSp.mat)<-spNames
 rownames(regSp.mat)<-regIDs
 
+#create a matrix of the number of samples by region in your chosen regionalization
 i<-1;j<-1;                                          # row/col index
 for (r in regIDs) {                                 # for each region
   sub<-ipdb[ipdb[,reg]==r,]
@@ -57,7 +61,7 @@ for (r in regIDs) {                                 # for each region
 # Qsp<-ipdb[(ipdb$Genus_spec=='Cephalopholis_argus_CO1' & ipdb$ECO_CODE==20088),]
 # length(Qsp[,1])
 
-#sort regSp.mat into upper left
+#remove NAs
 regSp.mat[is.na(regSp.mat)]<-0
     # species/reg
 
@@ -74,6 +78,7 @@ regSp.mat[is.na(regSp.mat)]<-0
 #plot(reg.nested) #weird
 #reg.nested$statistic[3]
 
+#sort regSp.mat into upper left
 reg.nr<-bipartite::nestedrank(regSp.mat, method="NODF", return.matrix=TRUE)
 dim(reg.nr$nested.matrix)
 
@@ -103,7 +108,9 @@ dev.off()
 
 
 #Pick out species with complete samples across a given set of regions from Veron (but with Red Sea and India lumped into "Indian Ocean")
-IP<-c("Indian Ocean","Coral Triangle","Central Pacific","French Polynesia","Northern South China Sea", "Eastern Indian Ocean")  
+IP<-c("Indian Ocean","Coral Triangle","Central Pacific","French Polynesia","Northern South China Sea", "Eastern Indian Ocean")  #for VeronDivis2
+
+
 
 reg.IP<-reg.nr.mat.na[which(rownames(reg.nr.mat.na) %in% IP),]
 reg.IP<-t(reg.IP)
@@ -183,6 +190,69 @@ reg.IP<-reg.IP[which(complete.cases(reg.IP)),]
 
 #test if same as vegan. 
 nestednodf(reg.nr.mat, order=TRUE, weight=TRUE)
+
+CT<-c("Western Coral Triangle", "Eastern Coral Triangle", "Sunda Shelf", "Andaman", "Java Transitional", "Sahul Shelf", "Northwest Australian Shelf") - no cosampled species # for PROVINCE
+
+
+CT<-c("Western Coral Triangle", "Eastern Coral Triangle", "Sunda Shelf", "Andaman", "Java Transitional", "Sahul Shelf")
+# 
+# Western Coral Triangle Java Transitional Sunda Shelf Eastern Coral Triangle Andaman
+# Tridacna_maxima_CO1                    379               120          28                      5      48
+# Tridacna_crocea_CO1                    404                78          21                      4      61
+# Sahul Shelf
+# Tridacna_maxima_CO1           4
+# Tridacna_crocea_CO1           4
+
+CT<-c("Western Coral Triangle", "Eastern Coral Triangle", "Sunda Shelf", "Andaman", "Java Transitional")
+
+# Western Coral Triangle Java Transitional Sunda Shelf Eastern Coral Triangle
+# Nerita_albicilla_CO1                      80                38          19                     10
+# Holothuria_atra_CO1                      117                39          18                      5
+# Linckia_laevigata_CO1                    610               187          10                     59
+# Tridacna_maxima_CO1                      379               120          28                      5
+# Tridacna_crocea_CO1                      404                78          21                      4
+# Andaman
+# Nerita_albicilla_CO1       11
+# Holothuria_atra_CO1        27
+# Linckia_laevigata_CO1      46
+# Tridacna_maxima_CO1        48
+# Tridacna_crocea_CO1        61
+
+CT<-c("Western Coral Triangle", "Eastern Coral Triangle", "Sunda Shelf", "Java Transitional")
+
+# Western Coral Triangle Java Transitional Sunda Shelf
+# Acanthaster_planciPac_CR                         264                32          48
+# Nerita_albicilla_CO1                              80                38          19
+# Holothuria_atra_CO1                              117                39          18
+# Linckia_laevigata_CO1                            610               187          10
+# Tridacna_maxima_CO1                              379               120          28
+# Tridacna_crocea_CO1                              404                78          21
+# Tridacna_squamosa_CO1                            242                61           6
+# Caesio_cuning_CR                                 238                33          40
+# Haptosquilla_glyptocercus_CO1                    194                34          10
+# Haptosquilla_pulchella_CO1                       289                27          45
+# Gonodactylellus_viridis_CO1                      159                20          39
+
+# Eastern Coral Triangle
+# Acanthaster_planciPac_CR                          14
+# Nerita_albicilla_CO1                              10
+# Holothuria_atra_CO1                                5
+# Linckia_laevigata_CO1                             59
+# Tridacna_maxima_CO1                                5
+# Tridacna_crocea_CO1                                4
+# Tridacna_squamosa_CO1                              2
+# Caesio_cuning_CR                                   2
+# Haptosquilla_glyptocercus_CO1                     11
+# Haptosquilla_pulchella_CO1                        20
+# Gonodactylellus_viridis_CO1                       10
+
+
+
+reg.CT<-reg.nr.mat.na[which(rownames(reg.nr.mat.na) %in% CT),]
+reg.CT<-t(reg.CT)
+reg.CT<-reg.CT[which(complete.cases(reg.CT)),]
+
+
 
 
 #ToDo

@@ -97,13 +97,17 @@ Extending this to multiple gsls means we have to loop through them, converting t
 
 ```{r make_genpop2, echo=F, message=F, warning=F}
 #here's a set of gsls to use
-mcoi_set<-c("Nerita_plicata_CO1","Nerita_albicilla_CO1","Tripneustes_gratilla_CO1","Naso_unicornis_CR","Dascyllus_aruanus_CYB","Dascyllus_trimaculatus_CR","Acanthaster_planci_CO1","Panulirus_penicillatus_CO1","Stenella_longirostris_CYB","Stenella_longirostris_CR","Scarus_psittacus_CR","Diadema_savignyi_A68","Cephalopholis_argus_CYB", "Naso_brevirostris_CR")
+#mcoi_set<-c("Nerita_plicata_CO1","Nerita_albicilla_CO1","Tripneustes_gratilla_CO1","Dascyllus_aruanus_CYB","Acanthaster_planci_CO1","Panulirus_penicillatus_CO1","Stenella_longirostris_CR","Scarus_psittacus_CR","Diadema_savignyi_A68","Naso_unicornis_CR")
+#mcoi_set<-c("Nerita_albicilla_CO1", "Holothuria_atra_CO1", "Linckia_laevigata_CO1", "Tridacna_maxima_CO1", "Tridacna_crocea_CO1")
+mcoi_set<-c("Acanthaster_planciPac_CR", "Nerita_albicilla_CO1", "Holothuria_atra_CO1", "Linckia_laevigata_CO1", "Tridacna_maxima_CO1", "Tridacna_crocea_CO1", "Tridacna_squamosa_CO1", "Caesio_cuning_CR", "Haptosquilla_glyptocercus_CO1", "Haptosquilla_pulchella_CO1", "Gonodactylellus_viridis_CO1")
 
 #and a set of Veron's regions from which all have been sampled (see ipdb2RegionSumaries__ET.R)
-regions<-c("Indian Ocean", "Coral Triangle","Central Pacific","French Polynesia")
+#regions<-c("Indian Ocean", "Coral Triangle","Central Pacific","French Polynesia", "Northern South China Sea")
+regions<-c("Western Coral Triangle", "Eastern Coral Triangle", "Sunda Shelf", "Java Transitional")
 
 #using this regionalization
-regionalization<-"VeronDivis"
+#regionalization<-"VeronDivis"
+  regionalization<-"PROVINCE"
 
 #create an empty matrix
 bigtab<-matrix(nrow=length(regions))
@@ -164,7 +168,7 @@ for(i in 1:ngsl) {
 
 # display %PCA
 nsamp<-gsl_ktab$blo
-col = c("red","purple","blue","deepskyblue4")
+col = rainbow(length(regions))
 
 par(mfrow=c(2,2))
 for(i in 1:ngsl) {
