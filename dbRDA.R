@@ -1,84 +1,83 @@
-# Example of dbRDA approach applied to Linkia using PhiST data based on ecoregions
+# Cynthia Riginos - November 2016
+# USING dbRDA TO INFER THE CONTRIBUTION OF BIOGEOGRAPHY AND IBD TO GENETIC STRUCTURE
+# For now, using REALMS to define biogeographic hypotheses - Crandall to expand to other Ho's
+# Also, focusing only on WIP vs CIP as a demonstration
+
+
+library(dplyr)
 library(vegan)
 
-source("../config.R")
+#set working directory to source location
+source("config.R")
 
-setwd("~/Documents/Cynthia-Atlas/Git_folders/DIPnet/popgenDB")
-
-#read in geographical regionalizations from Treml
+#read in geographical regionalizations from Eric Treml and reduce to unique fin100 id's
 spatial<-read.table(spatial_path, header=T, sep="\t",stringsAsFactors = F, na.strings=c("NA"," ",""), quote="")
+fin100<-unique(spatial[,c("fn100id", "fn100_x","fn100_y", "REALM" )])
+fin100<-fin100[order(fin100$fn100id),]  #order ascending to make sure it matches later on
+fin100$fn100id<-as.factor(fin100$fn100id)  #so that dplyr join function does not have a fit later
 
-#read in ipdb list of genetics distances (PhiST)
-load("~/Desktop/DIPnet_structure_ecoregions_PhiST_071615.RData") 
+#Make lists of WIP, CIP fin100 ID's
+WIP<-droplevels(fin100[which(fin100$REALM == "Western Indo-Pacific"),])
+CIP<-fin100[which(fin100$REALM == "Central Indo-Pacific"),]
+#EIP<-fin100[which(fin100$REALM == "Eastern Indo-Pacific"),]
 
-#Subset for one species 
-Linkia<-(diffstats$Linckia_laevigata_CO1)
+#read in ipdb list of genetics distances (PhiST) - grab from GoogleDrive and place where relevant
+load("~/Desktop/DIPnet_structure_060715_PhiST_fn100id.Rdata")   #using fn100.id b/c they have x and y locations
+##NOTE - WE SHOULD CHECK WITH EAT TO MAKE SURE THAT THESE PROJECTIONS ARE MOST SENSIBLE TO USE
 
-#PRINCIPAL COORDINATES OF GENETIC DISTANCE MATRIX
-PhiSt.pcoa<-cmdscale(Linkia, k=dim(as.matrix(Linkia))[1] - 1, eig=TRUE, add=TRUE)   #k = 23 for Linckia: 24 sites    #add=TRUE sets the Cailliez correction to avoid negative eigenvalues
-PhiSt.scores<-PhiSt.pcoa$points  
+species<-names(diffstats)
 
-#CREATE DISTANCE MATRIX FOR SPATIAL DATA AND FIND PRINCIPAL COORDINATES
-#This is VERY HACKY. We obviously want much more sophisticated spatial predictors!! Here I am just yanking out longs and lats for representative pops in the ecoregion
-#NOTE - important that the site locations in the geographic distance matrix follow EXACTLY the same order as the genetic distance matrix
+#To do - SET UP LOOPING STRUCTURE - LOOP OVER ALL SPECIES
 
-sites<-row.names(as.matrix(Linkia))
+#Example: Subset for one species 
+s=180  #Linckia
+single_species<-diffstats[[s]]  
 
-ll<-unique(spatial[which(spatial$Genus_spec == "Linckia_laevigata_CO1"),c("ECOREGION", "decimalLat","decimalLon" )])
-ll.sites<-data.frame(row.names=sites)
-for (r in 1:nrow(ll.sites)) {
-  ll.sites[r,"Latitude"]<-ll[ll$ECOREGION==row.names(ll.sites)[r],"decimalLat"][1]
-  ll.sites[r,"Longitude"]<-ll[ll$ECOREGION==row.names(ll.sites)[r],"decimalLon"][1]
+#Figure out which fin100 locations are in which biogeographic areas
+#This initial mockup is focusing only on WIP-CIP 
+#In order to subset the distance object, it is turned into a matrix, subsetted, and the turned back to a distance
+single_species.matrix<-as.matrix(single_species)
+
+yes.WIP<-which(row.names(single_species.matrix) %in% WIP$fn100id)
+yes.CIP<-which(row.names(single_species.matrix) %in% CIP$fn100id)
+WIP.CIP<-which(row.names(single_species.matrix) %in% WIP$fn100id | row.names(single_species.matrix) %in% CIP$fn100id)
+
+#only proceed if minimum two pops per realm
+#WIP vs CIP - Subset distance object, undertake PCOA, then dbRDA (following Legendre & Anderson 1999)
+if (length(yes.WIP)>1 & length(yes.CIP)>1) {
+  WIP_CIP<-single_species.matrix[WIP.CIP,WIP.CIP]
+  WIP_CIP.dist<-as.dist(WIP_CIP)
+  
+  #PCOA
+  PhiSt.pcoa<-cmdscale(WIP_CIP.dist, k=dim(as.matrix(single_species))[1] - 1, eig=TRUE, add=FALSE)   #k = 52 for Linckia: 53 sites   
+  #ignore warnings for negative eigenvalues
+  PhiSt.scores<-PhiSt.pcoa$points  #note that these are sorted by fn100id; these will be the response variables in the RDA
+  
+  #Set up for RDA
+  sites<-as.data.frame(row.names(WIP_CIP))
+  colnames(sites)<-"fn100id"
+  sites<-left_join(sites, fin100)  #ignore warning about coercion - this means that some factors are being dropped from fin100
+  RDA.res<-rda(PhiSt.scores~fn100_x+fn100_y+REALM, data=sites, scale=TRUE )
+  # summary(RDA.res)
+  # (R2adj <- RsquareAdj(RDA.res)$adj.r.squared)
+  # anova.cca(RDA.res, step=1000)
+  # anova(RDA.res, by="term", step=1000)
+  
+  #store results as list
+  constrained.interia<-summary(RDA.res)$constr.chi
+  total.interia<-summary(RDA.res)$tot.chi
+  proportion.constrained.interia<-constrained.interia/total.interia
+  adj.R2.total.model<-RsquareAdj(RDA.res)$adj.r.squared
+  model.sig<-anova.cca(RDA.res, step=1000)
+  terms.sig<-anova(RDA.res, by="term", step=1000)
+  
+  #need to create list of results with species name as key - EC, can you do this?
+  
 }
 
-library(fossil)
-geog.dists<-earth.dist(ll.sites)  #over earth distances..... not what we want to use!
-
-#make the pcoa
-#once we have geographic predictors we will have to examine to decide how many PCs to retain
-geog.pcoa<-cmdscale(geog.dists, k=2, eig=TRUE, add=TRUE)     #add=TRUE sets the Cailliez correction to avoid negative eigenvalues; need to think about how many PCs are reasonable to retain
-geog.scores<-geog.pcoa$points
+#THEN PROCEED WITH OTHER BIOGEOGRAPHIC DIVISIONS, etc
 
 
-#WE CAN ADD OTHER PREDICTIVE DISTANCE MATRICES 
-#BARRIERS: use dummy variables: 0 for same side of barrier, 1 for different sides... set up as a distance matrix
-#If we have many predictive variables, we will want to test for and deal with colinearity
-
-
-##RDA
-linckia.rda<-rda(PhiSt.scores,geog.scores)  #note that in vegan the Y matrix is the constraining matrix
-#in reality we probably want geographic distance (overwater?) to be the conditioning matrix and to have additional predictive matrices
-summary(linckia.rda)
-
-#comments on this simple example: 
-# The RDA eigenvectors reflect the amount of constrained variance explained, in this instance 48% (like R2 but bias correction follows later)
-# Because PC1 is greater than RDA2, I would only take RDA1 seriously (41% of variance)
-# "Species scores" - unclear in this context
-# "Site scores" -  maps sites onto genetic PCoA axes (onto respose eigenvectors)
-# "Site constraints"-  maps sites onto geographic PCoA axes (onto predictive eigenvectors)
-
-#regresssion coefficients between explanatory variables and canonical axes
-coef(linckia.rda)
-
-#unadjusted R2 of model
-R2<-RsquareAdj(linckia.rda)$r.squared
-
-#adjusted R2
-R2adj<-RsquareAdj(linckia.rda)$adj.r.squared
-
-#ploting RDA results - 1 distance triplot
-plot(linckia.rda, scaling =1)
-#locations are mapped on by name, in red are the genetic PCoA axes, in blue are the geographic PCoA axes
-
-#ploting RDA results - 2 corellation triplot
-plot(linckia.rda, scaling =2)
-#these two different ways of plotting the data confuse me and if I gain clarity on the subject I will let you know!
-
-#Testing SIGNIFICANCE of RDA results
-#global test
-anova.cca(linckia.rda, step=1000)
-#by canoncial axes
-anova.cca(linckia.rda, by="axis", step=1000)  #why is this not working?
 
 
 
