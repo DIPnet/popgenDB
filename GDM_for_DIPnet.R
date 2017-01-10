@@ -1,4 +1,4 @@
-##Generalized dissimilarity modeling
+##Generalized dissimilarity modeling - Cynthia Riginos
 #Ferrier S, Manion G, Elith J, Richardson K, 2007. Using generalized dissimilarity modelling to analyse and predict patterns of beta diversity in regional biodiversity assessment. Diversity and Distributions 13: 252–264.
 
 
@@ -23,7 +23,8 @@ CIP<-fin100[which(fin100$REALM == "Central Indo-Pacific"),]
 
 
 #read in ipdb list of genetics distances (PhiST) - grab from GoogleDrive and place where relevant
-load("~/Desktop/DIPnet_structure_060715_PhiST_fn100id.Rdata")   #using fn100.id b/c they have x and y locations
+load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/fn100id/DIPnet_structure_060715_PhiST_fn100id.Rdata")
+#using fn100.id b/c they have x and y locations
 ##NOTE - WE SHOULD CHECK WITH EAT TO MAKE SURE THAT THESE PROJECTIONS ARE MOST SENSIBLE TO USE
 ##ACTUALLY GDM CAN INCORPORATE ANY DISTANCE MEASURE SO MAYBE WE SHOULD USE OVER WATER AS A NULL....
 
@@ -33,7 +34,7 @@ species<-names(diffstats)
 
 #Example: Subset for one species 
 s=180  #Linckia
-single_species<-diffstats[[s]] 
+single_species<-diffstats[["Linckia_laevigata_CO1"]]
 
 ##PREP FOR GDM - format predictive variables
 ##For now, just using spatial locations and biogeographic assignment, BUT distance measures and environmental rasters can be used

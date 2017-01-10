@@ -21,8 +21,8 @@ WIP<-droplevels(fin100[which(fin100$REALM == "Western Indo-Pacific"),])
 CIP<-fin100[which(fin100$REALM == "Central Indo-Pacific"),]
 #EIP<-fin100[which(fin100$REALM == "Eastern Indo-Pacific"),]
 
-#read in ipdb list of genetics distances (PhiST) - grab from GoogleDrive and place where relevant
-load("~/Desktop/DIPnet_structure_060715_PhiST_fn100id.Rdata")   #using fn100.id b/c they have x and y locations
+#read in ipdb list of genetics distances (PhiST) - grab from GoogleDrive 
+load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/fn100id/DIPnet_structure_060715_PhiST_fn100id.Rdata")   #using fn100.id b/c they have x and y locations
 ##NOTE - WE SHOULD CHECK WITH EAT TO MAKE SURE THAT THESE PROJECTIONS ARE MOST SENSIBLE TO USE
 
 species<-names(diffstats)
@@ -31,7 +31,7 @@ species<-names(diffstats)
 
 #Example: Subset for one species 
 s=180  #Linckia
-single_species<-diffstats[[s]]  
+single_species<-diffstats[["Linckia_laevigata_CO1"]] 
 
 #Figure out which fin100 locations are in which biogeographic areas
 #This initial mockup is focusing only on WIP-CIP 
