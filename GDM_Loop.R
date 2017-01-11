@@ -3,7 +3,7 @@
 # in the file GDM_for_DIPnet.R. Here are the steps:
 # 1. Import the IPDB and PhiST/FST table
 # 2. Subsample for each species of interest, and filter based on Phi_ST table.
-# 3. Calculate the overwater distance between all points
+# 3. Calculate the overwater/great circle distance between all points
 # 4. Create dummy distance matrices for each putative "barrier"
 # 5. Run through gdm
 # 6. Save coefficients
@@ -12,7 +12,9 @@
 # Initial config.
 library(gdm)
 library(plyr)
+library(gdistance)
 source("config.R")
+source("DIPnet_Stats_Functions.R")
 
 ######################################################################
 # Import the IPDB and Fst tables
@@ -60,10 +62,47 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1"
   #subsample Fst and filter sp based on the localities that have Fst values
   gslFST<-diffstats[[gsl]]
   sp<-sp[sp$sample %in% labels(gslFST),]
-  locs<-unique(sp$sample)
   
   
+  # Not all localities are included in Veron's regionalization (e.g. Guam), so zap NAs
+  sp<-sp[!is.na(sp$VeronDivis),]
+  
+  #create a locations data frame that has all the localities plus lats and longs and their Veron region.
+  locs<-as.data.frame(unique(sp$sample))
+  names(locs)<-"sample"
+  locs$Long<-sp$decimalLongitude[which(locs %in% sp$sample)]
+  #can't do a unique on sample, lats and longs because some samples have non-unique lats and longs! So I do a join and take the first match.
+  locs<-join(locs,sp[c("sample","decimalLongitude","decimalLatitude"
+                       ,"VeronDivis")], by="sample", match="first")
+
+  #make a matrix out of gslFST with the first column sample names
+  gslFSTm<-as.matrix(c(locs$sample,gslFST),nrow=length(locs$sample))
+  gslFSTm<-cbind(locs$sample,gslFST)
+  
+######################################################################
+# Calculate Great Circle Distance
+  gcdist_km <- pointDistance(locs[,2:3],lonlat=T)/1000
+  
+####################################################################### Calculate Overwater Distances#
+  #Save for later##
+#######################################################################
+#Create dummy distance matrices for each putative "barrier" 
+  #currently this creates matrices of zero for pairs of sites within a region and 1s for pairs of sites between 2 regions
+  #get the Veron regions for this species
+  unique(locs$VeronDivis) 
+  
+  #Convert a logical test to 1s and 0s and then take the euclidean distance
+  WA<-as.matrix(dist(as.numeric(locs$VeronDivis=="Western Australia")))
+  CT<-as.matrix(dist(as.numeric(locs$VeronDivis=="Coral Triangle")))
+  EIO<-as.matrix(dist(as.numeric(locs$VeronDivis=="Eastern Indian Ocean")))
+  CP<-as.matrix(dist(as.numeric(locs$VeronDivis=="Central Pacific")))
+  
+
   
   
+#######################################################################
+# Run through gdm
+  gdmTab.species <- formatsitepair(speciesDissim, bioFormat=3, XColumn="fn100_x", YColumn="fn100_y", predData=WIP_CIP.sites, siteColumn="fn100id")
   
+ gdm.format<-formatsitepair(bioData=gslFST, bioFormat=3, predData=locs,XColumn = "decimalLongitude", YColumn = "decimalLatitude", siteColumn="sample", distPreds=c(WA,CT,EIO,CP))
 }
