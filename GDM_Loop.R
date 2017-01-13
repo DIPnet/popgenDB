@@ -59,15 +59,15 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1"
   sp$sample<-paste(sp$locality,round(sp$decimalLatitude, digits=0),round(sp$decimalLongitude, digits=0),sep="_")  #sets up a variable that matches the name in Fst table
   sp<-sp[order(sp$sample),]
   # Not all localities are included in Veron's regionalization (e.g. Guam), so get their names and then zap NAs
-   nonVeronpops<-unique(sp$sample[is.na(sp$VeronDivis)])
-   sp<-sp[!is.na(sp$VeronDivis),]
+  nonVeronpops<-unique(sp$sample[is.na(sp$VeronDivis)])
+  sp<-sp[!is.na(sp$VeronDivis),]
   
   #subsample Fst and filter sp based on the localities that have Fst values
   gslFST<-diffstats[[gsl]]
   sp<-sp[sp$sample %in% labels(gslFST),]
   
   
-
+  
   
   #create a locations data frame that has all the localities plus lats and longs and their Veron region.
   locs<-as.data.frame(unique(sp$sample))
@@ -88,63 +88,71 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1"
   # convert to data frame with popsample names as first column
   gslFSTm<-cbind(sample=locs$sample,as.data.frame(gslFSTm))
   
-######################################################################
-# Calculate Great Circle Distance
+  ######################################################################
+  # Calculate Great Circle Distance
   gcdist_km <- pointDistance(locs[,2:3],lonlat=T)/1000
   #cbind on the sample names
   gcdist_km <- cbind(sample=locs$sample,as.data.frame(gcdist_km))
   
-####################################################################### Calculate Overwater Distances#
+  ####################################################################### Calculate Overwater Distances#
   #Save for later##
-#######################################################################
-#Create dummy distance matrices for each putative "barrier"
+  #######################################################################
+  #Create dummy distance matrices for each putative "barrier"
   
   #currently this creates matrices of zero for pairs of sites within a region and 1s for pairs of sites between 2 regions
-
+  
   #Convert a logical test to 1s and 0s and then take the euclidean distance
   Sunda<-as.matrix(dist(as.numeric(locs$VeronDivis %in% c("Eastern Indian Ocean","Indian Ocean","Red Sea Plus","India"))))
   Sunda<-cbind(sample=locs$sample,as.data.frame(Sunda))
   
   EastCT<-as.matrix(dist(as.numeric(locs$VeronDivis %in% c("Eastern Indian Ocean","Indian Ocean","Red Sea Plus","India","Coral Triangle","Western Australia","Vietnam","South China Sea","Northern South China Sea"))))
   EastCT<-cbind(sample=locs$sample,as.data.frame(EastCT))
-
+  
   locs$sample<-as.character(locs$sample)
   gslFSTm$sample<-as.character(gslFSTm$sample)
   Sunda$sample<-as.character(Sunda$sample)
   EastCT$sample<-as.character(EastCT$sample)
   gcdist_km$sample<-as.character(gcdist_km$sample)
-
   
   
-#######################################################################
-# Run through gdm
+  
+  #######################################################################
+  # Run through gdm
+  
+  #format site pairs into column format
+  gdm.format<-formatsitepair(bioData=gslFSTm, bioFormat=3, predData=locs[,1:3],XColumn = "decimalLongitude", YColumn = "decimalLatitude", siteColumn="sample", distPreds=list(gcdist_km,Sunda,EastCT))
+  
+  #run all the models
+  gdm1.all<-gdm(gdm.format)
+  gdm2.NO.Geog<-gdm(gdm.format[-grep("matrix_1",names(gdm.format)),])
+  gdm3.NO.Sunda<-gdm(gdm.format[-grep("matrix_2",names(gdm.format)),])
+  gdm4.NO.EastCT<-gdm(gdm.format[-grep("matrix_3",names(gdm.format)),])
+  gdm5.ONLY.Geog<-gdm(gdm.format[-grep("matrix_[23]",names(gdm.format)),])
+  gdm6.ONLY.Sunda<-gdm(gdm.format[-grep("matrix_[13]",names(gdm.format)),])
+  gdm7.ONLY.EastCT<-gdm(gdm.format[-grep("matrix_[12]",names(gdm.format)),])
+  
+  summary(gdm1.all)
+  
+  #print the plots for gdm_all to a file
+  pdf(file=paste(gsl,"gdm_plot.pdf",sep=""))
+  plot(gdm1.all)
+  dev.off()
 
-#format site pairs into column format
- gdm.format<-formatsitepair(bioData=gslFSTm, bioFormat=3, predData=locs[,1:3],XColumn = "decimalLongitude", YColumn = "decimalLatitude", siteColumn="sample", distPreds=list(gcdist_km,Sunda,EastCT))
-
- #run the model
-gdm.species<-gdm(gdm.format)
- 
-summary(gdm.species)
-
-#print the plots to a file
-pdf(file=paste(gsl,"gdm_plot.pdf",sep=""))
-plot(gdm.species)
-dev.off()
-
-#Stats to save: relative importance (=sum of coefficients for each predictor) and proportion of deviance explained by model
-#See tables and Figures in Fitzpatrick MC, Sanders NJ, Normand S, Svenning JC, Ferrier S, Gove AD, Dunn RR, 2013. Environmental and historical imprints on beta diversity: insights from variation in rates of species turnover along gradients. Proc. Biol. Sci. 280: 20131201–20131201
-
-
-numb.geog.coeff<-gdm.species$splines[1]
-numb.Sunda.coeff<-gdm.species$splines[2]
-numb.EastCT.coeff<-gdm.species$splines[3]
-
-impt.geog<-sum(gdm.species$coefficients[1:numb.geog.coeff])
-impt.Sunda<-sum(gdm.species$coefficients[(numb.geog.coeff+1) : (numb.geog.coeff+numb.Sunda.coeff)])
-impt.EastCT<-sum(gdm.species$coefficients[(numb.geog.coeff+numb.Sunda.coeff+1):(numb.geog.coeff+numb.Sunda.coeff+numb.EastCT.coeff)])
-
-fullmodel.gdm.deviance<- gdm.species$gdmdeviance  #SAVE THIS
-fullmodel.explained.deviance<- gdm.species$explained #SAVE THIS
-fullmodel.proportion.deviance.explained<- fullmodel.explained.deviance/ fullmodel.gdm.deviance   #probably save - see Fig 2 in Fitzpatrick et al. 2013 
+###############################################################################################
+  #Stats to save: relative importance (=sum of coefficients for each predictor) and proportion of deviance explained by model
+  #See tables and Figures in Fitzpatrick MC, Sanders NJ, Normand S, Svenning JC, Ferrier S, Gove AD, Dunn RR, 2013. Environmental and historical imprints on beta diversity: insights from variation in rates of species turnover along gradients. Proc. Biol. Sci. 280: 20131201–20131201
+####
+  numb.geog.coeff<-gdm1.all$splines[1]
+  numb.Sunda.coeff<-gdm1.all$splines[2]
+  numb.EastCT.coeff<-gdm1.all$splines[3]
+  
+ #importance stats
+  impt.geog.all<-sum(gdm1.all$coefficients[1:numb.geog.coeff])
+  impt.Sunda.all<-sum(gdm1.all$coefficients[(numb.geog.coeff+1) : (numb.geog.coeff+numb.Sunda.coeff)])
+  impt.EastCT.all<-sum(gdm1.all$coefficients[(numb.geog.coeff+numb.Sunda.coeff+1):(numb.geog.coeff+numb.Sunda.coeff+numb.EastCT.coeff)])
+  
+  #deviance stats
+  fullmodel.gdm.deviance<- gdm1.all$gdmdeviance  
+  fullmodel.explained.deviance<- gdm1.all$explained 
+  fullmodel.proportion.deviance.explained<- fullmodel.explained.deviance/ fullmodel.gdm.deviance   #probably save - see Fig 2 in Fitzpatrick et al. 2013 
 }
