@@ -125,9 +125,13 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1"
   
   #Convert a logical test to 1s and 0s and then take the euclidean distance
   Sunda<-as.matrix(dist(as.numeric(locs$VeronDivis %in% c("Eastern Indian Ocean","Indian Ocean","Red Sea Plus","India"))))
+  Sunda.Test<-sum(Sunda)>0 # test if this species is distributed across the Sunda Barrier
+  
   Sunda<-cbind(sample=locs$sample,as.data.frame(Sunda))
   
   EastCT<-as.matrix(dist(as.numeric(locs$VeronDivis %in% c("Eastern Indian Ocean","Indian Ocean","Red Sea Plus","India","Coral Triangle","Western Australia","Vietnam","South China Sea","Northern South China Sea"))))
+  EastCT.Test<-sum(EastCT)>0 # test if this species is distributed across the EastCT Barrier
+  
   EastCT<-cbind(sample=locs$sample,as.data.frame(EastCT))
   
   locs$sample<-as.character(locs$sample)
@@ -263,7 +267,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1"
   gdm7.ONLY.EastCT.proportion.deviance.explained<- gdm7.ONLY.EastCT.explained.deviance/ gdm7.ONLY.EastCT.gdm.deviance   #see Fig 2 in Fitzpatrick et al. 2013 
   
   #Cat all the stats together
-  catstats<-c(impt.Geog.gdm1.all,impt.Sunda.gdm1.all,impt.EastCT.gdm1.all,gdm1.all.gdm.deviance,gdm1.all.explained.deviance,gdm1.all.proportion.deviance.explained,
+  catstats<-c(Sunda.Test, EastCT.Test,impt.Geog.gdm1.all,impt.Sunda.gdm1.all,impt.EastCT.gdm1.all,gdm1.all.gdm.deviance,gdm1.all.explained.deviance,gdm1.all.proportion.deviance.explained,
               impt.Sunda.gdm2.NO.Geog,impt.EastCT.gdm2.NO.Geog,gdm2.NO.Geog.gdm.deviance,gdm2.NO.Geog.explained.deviance,gdm2.NO.Geog.proportion.deviance.explained,
               impt.Geog.gdm3.NO.Sunda,impt.EastCT.gdm3.NO.Sunda,gdm3.NO.Sunda.gdm.deviance,gdm3.NO.Sunda.explained.deviance,gdm3.NO.Sunda.proportion.deviance.explained,
               impt.Geog.gdm4.NO.EastCT,impt.Sunda.gdm4.NO.EastCT,gdm4.NO.EastCT.gdm.deviance,gdm4.NO.EastCT.explained.deviance,gdm4.NO.EastCT.proportion.deviance.explained,
@@ -272,7 +276,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1"
               impt.EastCT.gdm7.ONLY.EastCT,gdm7.ONLY.EastCT.gdm.deviance,gdm7.ONLY.EastCT.explained.deviance,gdm7.ONLY.EastCT.proportion.deviance.explained)
   
   #add names
-  names(catstats)<-c("impt.Geog.gdm1.all","impt.Sunda.gdm1.all","impt.EastCT.gdm1.all","gdm1.all.gdm.deviance","gdm1.all.explained.deviance","gdm1.all.proportion.deviance.explained","impt.Sunda.gdm2.NO.Geog","impt.EastCT.gdm2.NO.Geog","gdm2.NO.Geog.gdm.deviance","gdm2.NO.Geog.explained.deviance","gdm2.NO.Geog.proportion.deviance.explained","impt.Geog.gdm3.NO.Sunda","impt.EastCT.gdm3.NO.Sunda","gdm3.NO.Sunda.gdm.deviance","gdm3.NO.Sunda.explained.deviance","gdm3.NO.Sunda.proportion.deviance.explained","impt.Geog.gdm4.NO.EastCT","impt.Sunda.gdm4.NO.EastCT","gdm4.NO.EastCT.gdm.deviance","gdm4.NO.EastCT.explained.deviance","gdm4.NO.EastCT.proportion.deviance.explained","impt.Geog.gdm5.ONLY.Geog","gdm5.ONLY.Geog.gdm.deviance","gdm5.ONLY.Geog.explained.deviance","gdm5.ONLY.Geog.proportion.deviance.explained","impt.Sunda.gdm6.ONLY.Sunda","gdm6.ONLY.Sunda.gdm.deviance","gdm6.ONLY.Sunda.explained.deviance","gdm6.ONLY.Sunda.proportion.deviance.explained","impt.EastCT.gdm7.ONLY.EastCT","gdm7.ONLY.EastCT.gdm.deviance","gdm7.ONLY.EastCT.explained.deviance","gdm7.ONLY.EastCT.proportion.deviance.explained")
+  names(catstats)<-c("Sunda.Test", "EastCT.Test","impt.Geog.gdm1.all","impt.Sunda.gdm1.all","impt.EastCT.gdm1.all","gdm1.all.gdm.deviance","gdm1.all.explained.deviance","gdm1.all.proportion.deviance.explained","impt.Sunda.gdm2.NO.Geog","impt.EastCT.gdm2.NO.Geog","gdm2.NO.Geog.gdm.deviance","gdm2.NO.Geog.explained.deviance","gdm2.NO.Geog.proportion.deviance.explained","impt.Geog.gdm3.NO.Sunda","impt.EastCT.gdm3.NO.Sunda","gdm3.NO.Sunda.gdm.deviance","gdm3.NO.Sunda.explained.deviance","gdm3.NO.Sunda.proportion.deviance.explained","impt.Geog.gdm4.NO.EastCT","impt.Sunda.gdm4.NO.EastCT","gdm4.NO.EastCT.gdm.deviance","gdm4.NO.EastCT.explained.deviance","gdm4.NO.EastCT.proportion.deviance.explained","impt.Geog.gdm5.ONLY.Geog","gdm5.ONLY.Geog.gdm.deviance","gdm5.ONLY.Geog.explained.deviance","gdm5.ONLY.Geog.proportion.deviance.explained","impt.Sunda.gdm6.ONLY.Sunda","gdm6.ONLY.Sunda.gdm.deviance","gdm6.ONLY.Sunda.explained.deviance","gdm6.ONLY.Sunda.proportion.deviance.explained","impt.EastCT.gdm7.ONLY.EastCT","gdm7.ONLY.EastCT.gdm.deviance","gdm7.ONLY.EastCT.explained.deviance","gdm7.ONLY.EastCT.proportion.deviance.explained")
   
   all.pops.table[[gsl]]<-catstats
 }
