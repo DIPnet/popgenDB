@@ -119,7 +119,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1"
   ####################################################################### Calculate Overwater Distances#
   #Save for later##
   #######################################################################
-  #Create dummy distance matrices for each putative "barrier"
+ 
+  
+   #Create dummy distance matrices for each putative "barrier"
   
   #currently this creates matrices of zero for pairs of sites within a region and 1s for pairs of sites between 2 regions
   
@@ -281,3 +283,19 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1"
   all.pops.table[[gsl]]<-catstats
 }
 
+#pick out the gsls that worked
+all.pops.table2<-all.pops.table[unlist(lapply(all.pops.table,length)>1)]
+
+all.species.table<-data.frame(t(matrix(unlist(x = all.pops.table2),nrow=35,byrow=F)))
+
+rownames(all.species.table)<-names(all.pops.table2)
+
+names(all.species.table[[1]])
+
+names(all.species.table)<-names(all.pops.table2[[1]])
+
+all.species.table2<-all.species.table[which(all.species.table$Sunda.Test==1 & all.species.table$EastCT.Test==1),]
+
+write.csv(all.species.table,"./output/GDM_worked.csv")
+
+write.csv(all.species.table2,"./output/GDM_Sunda_EastCT.csv")
