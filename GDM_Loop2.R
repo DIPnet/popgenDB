@@ -11,10 +11,9 @@
 #     between the two regions (1s and 0s)
 # 6. Run through gdm with the barrier and without. Save the deviance values.
 # 7. Perform Monte-Carlo permutations to develop a null distribution 
-#    of deviance values
-# 8. Determine the significance of the barrier for this species
-# 9. Loop back to 4, over all putative barriers.
-# 10. Loop back to 2.
+#    of deviance values and determine significance (pvalue)
+# 8. Loop back to 4, over all putative barriers.
+# 9. Loop back to 2.
 
 # Initial config.
 library(gdm)
@@ -22,6 +21,9 @@ library(plyr)
 library(gdistance)
 source("config.R")
 source("DIPnet_Stats_Functions.R")
+
+stats<-data.frame(Species_Locus=character(0),Barrier=character(0),WithBarrierDeviance=numeric(0),WithBarrierExplainedDeviance=numeric(0),WithBarrierProportionExplained=numeric(0),ImportanceDistanceWithBarrier=numeric(0),ImportanceBarrierWithBarrier=numeric(0),NoBarrierDeviance=numeric(0),NoBarrierExplainedDeviance=numeric(0),NoBarrierProportionExplained=numeric(0),ImportanceDistanceWithoutBarrier=numeric(0),DeltaDeviance=numeric(0),Pvalue=numeric(0),stringsAsFactors = F)
+
 
 ######################################################################
 # 1. Import the IPDB and Fst tables
@@ -123,76 +125,81 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1"
   #######################################################################
   # 4. Create a subset of the distance matrices including only the localities from
   #    two neighboring Veron regions.
-  # for(barrier in barriers){
-  barrier<-c("Coral Triangle","Eastern Indian Ocean")
-  subset_locs<-which(locs$VeronDivis==barrier)
-  locs2<-locs[subset_locs,]
-  
-  gcdist_km2<-gcdist_km[subset_locs,c(1,subset_locs+1)]
-  gslFSTm2<-gslFSTm[subset_locs,c(1,subset_locs+1)]
-  
-  #######################################################################
-  # 5. Create a dummy distance matrix for each putative "barrier" 
-  #     between the two regions (1s and 0s)
-  
-  barrier_m2<-as.matrix(dist(as.numeric(locs2$VeronDivis %in% barrier[1])))
-  barrier_test<-sum(barrier_m2)>0
-  
-  barrier_m2 <- cbind(sample=locs2$sample,as.data.frame(barrier_m2))
-  
-  #if there aren't samples on either side of this barrier, then go to next barrier
-  if(!barrier_test){next}
-  
-  ############################################################################
-  # 6. Run through gdm with the barrier and without. Save the deviance values.
-  
-   #Create dummy distance matrices for each putative "barrier"
-  
-  locs2$sample<-as.character(locs2$sample)
-  gslFSTm2$sample<-as.character(gslFSTm2$sample)
-  gcdist_km2$sample<-as.character(gcdist_km2$sample)
-  
-  gdm.format<-formatsitepair(bioData=gslFSTm2, bioFormat=3, predData=locs2[,1:3],XColumn = "decimalLongitude", YColumn = "decimalLatitude", siteColumn="sample", distPreds=list(gcdist_km2,barrier_m2))
-  
-  #run gdm with and without the barrier
-  gdm.barrier<-gdm(gdm.format)
-  gdm.no.barrier<-gdm(gdm.format[-grep("matrix_2",names(gdm.format)),])
- 
-   #difference in deviance is the more complex model - less complex model
-  deltadev<-gdm.barrier$gdmdeviance-gdm.no.barrier$gdmdeviance
-  
-  ##############################################################################
-  # 7. Perform Monte-Carlo permutations to develop a null distribution 
-  #    of deviance values
-  gdm.format.rand<-gdm.format
-  rand.deltas<-vector() 
-  
-  while(length(rand.deltas) < 1000) {
-    gdm.format.rand$distance<-sample(gdm.format.rand$distance,size=length(gdm.format.rand$distance))
-    gdm.barrier.rand<-gdm(gdm.format.rand)
-    gdm.no.barrier.rand<-gdm(gdm.format.rand[-grep("matrix_2",
-                                                   names(gdm.format)),])
-    if(is.null(gdm.barrier.rand) | is.null(gdm.no.barrier.rand)){next}
-    deltadev.rand<-gdm.barrier.rand$gdmdeviance-gdm.no.barrier.rand$gdmdeviance
-    rand.deltas<-c(rand.deltas,deltadev.rand)
+  for(barrier in barriers){
+    barrier<-c("Coral Triangle","Eastern Indian Ocean")
+    subset_locs<-which(locs$VeronDivis==barrier)
+    locs2<-locs[subset_locs,]
+    
+    gcdist_km2<-gcdist_km[subset_locs,c(1,subset_locs+1)]
+    gslFSTm2<-gslFSTm[subset_locs,c(1,subset_locs+1)]
+    
+    #######################################################################
+    # 5. Create a dummy distance matrix for each putative "barrier" 
+    #     between the two regions (1s and 0s)
+    
+    barrier_m2<-as.matrix(dist(as.numeric(locs2$VeronDivis %in% barrier[1])))
+    barrier_test<-sum(barrier_m2)>0
+    
+    barrier_m2 <- cbind(sample=locs2$sample,as.data.frame(barrier_m2))
+    
+    #if there aren't samples on either side of this barrier, then go to next barrier
+    if(!barrier_test){next}
+    
+    ############################################################################
+    # 6. Run through gdm with the barrier and without. Save the deviance values.
+    
+    #Create dummy distance matrices for each putative "barrier"
+    
+    locs2$sample<-as.character(locs2$sample)
+    gslFSTm2$sample<-as.character(gslFSTm2$sample)
+    gcdist_km2$sample<-as.character(gcdist_km2$sample)
+    
+    gdm.format<-formatsitepair(bioData=gslFSTm2, bioFormat=3, predData=locs2[,1:3],XColumn = "decimalLongitude", YColumn = "decimalLatitude", siteColumn="sample", distPreds=list(gcdist_km2,barrier_m2))
+    
+    #run gdm with and without the barrier
+    gdm.barrier<-gdm(gdm.format)
+    gdm.no.barrier<-gdm(gdm.format[-grep("matrix_2",names(gdm.format)),])
+    
+    #difference in deviance is the more complex model - less complex model
+    deltadev<-gdm.barrier$gdmdeviance-gdm.no.barrier$gdmdeviance
+    
+    ##############################################################################
+    # 7. Perform Monte-Carlo permutations to develop a null distribution 
+    #    of deviance values and determine significance (pvalue)
+    gdm.format.rand<-gdm.format
+    rand.deltas<-vector() 
+    
+    while(length(rand.deltas) < 1000) {
+      gdm.format.rand$distance<-sample(gdm.format.rand$distance,size=length(gdm.format.rand$distance))
+      gdm.barrier.rand<-gdm(gdm.format.rand)
+      gdm.no.barrier.rand<-gdm(gdm.format.rand[-grep("matrix_2",
+                                                     names(gdm.format)),])
+      if(is.null(gdm.barrier.rand) | is.null(gdm.no.barrier.rand)){next}
+      deltadev.rand<-gdm.barrier.rand$gdmdeviance-gdm.no.barrier.rand$gdmdeviance
+      rand.deltas<-c(rand.deltas,deltadev.rand)
+    }
+    pvalue<-length(which(rand.deltas>deltadev))/length(rand.deltas)
+    
+    
+    
+    #save stats
+    gdm.barrier.deviance<-gdm.barrier$gdmdeviance
+    gdm.barrier.explained<-gdm.barrier$explained
+    gdm.barrier.prop.explained<-gdm.barrier.explained/gdm.barrier.deviance
+    
+    gdm.no.barrier.deviance<-gdm.no.barrier$gdmdeviance
+    gdm.no.barrier.explained<-gdm.no.barrier$explained
+    gdm.no.barrier.prop.explained<-gdm.no.barrier.explained/gdm.no.barrier.deviance
+    
+    impt.dist.gdm.barrier<-sum(gdm.barrier$coefficients[1:gdm.barrier$splines[1]])
+    impt.barrier.gdm.barrier<-sum(gdm.barrier$coefficients[gdm.barrier$splines[1]+1:gdm.barrier$splines[1]])
+    impt.dist.gdm.no.barrier<-sum(gdm.no.barrier$coefficients[1:gdm.no.barrier$splines[1]])
+    stats_model<-c(gsl,paste(barrier[1],barrier[2],sep="-"),gdm.barrier.deviance,gdm.barrier.explained,gdm.barrier.prop.explained, impt.dist.gdm.barrier, impt.barrier.gdm.barrier, gdm.no.barrier.deviance, gdm.no.barrier.explained, gdm.no.barrier.prop.explained,impt.dist.gdm.no.barrier, (gdm.barrier.deviance-gdm.no.barrier.deviance),pvalue)
+    
+    stats[nrow(stats)+1,]<-stats_model
   }
-  pvalue<-length(which(rand.deltas>deltadev))/length(rand.deltas)
   
 
- 
-  #save stats
-  gdm.barrier.deviance<-gdm.barrier$gdmdeviance
-  gdm.barrier.explained<-gdm.barrier$explained
-  gdm.barrier.prop.explained<-gdm.barrier.explained/gdm.barrier.deviance
-  
-  gdm.no.barrier.deviance<-gdm.no.barrier$gdmdeviance
-  gdm.no.barrier.explained<-gdm.no.barrier$explained
-  gdm.no.barrier.prop.explained<-gdm.no.barrier.explained/gdm.no.barrier.deviance
-  
-  impt.dist.gdm.barrier<-sum(gdm.barrier$coefficients[1:gdm.barrier$splines[1]])
-  impt.barrier.gdm.barrier<-sum(gdm.barrier$coefficients[gdm.barrier$splines[1]+1:gdm.barrier$splines[1]])
-  impt.dist.gdm.no.barrier<-sum(gdm.no.barrier$coefficients[1:gdm.no.barrier$splines[1]])
-  stats<-c(gsl,paste(barrier[1],barrier[2],sep="-"),gdm.barrier.deviance,gdm.barrier.explained,gdm.barrier.prop.explained, impt.dist.gdm.barrier, impt.barrier.gdm.barrier, gdm.no.barrier.deviance, gdm.no.barrier.explained, gdm.no.barrier.prop.explained,impt.dist.gdm.no.barrier, (gdm.barrier.deviance-gdm.no.barrier.deviance),pvalue)
   
   
 }
