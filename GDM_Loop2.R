@@ -22,7 +22,11 @@ library(gdistance)
 source("config.R")
 source("DIPnet_Stats_Functions.R")
 
+barriers<-read.csv("VeronBarriers.csv",header=F,stringsAsFactors = F)
+
 stats<-data.frame(Species_Locus=character(0),Barrier=character(0),WithBarrierDeviance=numeric(0),WithBarrierExplainedDeviance=numeric(0),WithBarrierProportionExplained=numeric(0),ImportanceDistanceWithBarrier=numeric(0),ImportanceBarrierWithBarrier=numeric(0),NoBarrierDeviance=numeric(0),NoBarrierExplainedDeviance=numeric(0),NoBarrierProportionExplained=numeric(0),ImportanceDistanceWithoutBarrier=numeric(0),DeltaDeviance=numeric(0),Pvalue=numeric(0),stringsAsFactors = F)
+
+
 
 
 ######################################################################
@@ -125,8 +129,8 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1"
   #######################################################################
   # 4. Create a subset of the distance matrices including only the localities from
   #    two neighboring Veron regions.
-  for(barrier in barriers){
-    barrier<-c("Coral Triangle","Eastern Indian Ocean")
+  for(j in 1:16){
+    barrier<-c(barriers[j,1],barriers[j,2])
     subset_locs<-which(locs$VeronDivis==barrier)
     locs2<-locs[subset_locs,]
     
@@ -148,8 +152,6 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1"
     ############################################################################
     # 6. Run through gdm with the barrier and without. Save the deviance values.
     
-    #Create dummy distance matrices for each putative "barrier"
-    
     locs2$sample<-as.character(locs2$sample)
     gslFSTm2$sample<-as.character(gslFSTm2$sample)
     gcdist_km2$sample<-as.character(gcdist_km2$sample)
@@ -159,6 +161,8 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1"
     #run gdm with and without the barrier
     gdm.barrier<-gdm(gdm.format)
     gdm.no.barrier<-gdm(gdm.format[-grep("matrix_2",names(gdm.format)),])
+    
+    if(is.null(gdm.barrier) | is.null(gdm.no.barrier)){next}
     
     #difference in deviance is the more complex model - less complex model
     deltadev<-gdm.barrier$gdmdeviance-gdm.no.barrier$gdmdeviance
