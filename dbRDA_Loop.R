@@ -9,8 +9,8 @@
 #    two neighboring Veron regions.
 # 5. Create a dummy distance matrix for each putative "barrier" 
 #     between the two regions (1s and 0s)
-# 6. Run through gdm with the barrier and without. Save the deviance values.
-# 7. Perform Monte-Carlo permutations to develop a null distribution 
+# 6. Run through dbRDA with the barrier and without.
+#### 7. Perform Monte-Carlo permutations to develop a null distribution 
 #    of deviance values and determine significance (pvalue)
 # 8. Loop back to 4, over all putative barriers.
 # 9. Loop back to 2.
@@ -18,7 +18,10 @@
 # Initial config.
 library(gdm)
 library(plyr)
+library(dplyr)
 library(gdistance)
+library(vegan)
+
 source("config.R")
 source("DIPnet_Stats_Functions.R")
 
@@ -84,7 +87,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   gslFST<-diffstats[[gsl]]
   #make a matrix out of gslFST, convert negative values to zero
   gslFSTm<-as.matrix(gslFST)
-  gslFSTm[which(gslFSTm<0)]<-0.00001
+  gslFSTm[which(gslFSTm<0)]<-0.0
   
   #zap weird slashes in the names
   rownames(gslFSTm)<-gsub("\"","",rownames(gslFSTm))
@@ -117,13 +120,13 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   #sort gslFSTm
   gslFSTm<-gslFSTm[order(rownames(gslFSTm)),order(colnames(gslFSTm))]
   # convert to data frame with popsample names as first column
-  gslFSTm<-cbind(sample=locs$sample,as.data.frame(gslFSTm))
+  #gslFSTm<-cbind(sample=locs$sample,as.data.frame(gslFSTm))
   
   ######################################################################
   # 3. Calculate Great Circle Distance
   gcdist_km <- pointDistance(locs[,2:3],lonlat=T)/1000
   #cbind on the sample names
-  gcdist_km <- cbind(sample=locs$sample,as.data.frame(gcdist_km))
+  #gcdist_km <- cbind(sample=locs$sample,as.data.frame(gcdist_km))
   
   ####################################################################### Calculate Overwater Distances#
   #Save for later##
@@ -137,8 +140,8 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     
     cat("Now Starting",barrier,"\n")
     
-    gcdist_km2<-gcdist_km[subset_locs,c(1,subset_locs+1)]
-    gslFSTm2<-gslFSTm[subset_locs,c(1,subset_locs+1)]
+    gcdist_km2<-gcdist_km[subset_locs,subset_locs]
+    gslFSTm2<-gslFSTm[subset_locs,subset_locs]
     
     #######################################################################
     # 5. Create a dummy distance matrix for each putative "barrier" 
@@ -147,19 +150,19 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     barrier_m2<-as.matrix(dist(as.numeric(locs2$VeronDivis %in% barrier[1])))
     barrier_test<-sum(barrier_m2)>0
     
-    barrier_m2 <- cbind(sample=locs2$sample,as.data.frame(barrier_m2))
+    #barrier_m2 <- cbind(sample=locs2$sample,as.data.frame(barrier_m2))
     
     #if there aren't samples on either side of this barrier, then go to next barrier
     if(!barrier_test){cat("Not testable \n");next}
     
     ############################################################################
-    # 6. Run through gdm with the barrier and without. Save the deviance values.
+    # 6. 
     
-    locs2$sample<-as.character(locs2$sample)
-    gslFSTm2$sample<-as.character(gslFSTm2$sample)
-    gcdist_km2$sample<-as.character(gcdist_km2$sample)
+    PhiST.pcoa<-cmdscale(gslFSTm2, k=dim(as.matrix(gslFSTm2))[1] - 1, eig=TRUE, add=FALSE) 
+    PhiST.scores<-PhiSt.pcoa$points
     
-    gdm.format<-formatsitepair(bioData=gslFSTm2, bioFormat=3, predData=locs2[,1:3],XColumn = "decimalLongitude", YColumn = "decimalLatitude", siteColumn="sample", distPreds=list(gcdist_km2,barrier_m2))
+    RDA.res<-rda(PhiSt.scores~decimalLongitude+decimalLatitude+VeronDivis, data=locs2, scale=TRUE )
+   
     
     #run gdm with and without the barrier
     gdm.barrier<-gdm(gdm.format)
