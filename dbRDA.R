@@ -64,9 +64,9 @@ if (length(yes.WIP)>1 & length(yes.CIP)>1) {
   # anova(RDA.res, by="term", step=1000)
   
   #store results as list
-  constrained.interia<-summary(RDA.res)$constr.chi
-  total.interia<-summary(RDA.res)$tot.chi
-  proportion.constrained.interia<-constrained.interia/total.interia
+  constrained.inertia<-summary(RDA.res)$constr.chi
+  total.inertia<-summary(RDA.res)$tot.chi
+  proportion.constrained.interia<-constrained.inertia/total.inertia
   adj.R2.total.model<-RsquareAdj(RDA.res)$adj.r.squared
   model.sig<-anova.cca(RDA.res, step=1000)
   terms.sig<-anova(RDA.res, by="term", step=1000)
