@@ -1,13 +1,12 @@
 # GDM Loop2 - Eric Crandall - 4/20/2017
 # I am revamping the original GDM loop that I wrote to follow an analysis 
 # outlined by Michelle Gaither and myself.
-# 1. Create a dummy column for each putative "barrier" (1s and 0s)
-# 2. Import the IPDB and PhiST/FST table
-# 3. Subsample for each species of interest, and filter based on Phi_ST table.
-# 4. Calculate the overwater/great circle distance between all points
-# 5. Calculate the principal coordinates for FST and geographic distance
-# 6. Run through dbRDA and extract statistics
-# 7. Loop back to 3.
+# 1. Import the IPDB and PhiST/FST table
+# 2. Subsample for each species of interest, and filter based on Phi_ST table.
+# 3. Calculate the overwater/great circle distance between all points
+# 4. Calculate the principal coordinates for FST and geographic distance
+# 5. Run through dbRDA and extract statistics
+# 6. Loop back to 3.
 
 ##################################################################################
 # Initial config.
@@ -20,24 +19,11 @@ library(vegan)
 source("config.R")
 source("DIPnet_Stats_Functions.R")
 
-stats<-data.frame(Species_Locus=character(0),Barrier=character(0),WithBarrierDeviance=numeric(0),WithBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithBarrier=numeric(0),ImportanceBarrierWithBarrier=numeric(0),NoBarrierDeviance=numeric(0),NoBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithoutBarrier=numeric(0),DeltaDeviance=numeric(0),Pvalue=numeric(0),stringsAsFactors = F)
+barriers<-read.csv("VeronBarriers.csv",header=F,stringsAsFactors = F)
 
-#######################################################################
-# 1. Create a dummy column for each putative "barrier" (1s and 0s)
-Indian_Ocean<-as.numeric(locs$VeronDivis %in% c("Indian Ocean","Red Sea Plus","India"))
-
-Sunda<-as.numeric(locs$VeronDivis %in% c("Eastern Indian Ocean","Indian Ocean","Red Sea Plus","India"))
-
-W_Australia<-as.numeric(locs$VeronDivis %in% c("Western Australia"))
-N_Australia<-as.numeric(locs$VeronDivis %in% c("North Australia"))
-SCS<-as.numeric(locs$VeronDivis %in% c("South China Sea"))
-Vietnam<-as.numeric(locs$VeronDivis %in% c("Vietnam"))
-Japan<-as.numeric(locs$VeronDivis %in% c("Northern Japan"))
-NSCS<-as.numeric(locs$VeronDivis %in% c("Northern South China Sea","Northern Japan"))
-
-East_CT<-as.numeric(locs$VeronDivis %in% c("Eastern Indian Ocean","Indian Ocean","Red Sea Plus","India","Coral Triangle","Western Australia","North Australia","Vietnam","South China Sea","Northern South China Sea","Northern Japan"))
-Central_Pac<-as.numeric(locs$VeronDivis %in% c("Eastern Indian Ocean","Indian Ocean","Red Sea Plus","India","Coral Triangle","Western Australia","North Australia","Vietnam","South China Sea","Northern South China Sea","Northern Japan","Central Pacific",""))
-Hawaii<-as.numeric(locs$VeronDivis %in% c("Hawaii"))
+stats<-data.frame(Species_Locus=character(0),Barrier=character(0),constrained.inertia=numeric(0),totalInertia=numeric(0),ProportionConstrained=numeric(0),adj.R2.total=numeric(0),modelF=numeric(0),modelPvalue=numeric(0),pcx_Var=numeric(0),pcx_p=numeric(0),pcy_Var=numeric(0),pcy_p=numeric(0),barrier_Var=numeric(0),barrier_p=numeric(0),stringsAsFactors = F)
+stats$Species_Locus<-as.character(stats$Species_Locus)
+stats$Barrier<-as.character(stats$Barrier)
 
 
 ######################################################################
@@ -75,12 +61,12 @@ all.gsl.rda<-sapply(esu_loci, function(x) NULL)
 
 
 ###############################################################################
-# 3. Subsample for each species of interest, and filter based on Phi_ST table.
+# 2. Subsample for each species of interest, and filter based on Phi_ST table.
 for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutjanus_kasmira_CYB"
   
   cat("\n","\n","\n","Now starting", gsl, "\n")
   
-  if(any(is.na(diffstats[[gsl]]))){cat("NAs in FST table, No gdm calculated"); next}
+  if(any(is.na(diffstats[[gsl]]))){cat("NAs in FST table, No dbRDA calculated"); next}
   
   if(diffstats[[gsl]]=="Fewer than 3 sampled populations after filtering. No stats calculated"){all.gsl.rda[[gsl]]<-"Fewer than 5 sampled populations after filtering."; cat("Fewer than 5 sampled populations after filtering.");next}
   sp<-ipdb[which(ipdb$Genus_species_locus==gsl),]
@@ -129,8 +115,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   
   #sort gslFSTm
   gslFSTm<-gslFSTm[order(rownames(gslFSTm)),order(colnames(gslFSTm))]
-  # convert to data frame with popsample names as first column
-  #gslFSTm<-cbind(sample=locs$sample,as.data.frame(gslFSTm))
+
   
   ######################################################################
   # 4. Calculate Great Circle Distance
@@ -142,41 +127,79 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   ####################################################################### Calculate Overwater Distances#
   #Save for later##
 
+  ##############################################################################
+  #5. Create a subset of the distance matrices including only the localities from
+  #    two neighboring Veron regions.
 
+  for(j in 1:16){
+    barrier<-c(barriers[j,1],barriers[j,2])
+    subset_locs<-which(locs$VeronDivis==barrier[1] | locs$VeronDivis==barrier[2])
+    locs2<-locs[subset_locs,]
     
-
+    cat("Now Starting",barrier,"\n")
+    
+    gcdist_km2<-gcdist_km[subset_locs,subset_locs]
+    gslFSTm2<-gslFSTm[subset_locs,subset_locs]
+    
+    #######################################################################
+    # 6. Create a dummy vector for each putative "barrier" 
+    #     between the two regions (1s on one side and 0s on the other)
+    
+    barrier_test<-length(unique(locs2$VeronDivis))>1
+    
+    #if there aren't samples on either side of this barrier, then go to next barrier
+    if(!barrier_test){cat("Not testable \n");next}
+    
     
     ############################################################################
-    # 5. Calculate the principal coordinates
+    # 7. Calculate the principal coordinates
     
-    phiST.pcoa<-cmdscale(gslFSTm, k=dim(as.matrix(gslFSTm))[1] - 1, eig=TRUE, add=FALSE) 
-    phiST.scores<-phiST.pcoa$points
+    FST.pcoa<-cmdscale(gslFSTm2, k=dim(as.matrix(gslFSTm2))[1] - 1, eig=TRUE, add=FALSE) 
+    FST.scores<-FST.pcoa$points
     
-    gcdist.pcoa<-cmdscale(gcdist_km, k=2, eig=TRUE, add=FALSE)
+    gcdist.pcoa<-cmdscale(gcdist_km2, k=2, eig=TRUE, add=FALSE)
     gcdist.scores<-gcdist.pcoa$points
     gcdist.scores<-data.frame("pcx"=gcdist.pcoa$points[,1],"pcy"=gcdist.pcoa$points[,2])
-    locs<-cbind(locs,gcdist.scores,Indian_Ocean,W_Australia,N_Australia,SCS,NSCS,Vietnam,Japan,Sunda,EastCT,Central_Pac,Hawaii)
+    locs2<-cbind(locs2,gcdist.scores)
     
     ###########################################################################
-    # 6. Calculate the RDA and extract statistics
-    RDA.res<-rda(phiST.scores~pcx+pcy+Indian_Ocean+Sunda+W_Australia+N_Australia+EastCT+SCS+Central_Pac+NSCS+Japan+Vietnam+Hawaii, data=locs, scale=TRUE )
-
-    anova(RDA.res, by="term", step=1000)
-    
+    # 8. Calculate the RDA and extract statistics
+    RDA.res<-rda(phiST.scores~pcx+pcy+VeronDivis, data=locs2, scale=TRUE )
     
     #Extract Statistics
     constrained.inertia<-summary(RDA.res)$constr.chi
     total.inertia<-summary(RDA.res)$tot.chi
-    proportion.constrained.interia<-constrained.inertia/total.inertia
+    proportion.constrained.inertia<-constrained.inertia/total.inertia
     
     adj.R2.total.model<-RsquareAdj(RDA.res)$adj.r.squared
     model.sig<-anova.cca(RDA.res, step=1000)
+    modelF<-model.sig$F[1]
+    modelPvalue<-model.sig$`Pr(>F)`[1]
+    
     terms.sig<-anova(RDA.res, by="term", step=1000)
+    pcx_Var<-terms.sig$Variance[1]
+    pcx_p<-terms.sig$`Pr(>F)`[1]
+    pcy_Var<-terms.sig$Variance[2]
+    pcy_p<-terms.sig$`Pr(>F)`[2]
+    barrier_Var<-terms.sig$Variance[3]
+    barrier_p<-terms.sig$`Pr(>F)`[3]
+    
+    
     
     #save stats
-     stats_model<-c(gsl,paste(barrier[1],barrier[2],sep="-"),gdm.barrier.deviance,gdm.barrier.explained, impt.dist.gdm.barrier, impt.barrier.gdm.barrier, gdm.no.barrier.deviance, gdm.no.barrier.explained,impt.dist.gdm.no.barrier, (gdm.barrier.deviance-gdm.no.barrier.deviance),pvalue)
+    
+    stats_model<-c(gsl,paste(barrier[1],barrier[2],sep="-"),constrained.inertia,total.inertia,proportion.constrained.inertia,adj.R2.total.model,modelF,modelPvalue,pcx_Var,pcx_p,pcy_Var,pcy_p,barrier_Var,barrier_p)
     
     stats[nrow(stats)+1,]<-stats_model
+    all.gsl.rda[[gsl]]<-RDA.res
+    
+    
+ 
+  }
+
+    
+
+
   }
   
 
