@@ -1,16 +1,16 @@
-"Red Sea Plus","Indian Ocean"
-"Indian Ocean","Eastern Indian Ocean"
-"Eastern Indian Ocean","Coral Triangle"
-"Coral Triangle","North Australia"
-"Coral Triangle","Western Australia"
-"Western Australia","North Australia"
-"North Australia","Central Pacific"
-"Coral Triangle","South China Sea"
-"Coral Triangle","Northern South China Sea"
-"Northern South China Sea","Northern Japan"
-"Coral Triangle","Central Pacific"
-"Northern South China Sea","Central Pacific"
-"Central Pacific","French Polynesia"
-"Central Pacific","Hawaii"
-"French Polynesia","Hawaii"
-"Northern Japan","Hawaii"
+Red Sea Plus,Indian Ocean
+Indian Ocean,Eastern Indian Ocean
+Eastern Indian Ocean,Coral Triangle
+Coral Triangle,North Australia
+Coral Triangle,Western Australia
+Western Australia,North Australia
+North Australia,Central Pacific
+Coral Triangle,South China Sea
+Coral Triangle,Northern South China Sea
+Northern South China Sea,Northern Japan
+Coral Triangle,Central Pacific
+Northern South China Sea,Central Pacific
+Central Pacific,French Polynesia
+Central Pacific,Hawaii
+French Polynesia,Hawaii
+Northern Japan,Hawaii

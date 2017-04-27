@@ -19,7 +19,10 @@ library(vegan)
 source("config.R")
 source("DIPnet_Stats_Functions.R")
 
-barriers<-read.csv("VeronBarriers.csv",header=F,stringsAsFactors = F)
+barriers1<-c("Red Sea Plus","Indian Ocean","Eastern Indian Ocean","Coral Triangle","Coral Triangle","Western Australia","North Australia","Coral Triangle","Coral Triangle","Northern South China Sea","Coral Triangle","Northern South China Sea","Central Pacific","Central Pacific","French Polynesia","Northern Japan")
+barriers2<-c("Indian Ocean","Eastern Indian Ocean","Coral Triangle","North Australia","Western Australia","North Australia","Central Pacific","South China Sea","Northern South China Sea","Northern Japan","Central Pacific","Central Pacific","French Polynesia","Hawaii","Hawaii","Hawaii")
+
+barriers<-cbind(barriers1,barriers2)
 
 stats<-data.frame(Species_Locus=character(0),Barrier=character(0),constrained.inertia=numeric(0),totalInertia=numeric(0),ProportionConstrained=numeric(0),adj.R2.total=numeric(0),modelF=numeric(0),modelPvalue=numeric(0),pcx_Var=numeric(0),pcx_p=numeric(0),pcy_Var=numeric(0),pcy_p=numeric(0),barrier_Var=numeric(0),barrier_p=numeric(0),stringsAsFactors = F)
 stats$Species_Locus<-as.character(stats$Species_Locus)
@@ -164,7 +167,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     
     ###########################################################################
     # 8. Calculate the RDA and extract statistics
-    RDA.res<-rda(phiST.scores~pcx+pcy+VeronDivis, data=locs2, scale=TRUE )
+    RDA.res<-rda(FST.scores~pcx+pcy+VeronDivis, data=locs2, scale=TRUE )
     
     #Extract Statistics
     constrained.inertia<-summary(RDA.res)$constr.chi
