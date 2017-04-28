@@ -136,24 +136,22 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
 
   for(j in 1:16){
     barrier<-c(barriers[j,1],barriers[j,2])
+    
+    #subset the locs table for pops that are in the two regions adjacent to the barrier
     subset_locs<-which(locs$VeronDivis==barrier[1] | locs$VeronDivis==barrier[2])
     locs2<-locs[subset_locs,]
+    
+    #test whether there are two samples from each side of the barrier
+    if(length(which(locs2$VeronDivis==barrier[1])) < 2 | length(which(locs2$VeronDivis==barrier[2])) < 2){cat("Fewer than 2 sampled localities per subset \n"); next}
+    
+
     
     cat("Now Starting",barrier,"\n")
     
     gcdist_km2<-gcdist_km[subset_locs,subset_locs]
     gslFSTm2<-gslFSTm[subset_locs,subset_locs]
     
-    #######################################################################
-    # 6. Create a dummy vector for each putative "barrier" 
-    #     between the two regions (1s on one side and 0s on the other)
-    
-    barrier_test<-length(unique(locs2$VeronDivis))>1
-    
-    #if there aren't samples on either side of this barrier, then go to next barrier
-    if(!barrier_test){cat("Not testable \n");next}
-    
-    
+
     ############################################################################
     # 7. Calculate the principal coordinates
     
