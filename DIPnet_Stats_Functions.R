@@ -368,6 +368,9 @@ pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei GST", "Hedrick G
     colnames(sp.df)<-c("materialSampleID", "sample", "haplotype")
     seq.gtype <- df2gtypes(sp.df, ploidy = 1, id.col=1,strata.col=2, sequences = gseqhaps$hap.seqs)
     
+    if(nrow(gseqhaps$hap.seqs) < 4) {all.pops.table[[gsl]]<-paste("fewer than 4 haplotypes left after filtering. No stats calculated")
+    cat("fewer than 4 haplotypes left after filtering. No stats calculated")
+    next}
     #DIFFERENTIATION STATS CALCULATION
     cat("Calculating", gdist)
 
