@@ -311,6 +311,8 @@ pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei GST", "Hedrick G
   
   all.pops.table<-sapply(esu_loci, function(x) NULL) 
   
+  gdist_back<-gdist  # save the original selection of genetic distance, due to some switcheroos below
+  
   # LOOP through all gsl combos  
   for(gsl in esu_loci){ #gsl<-"Zebrasoma_flavescens_CYB" 
     
@@ -368,9 +370,12 @@ pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei GST", "Hedrick G
     colnames(sp.df)<-c("materialSampleID", "sample", "haplotype")
     seq.gtype <- df2gtypes(sp.df, ploidy = 1, id.col=1,strata.col=2, sequences = gseqhaps$hap.seqs)
     
-    if(nrow(gseqhaps$hap.seqs) < 4) {all.pops.table[[gsl]]<-paste("fewer than 4 haplotypes left after filtering. No stats calculated")
-    cat("fewer than 4 haplotypes left after filtering. No stats calculated")
-    next}
+    #if(nrow(gseqhaps$hap.seqs) < 4) {all.pops.table[[gsl]]<-paste("fewer than 4 haplotypes left after filtering. No stats calculated")
+    #cat("fewer than 4 haplotypes left after filtering. No stats calculated")
+    #next}
+    # if there are more than one population with only one haplotype pairwiseTest will choke
+    if(length(which(summary(seq.gtype)$strata.smry[,3] == 1)) > 1 && gdist=="PhiST"){cat("Two populations with fixed haplotypes makes PhiST calculation choke. Using WC Theta instead of PhiST \n");gdist<-"WC Theta"}
+    
     #DIFFERENTIATION STATS CALCULATION
     cat("Calculating", gdist)
 
@@ -390,19 +395,19 @@ pairwise.structure.mtDNA.db<-function(ipdb=ipdb, gdist = c("Nei GST", "Hedrick G
       diffs<-pairwise_D(spseqs.genind)
     }
     
-    #Weir-Cockerhams (1984) theta - StrataG package (also commented code for hierfstat package - results are the same)
+    #PhiST - Excoffier et al. 1992 - StrataG package
+    if(gdist=="PhiST"){
+      pairwise<-pairwiseTest(seq.gtype,stats="phist",nrep=nrep,num.cores=num.cores,quietly=T,model="TN93")
+      pairwise$pair.mat$Fst[upper.tri(pairwise$pair.mat$PHIst)]<-0
+      diffs<-as.dist(pairwise$pair.mat$PHIst)
+    }
+    
+     #Weir-Cockerhams (1984) theta - StrataG package (also commented code for hierfstat package - results are the same)
     if(gdist=="WC Theta"){
       pairwise<-pairwiseTest(seq.gtype,stats="fst",nrep=nrep,num.cores=num.cores,quietly=T)
       pairwise$pair.mat$Fst[upper.tri(pairwise$pair.mat$Fst)]<-0
       diffs<-as.dist(pairwise$pair.mat$Fst)
-    }
-    
-    
-    #PhiST - Excoffier et al. 1992 - StrataG package
-    if(gdist=="PhiST"){
-      pairwise<-pairwiseTest(seq.gtype,stats="phist",nrep=nrep,num.cores=num.cores,quietly=T)
-      pairwise$pair.mat$Fst[upper.tri(pairwise$pair.mat$PHIst)]<-0
-      diffs<-as.dist(pairwise$pair.mat$PHIst)
+      if(length(which(summary(seq.gtype)$strata.smry[,3] == 1)) > 1 && gdist_back=="PhiST"){gdist<-"PhiST"}
     }
     
     #ChiSq - Raymond and Rousset 1995? I think? - StrataG package
