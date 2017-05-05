@@ -54,7 +54,7 @@ ipdb<-join(ipdb,abgd[,c(1,3)], by = "IPDB_ID",type = "left")
 ipdb<-ipdb[ipdb$IPDB_ID %in% drops == FALSE, ] 
 
 # read in the Fst/PhiSt table 
-load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_060715_WC Theta_sample.Rdata")
+load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_PhiST_042817.Rdata")
 
 
 # Make an empty list to save gdm output for each species

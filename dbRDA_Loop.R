@@ -24,7 +24,7 @@ barriers2<-c("Indian Ocean","Eastern Indian Ocean","Coral Triangle","North Austr
 
 barriers<-cbind(barriers1,barriers2)
 
-stats<-data.frame(Species_Locus=character(0),Barrier=character(0),constrained.inertia=numeric(0),totalInertia=numeric(0),ProportionConstrained=numeric(0),adj.R2.total=numeric(0),modelF=numeric(0),modelPvalue=numeric(0),pcx_Var=numeric(0),pcx_p=numeric(0),pcy_Var=numeric(0),pcy_p=numeric(0),barrier_Var=numeric(0),barrier_p=numeric(0),stringsAsFactors = F)
+stats<-data.frame(Species_Locus=character(0),Barrier=character(0),constrained.inertia=numeric(0),totalInertia=numeric(0),ProportionConstrained=numeric(0),adj.R2.total=numeric(0),modelF=numeric(0),modelPvalue=numeric(0),pcx_Var=numeric(0),pcx_p=numeric(0),pcy_Var=numeric(0),pcy_p=numeric(0),barrier_Var=numeric(0),barrier_p=numeric(0),barrier_margvar=numeric(0),barrier_margp=numeric(0),stringsAsFactors = F)
 stats$Species_Locus<-as.character(stats$Species_Locus)
 stats$Barrier<-as.character(stats$Barrier)
 
@@ -54,7 +54,7 @@ ipdb<-join(ipdb,abgd[,c(1,3)], by = "IPDB_ID",type = "left")
 ipdb<-ipdb[ipdb$IPDB_ID %in% drops == FALSE, ] 
 
 # read in the Fst/PhiSt table 
-load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_060715_WC Theta_sample.Rdata")
+load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_PhiST_042817.Rdata")
 
 
 # Make an empty list to save gdm output for each species
@@ -185,11 +185,14 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     barrier_Var<-terms.sig$Variance[3]
     barrier_p<-terms.sig$`Pr(>F)`[3]
     
+    marg.sig<-anova(RDA.res, by="margin", step=1000)
+    barrier_margVar<-marg.sig$Variance[3]
+    barrier_margp<-marg.sig$`Pr(>F)`[3]
     
     
     #save stats
     
-    stats_model<-c(gsl,paste(barrier[1],barrier[2],sep="-"),constrained.inertia,total.inertia,proportion.constrained.inertia,adj.R2.total.model,modelF,modelPvalue,pcx_Var,pcx_p,pcy_Var,pcy_p,barrier_Var,barrier_p)
+    stats_model<-c(gsl,paste(barrier[1],barrier[2],sep="-"),constrained.inertia,total.inertia,proportion.constrained.inertia,adj.R2.total.model,modelF,modelPvalue,pcx_Var,pcx_p,pcy_Var,pcy_p,barrier_Var,barrier_p,barrier_margVar,barrier_margp)
     
     stats[nrow(stats)+1,]<-stats_model
     all.gsl.rda[[gsl]]<-RDA.res
