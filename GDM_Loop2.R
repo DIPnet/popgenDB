@@ -70,6 +70,8 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   if(any(is.na(diffstats[[gsl]]))){cat("NAs in FST table, No gdm calculated"); next}
   
   if(diffstats[[gsl]]=="Fewer than 3 sampled populations after filtering. No stats calculated"){all.pops.table[[gsl]]<-"Fewer than 5 sampled populations after filtering."; cat("Fewer than 5 sampled populations after filtering.");next}
+  
+  #pull out the data for this genus-species-locus (gsl)
   sp<-ipdb[which(ipdb$Genus_species_locus==gsl),]
   #clean weird backslashes from names
   sp$locality<-gsub("\"","",sp$locality)
@@ -84,7 +86,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   gslFST<-diffstats[[gsl]]
   #make a matrix out of gslFST, convert negative values to zero
   gslFSTm<-as.matrix(gslFST)
-  gslFSTm[which(gslFSTm<0)]<-0.00001
+  gslFSTm[which(gslFSTm<=0)]<-0.00001
   
   #zap weird slashes in the names
   rownames(gslFSTm)<-gsub("\"","",rownames(gslFSTm))
@@ -122,6 +124,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   ######################################################################
   # 3. Calculate Great Circle Distance
   gcdist_km <- pointDistance(locs[,2:3],lonlat=T)/1000
+  #symmetricize the matrix
+  gcdist_km[upper.tri(gcdist_km)]<-t(gcdist_km)[upper.tri(gcdist_km)]
+  
   #cbind on the sample names
   gcdist_km <- cbind(sample=locs$sample,as.data.frame(gcdist_km))
   
@@ -168,7 +173,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     if(is.null(gdm.barrier) | is.null(gdm.no.barrier)){cat("No Solution Obtained \n");next}
     
     #difference in deviance is the more complex model - less complex model
-    deltadev<-gdm.barrier$gdmdeviance-gdm.no.barrier$gdmdeviance
+    deltadev<-gdm.no.barrier$gdmdeviance-gdm.barrier$gdmdeviance
     
     ##############################################################################
     # 7. Perform Monte-Carlo permutations to develop a null distribution 
@@ -182,10 +187,10 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
       gdm.no.barrier.rand<-gdm(gdm.format.rand[,-grep("matrix_2",
                                                       names(gdm.format))])
       if(is.null(gdm.barrier.rand) | is.null(gdm.no.barrier.rand)){next}
-      deltadev.rand<-gdm.barrier.rand$gdmdeviance-gdm.no.barrier.rand$gdmdeviance
+      deltadev.rand<-gdm.no.barrier.rand$gdmdeviance-gdm.barrier.rand$gdmdeviance
       rand.deltas<-c(rand.deltas,deltadev.rand)
     }
-    pvalue<-length(which(rand.deltas>deltadev))/length(rand.deltas)
+    pvalue<-length(which(abs(deltadev) > abs(rand.deltas)))/length(rand.deltas)
     
     
     
