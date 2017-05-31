@@ -216,7 +216,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
 }
 
 
-
+# do some figuring with the results - see how often each barrier is significant at alpha of 0.05 - will get more sophisticated later.
 library(dplyr)
 
 goodbarriers<-stats %>% filter(Pvalue < 0.05) %>% group_by(Barrier) %>% summarize(goodbarriers = n())
