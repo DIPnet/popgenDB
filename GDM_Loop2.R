@@ -190,7 +190,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
       deltadev.rand<-gdm.no.barrier.rand$gdmdeviance-gdm.barrier.rand$gdmdeviance
       rand.deltas<-c(rand.deltas,deltadev.rand)
     }
-    pvalue<-length(which(abs(deltadev) > abs(rand.deltas)))/length(rand.deltas)
+    pvalue<-length(which(abs(deltadev) < abs(rand.deltas)))/length(rand.deltas)
     
     
     
@@ -205,7 +205,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     impt.barrier.gdm.barrier<-sum(gdm.barrier$coefficients[gdm.barrier$splines[1]+1:gdm.barrier$splines[1]])
     impt.dist.gdm.no.barrier<-sum(gdm.no.barrier$coefficients[1:gdm.no.barrier$splines[1]])
    
-     stats_model<-c(gsl,paste(barrier[1],barrier[2],sep="-"),gdm.barrier.deviance,gdm.barrier.explained, impt.dist.gdm.barrier, impt.barrier.gdm.barrier, gdm.no.barrier.deviance, gdm.no.barrier.explained,impt.dist.gdm.no.barrier, (gdm.barrier.deviance-gdm.no.barrier.deviance),pvalue)
+     stats_model<-c(gsl,paste(barrier[1],barrier[2],sep="-"),gdm.barrier.deviance,gdm.barrier.explained, impt.dist.gdm.barrier, impt.barrier.gdm.barrier, gdm.no.barrier.deviance, gdm.no.barrier.explained,impt.dist.gdm.no.barrier, deltadev,pvalue)
     
     stats[nrow(stats)+1,]<-stats_model
   }
@@ -214,3 +214,17 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   
   
 }
+
+
+
+library(dplyr)
+
+goodbarriers<-stats %>% filter(Pvalue < 0.05) %>% group_by(Barrier) %>% summarize(goodbarriers = n())
+
+allbarriers<-stats %>% group_by(Barrier) %>% summarize(barrier_tests = n())
+
+barrier_ratios<-left_join(allbarriers,goodbarriers,by="Barrier")
+
+barrier_ratios$goodbarriers[which(is.na(barrier_ratios$goodbarriers))]<-0
+
+barrier_ratios<-mutate(barrier_ratios, goodbarriers/barrier_tests)
