@@ -24,9 +24,10 @@ barriers2<-c("Indian Ocean","Eastern Indian Ocean","Coral Triangle","North Austr
 
 barriers<-cbind(barriers1,barriers2)
 
-stats<-data.frame(Species_Locus=character(0),Barrier=character(0),constrained.inertia=numeric(0),totalInertia=numeric(0),ProportionConstrained=numeric(0),adj.R2.total=numeric(0),modelF=numeric(0),modelPvalue=numeric(0),pcx_Var=numeric(0),pcx_p=numeric(0),pcy_Var=numeric(0),pcy_p=numeric(0),barrier_Var=numeric(0),barrier_p=numeric(0),barrier_margvar=numeric(0),barrier_margp=numeric(0),stringsAsFactors = F)
+stats<-data.frame(Species_Locus=character(0),Barrier=character(0),NumbPopsBar1=numeric(0), NumbPopsBar2=numeric(0),constrained.inertia=numeric(0),totalInertia=numeric(0),ProportionConstrained=numeric(0),adj.R2.total=numeric(0),modelF=numeric(0),modelPvalue=numeric(0),pcx_Var=numeric(0),pcx_p=numeric(0),pcy_Var=numeric(0),pcy_p=numeric(0),barrier_Var=numeric(0),barrier_p=numeric(0),barrier_margvar=numeric(0),barrier_margp=numeric(0),bestmodel=character(0), constrained.inertia.best=numeric(0), total.inertia.best=numeric(0), proportion.constrained.inertia.best=numeric(0), adj.R2.best.model=numeric(0), stringsAsFactors = F)
 stats$Species_Locus<-as.character(stats$Species_Locus)
 stats$Barrier<-as.character(stats$Barrier)
+stats$bestmodel<-as.character(stats$bestmodel)
 
 
 ######################################################################
@@ -55,7 +56,7 @@ ipdb<-ipdb[ipdb$IPDB_ID %in% drops == FALSE, ]
 
 # read in the Fst/PhiSt table 
 load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_PhiST_042817.Rdata")
-
+#load("~/Desktop/DIPnet_structure_sample_PhiST_042817.Rdata")
 
 # Make an empty list to save gdm output for each species
 esu_loci <- unique(ipdb$Genus_species_locus)
@@ -141,10 +142,11 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     subset_locs<-which(locs$VeronDivis==barrier[1] | locs$VeronDivis==barrier[2])
     locs2<-locs[subset_locs,]
     
-    #test whether there are two samples from each side of the barrier
+    #test whether there are two samples from each side of the barrier and record numb pops
     if(length(which(locs2$VeronDivis==barrier[1])) < 2 | length(which(locs2$VeronDivis==barrier[2])) < 2){cat("Fewer than 2 sampled localities per subset \n"); next}
     
-
+    NumbPopsBar1<-length(which(locs2$VeronDivis==barrier[1]))
+    NumbPopsBar2<-length(which(locs2$VeronDivis==barrier[2]))
     
     cat("Now Starting",barrier,"\n")
     
@@ -189,10 +191,27 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     barrier_margVar<-marg.sig$Variance[3]
     barrier_margp<-marg.sig$`Pr(>F)`[3]
     
+    #Model selection
+    nullmodel<-rda(FST.scores~1, data=locs2, scale=TRUE )
+    forward.model<-ordiR2step(nullmodel, scope=formula(RDA.res), directon="forward", psteps=1000)  #ordiR2step implements Blanchets stopping criterion
+    bestmodel<-as.character(forward.model$call[2])
+    if (isTRUE(summary(forward.model)$constr.chi)){
+      constrained.inertia.best<-summary(forward.model)$constr.chi
+      total.inertia.best<-summary(forward.model)$tot.chi
+      proportion.constrained.inertia.best<-constrained.inertia.best/total.inertia.best
+      adj.R2.best.model<-RsquareAdj(forward.model)$adj.r.squared
+      
+    } else {
+      constrained.inertia.best<-NA
+      total.inertia.best<-summary(forward.model)$tot.chi
+      proportion.constrained.inertia.best<-NA
+      adj.R2.best.model<-NA
+    }
     
+  
     #save stats
     
-    stats_model<-c(gsl,paste(barrier[1],barrier[2],sep="-"),constrained.inertia,total.inertia,proportion.constrained.inertia,adj.R2.total.model,modelF,modelPvalue,pcx_Var,pcx_p,pcy_Var,pcy_p,barrier_Var,barrier_p,barrier_margVar,barrier_margp)
+    stats_model<-c(gsl,paste(barrier[1],barrier[2],sep="-"),NumbPopsBar1, NumbPopsBar2,constrained.inertia,total.inertia,proportion.constrained.inertia,adj.R2.total.model,modelF,modelPvalue,pcx_Var,pcx_p,pcy_Var,pcy_p,barrier_Var,barrier_p,barrier_margVar,barrier_margp, bestmodel, constrained.inertia.best, total.inertia.best, proportion.constrained.inertia.best, adj.R2.best.model)
     
     stats[nrow(stats)+1,]<-stats_model
     all.gsl.rda[[gsl]]<-RDA.res
@@ -209,4 +228,4 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
 
   
   
-}
+#}
