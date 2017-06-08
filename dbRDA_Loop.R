@@ -143,7 +143,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     locs2<-locs[subset_locs,]
     
     #test whether there are two samples from each side of the barrier and record numb pops
-    if(length(which(locs2$VeronDivis==barrier[1])) < 2 | length(which(locs2$VeronDivis==barrier[2])) < 2){cat("Fewer than 2 sampled localities per subset \n"); next}
+    if(length(which(locs2$VeronDivis==barrier[1])) < 3 | length(which(locs2$VeronDivis==barrier[2])) < 3){cat("Fewer than 2 sampled localities per subset \n"); next}
     
     NumbPopsBar1<-length(which(locs2$VeronDivis==barrier[1]))
     NumbPopsBar2<-length(which(locs2$VeronDivis==barrier[2]))
@@ -195,19 +195,18 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     nullmodel<-rda(FST.scores~1, data=locs2, scale=TRUE )
     forward.model<-ordiR2step(nullmodel, scope=formula(RDA.res), directon="forward", psteps=1000)  #ordiR2step implements Blanchets stopping criterion
     bestmodel<-as.character(forward.model$call[2])
-    if (isTRUE(summary(forward.model)$constr.chi)){
-      constrained.inertia.best<-summary(forward.model)$constr.chi
-      total.inertia.best<-summary(forward.model)$tot.chi
-      proportion.constrained.inertia.best<-constrained.inertia.best/total.inertia.best
-      adj.R2.best.model<-RsquareAdj(forward.model)$adj.r.squared
-      
-    } else {
+    if (isTRUE(summary(forward.model)$constr.chi==NULL)){
       constrained.inertia.best<-NA
       total.inertia.best<-summary(forward.model)$tot.chi
       proportion.constrained.inertia.best<-NA
       adj.R2.best.model<-NA
+    } else {
+      constrained.inertia.best<-summary(forward.model)$constr.chi
+      total.inertia.best<-summary(forward.model)$tot.chi
+      proportion.constrained.inertia.best<-constrained.inertia.best/total.inertia.best
+      adj.R2.best.model<-RsquareAdj(forward.model)$adj.r.squared
     }
-    
+     
   
     #save stats
     
@@ -225,7 +224,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
 
   }
   
-
+write.csv(stats, "dbRDA_pairs_3popmin_8June.csv")
   
   
 #}
