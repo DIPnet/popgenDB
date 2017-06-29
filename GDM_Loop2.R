@@ -60,6 +60,8 @@ load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_
 # Make an empty list to save gdm output for each species
 esu_loci <- unique(ipdb$Genus_species_locus)
 all.pops.table<-sapply(esu_loci, function(x) NULL)
+solution<-NULL
+nosolution<-NULL
 
 ###############################################################################
 # 2. Subsample for each species of interest, and filter based on Phi_ST table.
@@ -170,7 +172,10 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     gdm.barrier<-gdm(gdm.format)
     gdm.no.barrier<-gdm(gdm.format[,-grep("matrix_2",names(gdm.format))])
     
-    if(is.null(gdm.barrier) | is.null(gdm.no.barrier)){cat("No Solution Obtained \n");next}
+    if(is.null(gdm.barrier) | is.null(gdm.no.barrier))
+      {cat("No Solution Obtained \n");
+      nosolution<-rbind(nosolution,c(gsl,barrier));
+      next}
     
     #difference in deviance is the more complex model - less complex model
     deltadev<-gdm.no.barrier$gdmdeviance-gdm.barrier$gdmdeviance
@@ -192,7 +197,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     }
     pvalue<-length(which(abs(deltadev) < abs(rand.deltas)))/length(rand.deltas)
     
-    
+    #code to keep track of which ones worked
+    cat("Good Solution \n");
+    solution<-rbind(solution,c(gsl,barrier))
     
     #save stats
     gdm.barrier.deviance<-gdm.barrier$gdmdeviance
