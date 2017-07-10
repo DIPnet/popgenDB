@@ -24,9 +24,11 @@ source("DIPnet_Stats_Functions.R")
 
 barriers<-read.csv("VeronBarriers.csv",header=F,stringsAsFactors = F)
 
-stats<-data.frame(Species_Locus=character(0),Barrier=character(0),WithBarrierDeviance=numeric(0),WithBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithBarrier=numeric(0),ImportanceBarrierWithBarrier=numeric(0),NoBarrierDeviance=numeric(0),NoBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithoutBarrier=numeric(0),DeltaDeviance=numeric(0),Pvalue=numeric(0),stringsAsFactors = F)
 
-
+rescale<-function(x){
+  normalized<-(x-min(x))/(max(x)-min(x))
+  return(normalized)
+}
 
 
 ######################################################################
@@ -57,11 +59,14 @@ ipdb<-ipdb[ipdb$IPDB_ID %in% drops == FALSE, ]
 load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_PhiST_042817.Rdata")
 
 
-# Make an empty list to save gdm output for each species
+# Make an empty list to save gdm output for each species, save the stats for successful models in a data frame
 esu_loci <- unique(ipdb$Genus_species_locus)
 all.pops.table<-sapply(esu_loci, function(x) NULL)
 solution<-list()
 nosolution<-list()
+stats<-data.frame(Species_Locus=character(0),Barrier=character(0),WithBarrierDeviance=numeric(0),WithBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithBarrier=numeric(0),ImportanceBarrierWithBarrier=numeric(0),NoBarrierDeviance=numeric(0),NoBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithoutBarrier=numeric(0),DeltaDeviance=numeric(0),Pvalue=numeric(0),stringsAsFactors = F)
+barriertests<-data.frame(Species=character(0),Region1=character(0),NumPops1=numeric(0),Region2=character(0),Numpops2=numeric(0), Test=logical(0), Solution=logical(0),Significant=logical(0),stringsAsFactors = F)
+k<-0
 
 ###############################################################################
 # 2. Subsample for each species of interest, and filter based on Phi_ST table.
@@ -71,7 +76,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   
   if(any(is.na(diffstats[[gsl]]))){cat("NAs in FST table, No gdm calculated"); next}
   
-  if(diffstats[[gsl]]=="Fewer than 3 sampled populations after filtering. No stats calculated"){all.pops.table[[gsl]]<-"Fewer than 5 sampled populations after filtering."; cat("Fewer than 5 sampled populations after filtering.");next}
+  if(diffstats[[gsl]]=="Fewer than 3 sampled populations after filtering. No stats calculated"){nostats<-c(nostats,gsl);next}
   
   #pull out the data for this genus-species-locus (gsl)
   sp<-ipdb[which(ipdb$Genus_species_locus==gsl),]
@@ -88,7 +93,10 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   gslFST<-diffstats[[gsl]]
   #make a matrix out of gslFST, convert negative values to zero
   gslFSTm<-as.matrix(gslFST)
-  gslFSTm[which(gslFSTm<=0)]<-0.00001
+  
+  gslFSTm[which(gslFSTm > 1)] <- 1 #some values that look like 1.0000 are registering as greater than 1
+  gslFSTm[which(gslFSTm < 0)] <- 0 #get rid of artifactual negative values
+  #gslFSTm<-rescale(gslFSTm)
   
   #zap weird slashes in the names
   rownames(gslFSTm)<-gsub("\"","",rownames(gslFSTm))
@@ -98,7 +106,8 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   if(any(rownames(gslFSTm) %in% nonVeronpops)){
     gslFSTm<-gslFSTm[-(which(rownames(gslFSTm) %in% nonVeronpops)),-(which(colnames(gslFSTm) %in% nonVeronpops))]
   }
-  if(length(rownames(gslFSTm))<5){all.pops.table[[gsl]]<-"Fewer than 5 sampled populations";cat("Fewer than 5 sampled populations");next}
+  
+  if(length(rownames(gslFSTm))<5){nostats<-c(nostats,gsl);cat("Fewer than 5 sampled populations");next}
   
   #and filter sp based on the localities that have Fst values
   sp<-sp[sp$sample %in% rownames(gslFSTm),]
@@ -108,8 +117,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   gslFSTm<- gslFSTm[which(rownames(gslFSTm) %in% unique(sp$sample)),which(rownames(gslFSTm) %in% unique(sp$sample))]
   
 
-  if(length(rownames(gslFSTm))<5){all.pops.table[[gsl]]<-"Fewer than 5 sampled populations";cat("Fewer than 5 sampled populations");next}
-  
+
   #create a locations data frame that has all the localities plus lats and longs and their Veron region.
   locs<-as.data.frame(unique(sp$sample))
   names(locs)<-"sample"
@@ -137,10 +145,17 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   #######################################################################
   # 4. Create a subset of the distance matrices including only the localities from
   #    two neighboring Veron regions.
+  
+  #make a table to keep track of all these tests for each species
+  
   for(j in 1:16){
+    k<-k+1
     barrier<-c(barriers[j,1],barriers[j,2])
     subset_locs<-which(locs$VeronDivis==barrier[1] | locs$VeronDivis==barrier[2])
     locs2<-locs[subset_locs,]
+    
+    Numpops1<-length(locs2$sample[which(locs$VeronDivis==barrier[1])])
+    Numpops2<-length(locs2$sample[which(locs$VeronDivis==barrier[2])])
     
     cat("Now Starting",barrier,"\n")
     
@@ -156,8 +171,8 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     
     barrier_m2 <- cbind(sample=locs2$sample,as.data.frame(barrier_m2))
     
-    #if there aren't samples on either side of this barrier, then go to next barrier
-    if(!barrier_test){cat("Not testable \n");next}
+    #if there aren't samples on either side of this barrier, then record this as non testable and go to next barrier
+    if(!barrier_test){cat("Not testable \n") ; barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,F,F,F);next}
     
     ############################################################################
     # 6. Run through gdm with the barrier and without. Save the deviance values.
@@ -175,10 +190,11 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     #TROUBLESHOOTING: save fst matrices from gdm models that obtain no solution
     if(is.null(gdm.barrier) | is.null(gdm.no.barrier))
       {cat("No Solution Obtained \n");
-      nosolution[[paste(gsl,barrier[1],barrier[2],sep=",")]]<-list(locs2,gdm.format);
+      nosolution[[paste(gsl,barrier[1],Numpops1,barrier[2],Numpops2,sep=",")]]<-list(locs2,gdm.format);
+      barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,T,F,F);
       next}
     
-    #difference in deviance is the more complex model - less complex model
+    #difference in deviance
     deltadev<-gdm.no.barrier$gdmdeviance-gdm.barrier$gdmdeviance
     
     ##############################################################################
@@ -216,9 +232,13 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
      stats_model<-c(gsl,paste(barrier[1],barrier[2],sep="-"),gdm.barrier.deviance,gdm.barrier.explained, impt.dist.gdm.barrier, impt.barrier.gdm.barrier, gdm.no.barrier.deviance, gdm.no.barrier.explained,impt.dist.gdm.no.barrier, deltadev,pvalue)
     
     stats[nrow(stats)+1,]<-stats_model
+    
+    #record this in the table
+    barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,T,T,pvalue < 0.05)
+    
   }
   
-
+all.pops.table[[gsl]] <- barriertests
   
   
 }
