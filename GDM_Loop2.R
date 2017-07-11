@@ -19,8 +19,11 @@
 library(gdm)
 library(plyr)
 library(gdistance)
+library(ecodist)
 source("config.R")
 source("DIPnet_Stats_Functions.R")
+
+setwd("~/github/popgenDB/")
 
 barriers<-read.csv("VeronBarriers.csv",header=F,stringsAsFactors = F)
 
@@ -56,15 +59,15 @@ ipdb<-join(ipdb,abgd[,c(1,3)], by = "IPDB_ID",type = "left")
 ipdb<-ipdb[ipdb$IPDB_ID %in% drops == FALSE, ] 
 
 # read in the Fst/PhiSt table 
-load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_PhiST_042817.Rdata")
+load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_060715_WC Theta_sample.Rdata")
 
 
 # Make an empty list to save gdm output for each species, save the stats for successful models in a data frame
 esu_loci <- unique(ipdb$Genus_species_locus)
-all.pops.table<-sapply(esu_loci, function(x) NULL)
 solution<-list()
 nosolution<-list()
 stats<-data.frame(Species_Locus=character(0),Barrier=character(0),WithBarrierDeviance=numeric(0),WithBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithBarrier=numeric(0),ImportanceBarrierWithBarrier=numeric(0),NoBarrierDeviance=numeric(0),NoBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithoutBarrier=numeric(0),DeltaDeviance=numeric(0),Pvalue=numeric(0),stringsAsFactors = F)
+nostats<-NULL
 barriertests<-data.frame(Species=character(0),Region1=character(0),NumPops1=numeric(0),Region2=character(0),Numpops2=numeric(0), Test=logical(0), Solution=logical(0),Significant=logical(0),stringsAsFactors = F)
 k<-0
 
@@ -91,12 +94,13 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   
   #subsample Fst 
   gslFST<-diffstats[[gsl]]
-  #make a matrix out of gslFST, convert negative values to zero
+  #make a matrix out of gslFST
   gslFSTm<-as.matrix(gslFST)
   
   gslFSTm[which(gslFSTm > 1)] <- 1 #some values that look like 1.0000 are registering as greater than 1
-  gslFSTm[which(gslFSTm < 0)] <- 0 #get rid of artifactual negative values
-  #gslFSTm<-rescale(gslFSTm)
+  #gslFSTm[which(gslFSTm < 0)] <- 0 #get rid of artifactual negative values
+  gslFSTm<-rescale(gslFSTm)
+  #gslFSTm<-gslFSTm/(1-gslFSTm)
   
   #zap weird slashes in the names
   rownames(gslFSTm)<-gsub("\"","",rownames(gslFSTm))
@@ -187,6 +191,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     gdm.barrier<-gdm(gdm.format)
     gdm.no.barrier<-gdm(gdm.format[,-grep("matrix_2",names(gdm.format))])
     
+    # run mrdm
+    mrdm<-MRM(formula = distance ~ s2.matrix_1 + s2.matrix_2, data=gdm.format,nperm = 10000)
+    
     #TROUBLESHOOTING: save fst matrices from gdm models that obtain no solution
     if(is.null(gdm.barrier) | is.null(gdm.no.barrier))
       {cat("No Solution Obtained \n");
@@ -228,8 +235,15 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     impt.dist.gdm.barrier<-sum(gdm.barrier$coefficients[1:gdm.barrier$splines[1]])
     impt.barrier.gdm.barrier<-sum(gdm.barrier$coefficients[gdm.barrier$splines[1]+1:gdm.barrier$splines[1]])
     impt.dist.gdm.no.barrier<-sum(gdm.no.barrier$coefficients[1:gdm.no.barrier$splines[1]])
+    
+    mrdm.rsquared<-mrdm$r.squared[1]
+    mrdm.rsquared.pvalue<-mrdm$r.squared[2]
+    mrdm.dist.pvalue<-mrdm$coef[2,2]
+    mrdm.barrier.pvalue<-mrdm$coef[2,3]
+    
+    
    
-     stats_model<-c(gsl,paste(barrier[1],barrier[2],sep="-"),gdm.barrier.deviance,gdm.barrier.explained, impt.dist.gdm.barrier, impt.barrier.gdm.barrier, gdm.no.barrier.deviance, gdm.no.barrier.explained,impt.dist.gdm.no.barrier, deltadev,pvalue)
+    stats_model<-c(gsl,paste(barrier[1],barrier[2],sep="-"),gdm.barrier.deviance,gdm.barrier.explained, impt.dist.gdm.barrier, impt.barrier.gdm.barrier, gdm.no.barrier.deviance, gdm.no.barrier.explained,impt.dist.gdm.no.barrier, deltadev,pvalue,mrdm.rsquared,mrdm.rsquared.pvalue,mrdm.dist.pvalue,mrdm.barrier.pvalue)
     
     stats[nrow(stats)+1,]<-stats_model
     
@@ -238,8 +252,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     
   }
   
-all.pops.table[[gsl]] <- barriertests
-  
+
   
 }
 
