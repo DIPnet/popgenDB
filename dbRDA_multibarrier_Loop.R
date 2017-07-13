@@ -19,12 +19,13 @@ library(vegan)
 source("config.R")
 source("DIPnet_Stats_Functions.R")
 
-barriers1<-c("Red Sea Plus","Indian Ocean","Eastern Indian Ocean","Coral Triangle","Coral Triangle","Western Australia","North Australia","Coral Triangle","Coral Triangle","Northern South China Sea","Coral Triangle","Northern South China Sea","Central Pacific","Central Pacific","French Polynesia","Northern Japan")
-barriers2<-c("Indian Ocean","Eastern Indian Ocean","Coral Triangle","North Australia","Western Australia","North Australia","Central Pacific","South China Sea","Northern South China Sea","Northern Japan","Central Pacific","Central Pacific","French Polynesia","Hawaii","Hawaii","Hawaii")
+#barriers1<-c("Red Sea Plus","Indian Ocean","Eastern Indian Ocean","Coral Triangle","Coral Triangle","Western Australia","North Australia","Coral Triangle","Coral Triangle","Northern South China Sea","Coral Triangle","Northern South China Sea","Central Pacific","Central Pacific","French Polynesia","Northern Japan")
+#barriers2<-c("Indian Ocean","Eastern Indian Ocean","Coral Triangle","North Australia","Western Australia","North Australia","Central Pacific","South China Sea","Northern South China Sea","Northern Japan","Central Pacific","Central Pacific","French Polynesia","Hawaii","Hawaii","Hawaii")
 
-barriers<-cbind(barriers1,barriers2)
+#barriers<-cbind(barriers1,barriers2)
 
-stats<-data.frame(Species_Locus=character(0),Barrier=character(0),NumbPopsBar1=numeric(0), NumbPopsBar2=numeric(0),constrained.inertia=numeric(0),totalInertia=numeric(0),ProportionConstrained=numeric(0),adj.R2.total=numeric(0),modelF=numeric(0),modelPvalue=numeric(0),pcx_Var=numeric(0),pcx_p=numeric(0),pcy_Var=numeric(0),pcy_p=numeric(0),barrier_Var=numeric(0),barrier_p=numeric(0),barrier_margvar=numeric(0),barrier_margp=numeric(0),bestmodel=character(0), constrained.inertia.best=numeric(0), total.inertia.best=numeric(0), proportion.constrained.inertia.best=numeric(0), adj.R2.best.model=numeric(0), stringsAsFactors = F)
+##1. Dataframe for results
+stats<-data.frame(Species_Locus=character(0),constrained.inertia=numeric(0),totalInertia=numeric(0),ProportionConstrained=numeric(0),adj.R2.total=numeric(0),modelF=numeric(0),modelPvalue=numeric(0),pcx_Var=numeric(0),pcx_p=numeric(0),pcy_Var=numeric(0),pcy_p=numeric(0),bestmodel=character(0), constrained.inertia.best=numeric(0), total.inertia.best=numeric(0), proportion.constrained.inertia.best=numeric(0), adj.R2.best.model=numeric(0), stringsAsFactors = F)
 stats$Species_Locus<-as.character(stats$Species_Locus)
 stats$Barrier<-as.character(stats$Barrier)
 stats$bestmodel<-as.character(stats$bestmodel)
@@ -72,7 +73,8 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   if(any(is.na(diffstats[[gsl]]))){cat("NAs in FST table, No dbRDA calculated"); next}
   
   if(diffstats[[gsl]]=="Fewer than 3 sampled populations after filtering. No stats calculated"){all.gsl.rda[[gsl]]<-"Fewer than 5 sampled populations after filtering."; cat("Fewer than 5 sampled populations after filtering.");next}
-  sp<-ipdb[which(ipdb$Genus_species_locus==gsl),]
+   sp<-ipdb[which(ipdb$Genus_species_locus==gsl),]
+  
   #clean weird backslashes from names
   sp$locality<-gsub("\"","",sp$locality)
   
@@ -115,6 +117,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   #can't do a unique on sample, lats and longs because some samples have non-unique lats and longs! So I do a join and take the first match.
   locs<-join(locs,sp[c("sample","decimalLongitude","decimalLatitude"
                        ,"VeronDivis")], by="sample", match="first")
+  if (length(unique(locs$VeronDivis)) < 2) {"Only one region!"; cat("Only one region!"); next}
   
   #sort gslFSTm
   gslFSTm<-gslFSTm[order(rownames(gslFSTm)),order(colnames(gslFSTm))]
@@ -131,42 +134,26 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   #Save for later##
 
   ##############################################################################
-  #5. Create a subset of the distance matrices including only the localities from
-  #    two neighboring Veron regions.
-
-  for(j in 1:16){
-    barrier<-c(barriers[j,1],barriers[j,2])
-    
-    #subset the locs table for pops that are in the two regions adjacent to the barrier
-    subset_locs<-which(locs$VeronDivis==barrier[1] | locs$VeronDivis==barrier[2])
-    locs2<-locs[subset_locs,]
-    
-    #test whether there are THREE samples from each side of the barrier and record numb pops
-    if(length(which(locs2$VeronDivis==barrier[1])) < 3 | length(which(locs2$VeronDivis==barrier[2])) < 3){cat("Fewer than 2 sampled localities per subset \n"); next}
-    
-    NumbPopsBar1<-length(which(locs2$VeronDivis==barrier[1]))
-    NumbPopsBar2<-length(which(locs2$VeronDivis==barrier[2]))
-    
-    cat("Now Starting",barrier,"\n")
-    
-    gcdist_km2<-gcdist_km[subset_locs,subset_locs]
-    gslFSTm2<-gslFSTm[subset_locs,subset_locs]
-    
+  #5. Create a matrix of regional identities
+  
+  regions<-with(locs, data.frame(model.matrix(~VeronDivis+0)))   #one of the predictors is superfluous but will get knocked out during RDA
+  row.names(regions)<-row.names(locs)
+  
 
     ############################################################################
     # 7. Calculate the principal coordinates
     
-    FST.pcoa<-cmdscale(gslFSTm2, k=dim(as.matrix(gslFSTm2))[1] - 1, eig=TRUE, add=FALSE) #ignore warnings - OK to have negatives according to Anderson
+    FST.pcoa<-cmdscale(gslFSTm, k=dim(as.matrix(gslFSTm))[1] - 1, eig=TRUE, add=FALSE) #ignore warnings - OK to have negatives according to Anderson
     FST.scores<-FST.pcoa$points
     
-    gcdist.pcoa<-cmdscale(gcdist_km2, k=2, eig=TRUE, add=FALSE)
+    gcdist.pcoa<-cmdscale(gcdist_km, k=2, eig=TRUE, add=FALSE)
     gcdist.scores<-gcdist.pcoa$points
     gcdist.scores<-data.frame("pcx"=gcdist.pcoa$points[,1],"pcy"=gcdist.pcoa$points[,2])
-    locs2<-cbind(locs2,gcdist.scores)
+    locs2<-cbind(regions,gcdist.scores)
     
     ###########################################################################
     # 8. Calculate the RDA and extract statistics
-    RDA.res<-rda(FST.scores~pcx+pcy+VeronDivis, data=locs2, scale=TRUE )
+    RDA.res<-rda(FST.scores~., data=locs2, scale=TRUE )
     
     #Extract Statistics
     constrained.inertia<-summary(RDA.res)$constr.chi
@@ -183,12 +170,12 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     pcx_p<-terms.sig$`Pr(>F)`[1]
     pcy_Var<-terms.sig$Variance[2]
     pcy_p<-terms.sig$`Pr(>F)`[2]
-    barrier_Var<-terms.sig$Variance[3]
-    barrier_p<-terms.sig$`Pr(>F)`[3]
+    #barrier_Var<-terms.sig$Variance[3]   #omitting for now as the number of barriers will differ
+    #barrier_p<-terms.sig$`Pr(>F)`[3]
     
-    marg.sig<-anova(RDA.res, by="margin", step=1000)
-    barrier_margVar<-marg.sig$Variance[3]
-    barrier_margp<-marg.sig$`Pr(>F)`[3]
+    #marg.sig<-anova(RDA.res, by="margin", step=1000)
+    #barrier_margVar<-marg.sig$Variance[3]
+    #barrier_margp<-marg.sig$`Pr(>F)`[3]
     
     #Model selection
     nullmodel<-rda(FST.scores~1, data=locs2, scale=TRUE )
@@ -209,7 +196,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   
     #save stats
     
-    stats_model<-c(gsl,paste(barrier[1],barrier[2],sep="-"),NumbPopsBar1, NumbPopsBar2,constrained.inertia,total.inertia,proportion.constrained.inertia,adj.R2.total.model,modelF,modelPvalue,pcx_Var,pcx_p,pcy_Var,pcy_p,barrier_Var,barrier_p,barrier_margVar,barrier_margp, bestmodel, constrained.inertia.best, total.inertia.best, proportion.constrained.inertia.best, adj.R2.best.model)
+    stats_model<-c(gsl,constrained.inertia,total.inertia,proportion.constrained.inertia,adj.R2.total.model,modelF,modelPvalue,pcx_Var,pcx_p,pcy_Var,pcy_p, bestmodel, constrained.inertia.best, total.inertia.best, proportion.constrained.inertia.best, adj.R2.best.model)
     
     stats[nrow(stats)+1,]<-stats_model
     all.gsl.rda[[gsl]]<-RDA.res
@@ -221,9 +208,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     
 
 
-  }
+ 
   
-write.csv(stats, "dbRDA_pairs_3popmin_13July.csv")
+write.csv(stats, "dbRDA_allpops_13July.csv")
   
   
 #}
