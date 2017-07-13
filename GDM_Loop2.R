@@ -20,6 +20,7 @@ library(gdm)
 library(plyr)
 library(gdistance)
 library(ecodist)
+library(dplyr)
 source("config.R")
 source("DIPnet_Stats_Functions.R")
 
@@ -66,9 +67,9 @@ load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_
 esu_loci <- unique(ipdb$Genus_species_locus)
 solution<-list()
 nosolution<-list()
-stats<-data.frame(Species_Locus=character(0),Barrier=character(0),WithBarrierDeviance=numeric(0),WithBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithBarrier=numeric(0),ImportanceBarrierWithBarrier=numeric(0),NoBarrierDeviance=numeric(0),NoBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithoutBarrier=numeric(0),DeltaDeviance=numeric(0),Pvalue=numeric(0),stringsAsFactors = F)
+stats<-data.frame(Species_Locus=character(0),Barrier=character(0),WithBarrierDeviance=numeric(0),WithBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithBarrier=numeric(0),ImportanceBarrierWithBarrier=numeric(0),NoBarrierDeviance=numeric(0),NoBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithoutBarrier=numeric(0),DeltaDeviance=numeric(0),Pvalue=numeric(0),MRDM.rsquared=numeric(0),MRDM.rsquared.pvalue=numeric(0),MRDM.dist.pvalue=numeric(0), MRDM.barrier.pvalue=numeric(0),stringsAsFactors = F)
 nostats<-NULL
-barriertests<-data.frame(Species=character(0),Region1=character(0),NumPops1=numeric(0),Region2=character(0),Numpops2=numeric(0), Test=logical(0), Solution=logical(0),Significant=logical(0),MRDM.Barrier.Significant=logical(0),stringsAsFactors = F)
+barriertests<-data.frame(Species=character(0),Region1=character(0),NumPops1=numeric(0),Region2=character(0),Numpops2=numeric(0), Test=logical(0), Solution=logical(0),Significant=logical(0),MRDM.dist.significant=logical(0),MRDM.Barrier.Significant=logical(0),stringsAsFactors = F)
 k<-0
 
 ###############################################################################
@@ -177,10 +178,10 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     barrier_m2 <- cbind(sample=locs2$sample,as.data.frame(barrier_m2))
     
     #if there aren't enough samples on either side of this barrier, then record this as non testable and go to next barrier
-    if(!barrier_test){cat("Not testable \n") ; barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,F,F,F,F);next}
+    if(!barrier_test){cat("Not testable \n") ; barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,F,F,F,F,F);next}
     
-    if( Numpops1 < 2) {cat("not enough populations within",barrier[1]) ; barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,F,F,F,F);next}
-    if( Numpops2 < 2) {cat("not enough populations within",barrier[2]) ; barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,F,F,F,F);next}
+    if( Numpops1 < 2) {cat("not enough populations within",barrier[1],"\n") ; barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,F,F,F,F,F);next}
+    if( Numpops2 < 2) {cat("not enough populations within",barrier[2],"\n") ; barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,F,F,F,F,F);next}
     
     ############################################################################
     # 6. Run through gdm with the barrier and without. Save the deviance values.
@@ -202,7 +203,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     if(is.null(gdm.barrier) | is.null(gdm.no.barrier))
       {cat("No Solution Obtained \n");
       nosolution[[paste(gsl,barrier[1],Numpops1,barrier[2],Numpops2,sep=",")]]<-list(locs2,gdm.format);
-      barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,T,F,F,mrdm$coef[3,2] < 0.05);
+      barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,T,F,F,mrdm$coef[2,2] < 0.05,mrdm$coef[3,2] < 0.05);
       next}
     
     #difference in deviance
@@ -252,7 +253,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     stats[nrow(stats)+1,]<-stats_model
     
     #record this in the table
-    barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,T,T,pvalue < 0.05, mrdm$coef[3,2] < 0.05)
+    barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,T,T,pvalue < 0.05, mrdm$coef[2,2] < 0.05,mrdm$coef[3,2] < 0.05)
     
   }
   
@@ -262,7 +263,17 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
 
 
 # do some figuring with the results - see how often each barrier is significant at alpha of 0.05 - will get more sophisticated later.
-library(dplyr)
+
+
+length(barriertests[which(barriertests$Test==T),1])
+#working GDM tests
+length(barriertests[which(barriertests$Solution==T & barriertests$Test==T),1])
+#failed GDM tests
+length(barriertests[which(barriertests$Solution==F & barriertests$Test==T),1])
+
+#overlap between MRDM and GDM
+length(barriertests[which(barriertests$Significant==T & barriertests$MRDM.Barrier.Significant==F),1])
+
 
 goodbarriers<-stats %>% filter(Pvalue < 0.05) %>% group_by(Barrier) %>% summarize(goodbarriers = n())
 
