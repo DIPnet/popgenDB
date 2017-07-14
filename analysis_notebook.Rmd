@@ -1,0 +1,482 @@
+---
+title: "DIPnet Population Structure Notebook"
+output: 
+  html_notebook:
+    toc: yes
+---
+
+# Setup
+```{r Setup}
+library(seqinr)  #might have to download .tgz file directly from CRAN site and install locally, not directly from CRAN repository
+library(ape)  
+library(pegas)
+library(hierfstat)
+library(mmod)
+library(adegenet)
+library(plyr)
+library(strataG)
+library(iNEXT)
+library(gdm)
+library(gdistance)
+library(ecodist)
+library(dplyr)
+library(reshape2)
+library(WriteXLS)
+library(ggplot2)
+
+
+source("config.R")
+source("DIPnet_Stats_Functions.R")
+
+rescale<-function(x){
+  normalized<-(x-min(x))/(max(x)-min(x))
+  return(normalized)
+}
+
+```
+
+```{r Import Data}
+######################################################################
+# 1. Import the IPDB and Fst tables
+ipdb<-read.table(ipdb_path,sep="\t",header=T,stringsAsFactors = F,quote="", na.strings=c("NA"," ","")) 
+
+
+#read in geographical regionalizations from Treml
+spatial<-read.table(spatial_path, header=T, sep="\t",stringsAsFactors = F, na.strings=c("NA"," ",""), quote="")
+
+#read in geographical regionalizations from Beger
+spatial2<-read.table(spatial2_path, header=T,sep="\t", stringsAsFactors = F, na.strings=c("NA"," ",""), quote="")
+
+#read in ABGD groups
+abgd<-read.table(abgd_path, header=T, sep="\t", stringsAsFactors = F)
+
+#join spatial
+ipdb<-join(ipdb,spatial, by = "IPDB_ID",type = "left")
+ipdb<-join(ipdb,spatial2[,c(2,18:24)], by = "IPDB_ID", type = "left")
+
+#join ABGD
+ipdb<-join(ipdb,abgd[,c(1,3)], by = "IPDB_ID",type = "left")
+
+# drop hybrids and divergent individuals
+ipdb<-ipdb[ipdb$IPDB_ID %in% drops == FALSE, ] 
+
+
+
+## remove anything not included in the ecoregions scheme (some dolphins, some COTS from Kingman and Madagascar(?), some A. nigros from Kiribati, som C. auriga from Fakareva, hammerheads from Western Australia, and West Africa, and some dolphins from the middle of the eastern tropical pacific
+
+ipdb_ecoregions<-ipdb[-which(is.na(ipdb$ECOREGION)),]
+
+## remove anything that doesn't occur in the 3 Indo-Pacific realms
+ipdb_ip<-ipdb_ecoregions[which(ipdb_ecoregions$REALM %in% c("Central Indo-Pacific","Western Indo-Pacific","Eastern Indo-Pacific")),]
+
+amova_ts_path<-"/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Hierarchical_structure"
+
+amova_abgd_path<-"/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_ESU/Hierarchical_structure"
+
+# Read in Veron barriers
+barriers<-read.csv("VeronBarriers.csv",header=F,stringsAsFactors = F)
+
+# read in the Fst/PhiSt table 
+load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_060715_WC Theta_sample.Rdata")
+
+```
+
+
+# Introduction
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. I am trying it out as a way to reproducibly document my work on the DIPnet Population Structure Paper.
+
+The overall workflow for this analysis is as follows:
+
+  - Run AMOVA according to several different regionalizations
+    - Briggs and Bowen 2013 - Fish Biogeography
+    - Veron et al. 2015 - Coral Biogeography
+    - Spalding et al. 2007 - 
+        - Marine Ecoregions
+        - Provinces
+        - Realms
+    - Kulbicki et al. 2013 - 
+        - Regionalization based on all species, 
+        - or just "reliable" species
+    - Keith et al. 2013 - Faunal Breaks
+  - Select the best model for each species according to the Bayesian Information Criterion
+  - Analyze individual "barriers" as implied by the regionalization that best explains the distribution of variation in the most species by modeling pairwise genetic distances given geographic distance and each barrier (individually or together):
+    - Generalized Dissimilarity Modeling (GDM)
+    - Multiple Regression with Distance Matrices (MRDM)
+    - Distance Based Redundancy Analysis (dbRDA)
+  - Special considerations:
+    - What is a species? Do the analysis using:
+        - Traditional species boundaries
+        - Automated Barcode Gap Discovery (ABGD) to account for cryptic species
+    - Include sequence distance in AMOVA?
+        - No: traditional Fst, specifically Weir and Cockerhams Theta
+        - Yes: Phi-ST
+
+# Run AMOVA loops
+
+Given the special considerations, we need to run 4 different flavors of AMOVA:
+  1. WCTheta and TradSpec
+  2. WCTheta and ABGD
+  3. PhiST and TradSpec
+  4. PhiST and ABGD
+
+Thus, we need to loop through all of the regionalizations above, running all 4 flavors of AMOVA.
+
+
+```{r AMOVA Loops, eval=F}
+
+## Loop through hypotheses, calculating AMOVA
+hypotheses<-c("ECOREGION", "PROVINCE","REALM","Bowen","Keith","Kulbicki_r","Kulbicki_b", "VeronDivis")
+amova_list<-list()
+
+for(h in hypotheses){
+  hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb_ip,level1 = "sample",level2=h,model="none",ABGD=F,nperm=1)
+  amova_list[[h]]<-hierstats
+}
+  
+
+## Summarize AMOVA results
+amovastats<-summarize_AMOVA(amova_list,hypotheses,specieslist=unique(ipdb$Genus_species_locus))
+
+WriteXLS(amovastats,ExcelFileName=file.path(amova_ts_path,"FST_TradSpec_raw_amova_output.Rdata.xlsx"))
+save(amova_list,file=file.path(amova_ts_path,"FST_TradSpec_raw_amova_output.Rdata"))
+save(amovastats,file=file.path(amova_ts_path,"FST_TradSpec_table_amova_output.Rdata"))
+```
+
+
+This takes a long time, so we are not running this code in the document, but loading in the results as we go through each consideration
+
+# Visualize AMOVA results
+
+## FST and Traditional Species Boundaries
+
+### Measure Support
+```{r Measure Support1}
+load(file=file.path(amova_ts_path,"FST_TradSpec_table_amova_output.Rdata"))
+
+# Measure support for each hypothesis
+
+#Get the values for each hypothesis for a given criterion - here I use BIC - and rank them for #each species, then choose the "best" hypothesis for each species based on the criterion.
+
+criterion<-"BIC"
+# find the maximum number of species from any of the 8 hypotheses
+maxlength<-max(sapply(amovastats,function(x) length(x[[1]]))) 
+# create an empty data frame with row names from the hypothesis with the most values
+crit_df<-data.frame(setNames(replicate(maxlength,numeric(0), simplify = F),nm=row.names(amovastats[["PROVINCE"]]))) 
+
+#Loop through the hypotheses, pulling out the values for criterion,transpose it, and then merge these values into the dataframe from the previous hypothesis 
+for(h in names(amovastats)){
+  crit_df<-merge(crit_df,t(amovastats[[h]][criterion]),all=T,sort=F)
+}
+#get the hypothesis names in there
+row.names(crit_df)<-names(amovastats)
+
+#rank the hypotheses for each species
+crit_rank<-as.data.frame(sapply(crit_df,rank,na.last="keep",ties.method="average"))
+row.names(crit_rank)<-names(amovastats)
+
+## remove gsls with more than 3 missing models
+crit_rank<-crit_rank[, colSums(is.na(crit_rank)) < nrow(crit_rank)-5]  
+
+## choose the best hypothesis or set of hypotheses for each species  
+best_hypothesis<-sapply(crit_rank,function(x){row.names(crit_rank)[which(x==min(x,na.rm=T)) ]})
+
+
+## Make a bar graph of best support for each hypothesis among species
+
+barplot<-ggplot(data=as.data.frame(unlist(best_hypothesis)), aes(x=unlist(best_hypothesis) )) + geom_bar(aes(y = (..count..)/sum(..count..))) + labs(x="Hypothesis",y="Proportion of Species", title="Proportional Support for Biogeographic Hypotheses based on BIC")
+
+barplot
+```
+
+### Calculate relative probability from Johnson and Omland 2004 and visualize with a heatmap
+```{r Relative Probability Heatmap1, fig.height=11, fig.width=8.5}
+# lookup the minimum BIC value for each species (which.min works better here, because it returns only the first instance of the minimum value)
+minBIC<-sapply(crit_df,function(x){x[which.min(x)]}) 
+
+#J&O box 4 eqn 1. scale() seems to be the way to go here, using the minBIC as the centering vector
+crit_df_deltaI<-scale(crit_df, center=minBIC, scale=F) 
+
+#J&O box 4 eqn 4. numerator, plus make it a data frame
+crit_df_deltaI_b<-as.data.frame(exp(-0.5*crit_df_deltaI)) 
+
+#J&O box 4 eqn 4. denominator
+crit_df_deltaI_sums<-sapply(crit_df_deltaI_b,sum,na.rm=T) 
+
+# this time use the scale argument of scale to divide each column by the corresponding sum
+crit_df_relative_prob<-scale(crit_df_deltaI_b,center=F,scale=crit_df_deltaI_sums) 
+
+
+## Make a heatmap of relative probability of each hypothesis
+
+#melt for ggplot2
+relprob<-melt(crit_df_relative_prob)
+colnames(relprob)<-c("Hypothesis","Species","Relative_Probability")
+
+#baseplot
+rp<-ggplot(relprob,aes(y=Species,x=Hypothesis,fill=Relative_Probability))
+
+#add geom_tile, turn the x-axis elements by 90 degrees, reverse the names on the y-axis, and use a diverging color scheme to highlight hypotheses with >50% rel prob.
+rp<-rp+geom_tile()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ylim(rev(levels(relprob$Species)))+
+  scale_fill_gradient2(low = "blue", mid = "white",
+                       high = "red", midpoint = 0.5, space = "rgb",
+                       na.value = "grey50", guide = "colourbar")
+rp
+```
+
+
+## PHIST and Traditional Species Boundaries
+
+Code is suppressed for the other 3 examples
+
+### Measure Support
+```{r Measure Support2, echo=F}
+load(file=file.path(amova_ts_path,"PHIST_TradSpecies_table_amova_output.Rdata"))
+
+# Measure support for each hypothesis
+
+#Get the values for each hypothesis for a given criterion - here I use BIC - and rank them for #each species, then choose the "best" hypothesis for each species based on the criterion.
+
+criterion<-"BIC"
+# find the maximum number of species from any of the 8 hypotheses
+maxlength<-max(sapply(amovastats,function(x) length(x[[1]]))) 
+# create an empty data frame with row names from the hypothesis with the most values
+crit_df<-data.frame(setNames(replicate(maxlength,numeric(0), simplify = F),nm=row.names(amovastats[["PROVINCE"]]))) 
+
+#Loop through the hypotheses, pulling out the values for criterion,transpose it, and then merge these values into the dataframe from the previous hypothesis 
+for(h in names(amovastats)){
+  crit_df<-merge(crit_df,t(amovastats[[h]][criterion]),all=T,sort=F)
+}
+#get the hypothesis names in there
+row.names(crit_df)<-names(amovastats)
+
+#rank the hypotheses for each species
+crit_rank<-as.data.frame(sapply(crit_df,rank,na.last="keep",ties.method="average"))
+row.names(crit_rank)<-names(amovastats)
+
+## remove gsls with more than 3 missing models
+crit_rank<-crit_rank[, colSums(is.na(crit_rank)) < nrow(crit_rank)-5]  
+
+## choose the best hypothesis or set of hypotheses for each species  
+best_hypothesis<-sapply(crit_rank,function(x){row.names(crit_rank)[which(x==min(x,na.rm=T)) ]})
+
+
+## Make a bar graph of best support for each hypothesis among species
+
+barplot<-ggplot(data=as.data.frame(unlist(best_hypothesis)), aes(x=unlist(best_hypothesis) )) + geom_bar(aes(y = (..count..)/sum(..count..))) + labs(x="Hypothesis",y="Proportion of Species", title="Proportional Support for Biogeographic Hypotheses based on BIC")
+
+barplot
+```
+
+
+### Calculate relative probability from Johnson and Omland 2004 and visualize with a heatmap
+```{r Relative Probability Heatmap2, echo=F}
+# lookup the minimum BIC value for each species (which.min works better here, because it returns only the first instance of the minimum value)
+minBIC<-sapply(crit_df,function(x){x[which.min(x)]}) 
+
+#J&O box 4 eqn 1. scale() seems to be the way to go here, using the minBIC as the centering vector
+crit_df_deltaI<-scale(crit_df, center=minBIC, scale=F) 
+
+#J&O box 4 eqn 4. numerator, plus make it a data frame
+crit_df_deltaI_b<-as.data.frame(exp(-0.5*crit_df_deltaI)) 
+
+#J&O box 4 eqn 4. denominator
+crit_df_deltaI_sums<-sapply(crit_df_deltaI_b,sum,na.rm=T) 
+
+# this time use the scale argument of scale to divide each column by the corresponding sum
+crit_df_relative_prob<-scale(crit_df_deltaI_b,center=F,scale=crit_df_deltaI_sums) 
+
+
+## Make a heatmap of relative probability of each hypothesis
+
+#melt for ggplot2
+relprob<-melt(crit_df_relative_prob)
+colnames(relprob)<-c("Hypothesis","Species","Relative_Probability")
+
+#baseplot
+rp<-ggplot(relprob,aes(y=Species,x=Hypothesis,fill=Relative_Probability))
+
+#add geom_tile, turn the x-axis elements by 90 degrees, reverse the names on the y-axis, and use a diverging color scheme to highlight hypotheses with >50% rel prob.
+rp<-rp+geom_tile()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ylim(rev(levels(relprob$Species)))+
+  scale_fill_gradient2(low = "blue", mid = "white",
+                       high = "red", midpoint = 0.5, space = "rgb",
+                       na.value = "grey50", guide = "colourbar")
+rp
+```
+## FST and ABGD Boundaries
+
+### Measure Support
+```{r Measure Support3, echo=F}
+load(file=file.path(amova_abgd_path,"FST_ABGD_table_amova_output.Rdata"))
+
+# Measure support for each hypothesis
+
+#Get the values for each hypothesis for a given criterion - here I use BIC - and rank them for #each species, then choose the "best" hypothesis for each species based on the criterion.
+
+criterion<-"BIC"
+# find the maximum number of species from any of the 8 hypotheses
+maxlength<-max(sapply(amovastats,function(x) length(x[[1]]))) 
+# create an empty data frame with row names from the hypothesis with the most values
+crit_df<-data.frame(setNames(replicate(maxlength,numeric(0), simplify = F),nm=row.names(amovastats[["PROVINCE"]]))) 
+
+#Loop through the hypotheses, pulling out the values for criterion,transpose it, and then merge these values into the dataframe from the previous hypothesis 
+for(h in names(amovastats)){
+  crit_df<-merge(crit_df,t(amovastats[[h]][criterion]),all=T,sort=F)
+}
+#get the hypothesis names in there
+row.names(crit_df)<-names(amovastats)
+
+#rank the hypotheses for each species
+crit_rank<-as.data.frame(sapply(crit_df,rank,na.last="keep",ties.method="average"))
+row.names(crit_rank)<-names(amovastats)
+
+## remove gsls with more than 3 missing models
+crit_rank<-crit_rank[, colSums(is.na(crit_rank)) < nrow(crit_rank)-5]  
+
+## choose the best hypothesis or set of hypotheses for each species  
+best_hypothesis<-sapply(crit_rank,function(x){row.names(crit_rank)[which(x==min(x,na.rm=T)) ]})
+
+
+## Make a bar graph of best support for each hypothesis among species
+
+barplot<-ggplot(data=as.data.frame(unlist(best_hypothesis)), aes(x=unlist(best_hypothesis) )) + geom_bar(aes(y = (..count..)/sum(..count..))) + labs(x="Hypothesis",y="Proportion of Species", title="Proportional Support for Biogeographic Hypotheses based on BIC")
+
+barplot
+```
+
+
+### Calculate relative probability from Johnson and Omland 2004 and visualize with a heatmap
+```{r Relative Probability Heatmap3, echo=F}
+# lookup the minimum BIC value for each species (which.min works better here, because it returns only the first instance of the minimum value)
+minBIC<-sapply(crit_df,function(x){x[which.min(x)]}) 
+
+#J&O box 4 eqn 1. scale() seems to be the way to go here, using the minBIC as the centering vector
+crit_df_deltaI<-scale(crit_df, center=minBIC, scale=F) 
+
+#J&O box 4 eqn 4. numerator, plus make it a data frame
+crit_df_deltaI_b<-as.data.frame(exp(-0.5*crit_df_deltaI)) 
+
+#J&O box 4 eqn 4. denominator
+crit_df_deltaI_sums<-sapply(crit_df_deltaI_b,sum,na.rm=T) 
+
+# this time use the scale argument of scale to divide each column by the corresponding sum
+crit_df_relative_prob<-scale(crit_df_deltaI_b,center=F,scale=crit_df_deltaI_sums) 
+
+
+## Make a heatmap of relative probability of each hypothesis
+
+#melt for ggplot2
+relprob<-melt(crit_df_relative_prob)
+colnames(relprob)<-c("Hypothesis","Species","Relative_Probability")
+
+#baseplot
+rp<-ggplot(relprob,aes(y=Species,x=Hypothesis,fill=Relative_Probability))
+
+#add geom_tile, turn the x-axis elements by 90 degrees, reverse the names on the y-axis, and use a diverging color scheme to highlight hypotheses with >50% rel prob.
+rp<-rp+geom_tile()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ylim(rev(levels(relprob$Species)))+
+  scale_fill_gradient2(low = "blue", mid = "white",
+                       high = "red", midpoint = 0.5, space = "rgb",
+                       na.value = "grey50", guide = "colourbar")
+rp
+```
+
+## PHIST and ABGD Boundaries
+
+### Measure Support
+```{r Measure Support4, echo=F}
+load(file=file.path(amova_abgd_path,"PHIST_ABGD_table_amova_output.Rdata"))
+
+# Measure support for each hypothesis
+
+#Get the values for each hypothesis for a given criterion - here I use BIC - and rank them for #each species, then choose the "best" hypothesis for each species based on the criterion.
+
+criterion<-"BIC"
+# find the maximum number of species from any of the 8 hypotheses
+maxlength<-max(sapply(amovastats,function(x) length(x[[1]]))) 
+# create an empty data frame with row names from the hypothesis with the most values
+crit_df<-data.frame(setNames(replicate(maxlength,numeric(0), simplify = F),nm=row.names(amovastats[["PROVINCE"]]))) 
+
+#Loop through the hypotheses, pulling out the values for criterion,transpose it, and then merge these values into the dataframe from the previous hypothesis 
+for(h in names(amovastats)){
+  crit_df<-merge(crit_df,t(amovastats[[h]][criterion]),all=T,sort=F)
+}
+#get the hypothesis names in there
+row.names(crit_df)<-names(amovastats)
+
+#rank the hypotheses for each species
+crit_rank<-as.data.frame(sapply(crit_df,rank,na.last="keep",ties.method="average"))
+row.names(crit_rank)<-names(amovastats)
+
+## remove gsls with more than 3 missing models
+crit_rank<-crit_rank[, colSums(is.na(crit_rank)) < nrow(crit_rank)-5]  
+
+## choose the best hypothesis or set of hypotheses for each species  
+best_hypothesis<-sapply(crit_rank,function(x){row.names(crit_rank)[which(x==min(x,na.rm=T)) ]})
+
+
+## Make a bar graph of best support for each hypothesis among species
+
+barplot<-ggplot(data=as.data.frame(unlist(best_hypothesis)), aes(x=unlist(best_hypothesis) )) + geom_bar(aes(y = (..count..)/sum(..count..))) + labs(x="Hypothesis",y="Proportion of Species", title="Proportional Support for Biogeographic Hypotheses based on BIC")
+
+barplot
+```
+
+
+### Calculate relative probability from Johnson and Omland 2004 and visualize with a heatmap
+```{r Relative Probability Heatmap4, echo=F}
+# lookup the minimum BIC value for each species (which.min works better here, because it returns only the first instance of the minimum value)
+minBIC<-sapply(crit_df,function(x){x[which.min(x)]}) 
+
+#J&O box 4 eqn 1. scale() seems to be the way to go here, using the minBIC as the centering vector
+crit_df_deltaI<-scale(crit_df, center=minBIC, scale=F) 
+
+#J&O box 4 eqn 4. numerator, plus make it a data frame
+crit_df_deltaI_b<-as.data.frame(exp(-0.5*crit_df_deltaI)) 
+
+#J&O box 4 eqn 4. denominator
+crit_df_deltaI_sums<-sapply(crit_df_deltaI_b,sum,na.rm=T) 
+
+# this time use the scale argument of scale to divide each column by the corresponding sum
+crit_df_relative_prob<-scale(crit_df_deltaI_b,center=F,scale=crit_df_deltaI_sums) 
+
+
+## Make a heatmap of relative probability of each hypothesis
+
+#melt for ggplot2
+relprob<-melt(crit_df_relative_prob)
+colnames(relprob)<-c("Hypothesis","Species","Relative_Probability")
+
+#baseplot
+rp<-ggplot(relprob,aes(y=Species,x=Hypothesis,fill=Relative_Probability))
+
+#add geom_tile, turn the x-axis elements by 90 degrees, reverse the names on the y-axis, and use a diverging color scheme to highlight hypotheses with >50% rel prob.
+rp<-rp+geom_tile()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ylim(rev(levels(relprob$Species)))+
+  scale_fill_gradient2(low = "blue", mid = "white",
+                       high = "red", midpoint = 0.5, space = "rgb",
+                       na.value = "grey50", guide = "colourbar")
+rp
+```
+
+# Calculate Pairwise Differentiation Stats
+
+By sample
+
+```{r, eval=F}
+diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb, gdist = "WC Theta", minseqs = 5, minsamps = 3, mintotalseqs = 0, nrep = 0, num.cores = 2, ABGD = T, regionalization = "sample")
+save(diffstats, file = )
+
+write(diffstats, file=file.path("/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_ESU/Pairwise_statistics/DIPnet_structure_sample_WC Theta_ABGD.Rdata"))
+
+diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb, gdist = "PhiST", minseqs = 5, minsamps = 3, mintotalseqs = 0, nrep = 0, num.cores = 2, ABGD = T, regionalization = "sample")
+save(diffstats, file = )
+
+write(diffstats, file=file.path("/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_ESU/Pairwise_statistics/DIPnet_structure_sample_WC Theta_ABGD.Rdata"))
+```
