@@ -23,6 +23,7 @@ library(dplyr)
 library(reshape2)
 library(WriteXLS)
 library(ggplot2)
+library(knitr)
 
 
 source("config.R")
@@ -479,3 +480,253 @@ diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb, gdist = "Jost D", minseqs = 5,
 
 save(diffstats, file="/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_ESU/Pairwise_statistics/DIPnet_structure_sample_JostD_ABGD.Rdata")
 ```
+
+# Generalized Dissimilarity Modeling
+
+## Traditional Species Boundaries
+```{r GDM1, message=FALSE, warning=FALSE}
+
+  load("/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_JostD.Rdata")
+
+esu_loci <- unique(ipdb$Genus_species_locus)
+solution<-list()
+nosolution<-list()
+
+stats<-data.frame(Species_Locus=character(0),Barrier=character(0),WithBarrierDeviance=numeric(0),WithBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithBarrier=numeric(0),ImportanceBarrierWithBarrier=numeric(0),NoBarrierDeviance=numeric(0),NoBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithoutBarrier=numeric(0),DeltaDeviance=numeric(0),Pvalue=numeric(0),MRDM.rsquared=numeric(0),MRDM.rsquared.pvalue=numeric(0),MRDM.dist.pvalue=numeric(0), MRDM.barrier.pvalue=numeric(0),stringsAsFactors = F)
+
+nostats<-NULL
+
+barriertests<-data.frame(Species=character(0),Region1=character(0),NumPops1=numeric(0),Region2=character(0),Numpops2=numeric(0), Test=logical(0), Solution=logical(0),stringsAsFactors = F)
+
+k<-0
+
+for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutjanus_kasmira_CYB" "Acanthaster_planci_CO1"
+  
+  cat("\n","\n","\n","Now starting", gsl, "\n")
+  
+  if(any(is.na(diffstats[[gsl]]))){cat("NAs in FST table, No gdm calculated"); next}
+  
+  if(diffstats[[gsl]]=="Fewer than 3 sampled populations after filtering. No stats calculated"){nostats<-c(nostats,gsl);next}
+  
+  #pull out the data for this genus-species-locus (gsl)
+  sp<-ipdb[which(ipdb$Genus_species_locus==gsl),]
+  #clean weird backslashes from names
+  sp$locality<-gsub("\"","",sp$locality)
+  
+  sp$sample<-paste(sp$locality,round(sp$decimalLatitude, digits=0),round(sp$decimalLongitude, digits=0),sep="_")  #sets up a variable that matches the name in Fst table
+  sp<-sp[order(sp$sample),]
+  # Not all localities are included in Veron's regionalization (e.g. Guam), so get their names and then zap NAs
+  nonVeronpops<-unique(sp$sample[is.na(sp$VeronDivis)])
+  sp<-sp[!is.na(sp$VeronDivis),]
+  
+  #subsample Fst 
+  gslFST<-diffstats[[gsl]]
+  #make a matrix out of gslFST
+  gslFSTm<-as.matrix(gslFST)
+  
+  gslFSTm[which(gslFSTm > 1)] <- 1 #some values that look like 1.0000 are registering as greater than 1
+  #gslFSTm[which(gslFSTm < 0)] <- 0 #get rid of artifactual negative values
+  gslFSTm<-rescale(gslFSTm)
+  #gslFSTm<-gslFSTm/(1-gslFSTm)
+  
+  #zap weird slashes in the names
+  rownames(gslFSTm)<-gsub("\"","",rownames(gslFSTm))
+  colnames(gslFSTm)<-rownames(gslFSTm)
+  
+  #zap the same na populations from the list of non existent pops from VeronDivis
+  if(any(rownames(gslFSTm) %in% nonVeronpops)){
+    gslFSTm<-gslFSTm[-(which(rownames(gslFSTm) %in% nonVeronpops)),-(which(colnames(gslFSTm) %in% nonVeronpops))]
+  }
+  
+  if(length(rownames(gslFSTm))<5){nostats<-c(nostats,gsl);cat("Fewer than 5 sampled populations");next}
+  
+  #and filter sp based on the localities that have Fst values
+  sp<-sp[sp$sample %in% rownames(gslFSTm),]
+  
+  #and vice versa
+  
+  gslFSTm<- gslFSTm[which(rownames(gslFSTm) %in% unique(sp$sample)),which(rownames(gslFSTm) %in% unique(sp$sample))]
+  
+
+
+  #create a locations data frame that has all the localities plus lats and longs and their Veron region.
+  locs<-as.data.frame(unique(sp$sample))
+  names(locs)<-"sample"
+  #locs$Long<-sp$decimalLongitude[which(locs %in% sp$sample)]
+  #can't do a unique on sample, lats and longs because some samples have non-unique lats and longs! So I do a join and take the first match.
+  locs<-join(locs,sp[c("sample","decimalLongitude","decimalLatitude"
+                       ,"VeronDivis")], by="sample", match="first")
+  
+  #sort gslFSTm
+  gslFSTm<-gslFSTm[order(rownames(gslFSTm)),order(colnames(gslFSTm))]
+  # convert to data frame with popsample names as first column
+  gslFSTm<-cbind(sample=locs$sample,as.data.frame(gslFSTm))
+  
+  ######################################################################
+  # 3. Calculate Great Circle Distance
+  gcdist_km <- pointDistance(locs[,2:3],lonlat=T)/1000
+  #symmetricize the matrix
+  gcdist_km[upper.tri(gcdist_km)]<-t(gcdist_km)[upper.tri(gcdist_km)]
+  
+  #cbind on the sample names
+  gcdist_km <- cbind(sample=locs$sample,as.data.frame(gcdist_km))
+  
+  ####################################################################### Calculate Overwater Distances#
+  #Save for later##
+  #######################################################################
+  # 4. Create a subset of the distance matrices including only the localities from
+  #    two neighboring Veron regions.
+  
+  #make a table to keep track of all these tests for each species
+  
+  for(j in 1:16){
+    k<-k+1
+    barrier<-c(barriers[j,1],barriers[j,2])
+    subset_locs<-which(locs$VeronDivis==barrier[1] | locs$VeronDivis==barrier[2])
+    locs2<-locs[subset_locs,]
+    
+    
+    Numpops1<-length(locs2$sample[which(locs$VeronDivis==barrier[1])])
+    Numpops2<-length(locs2$sample[which(locs$VeronDivis==barrier[2])])
+    
+    cat("Now Starting",barrier,"\n")
+    
+    gcdist_km2<-gcdist_km[subset_locs,c(1,subset_locs+1)]
+    gslFSTm2<-gslFSTm[subset_locs,c(1,subset_locs+1)]
+    
+    #######################################################################
+    # 5. Create a dummy distance matrix for each putative "barrier" 
+    #     between the two regions (1s and 0s)
+    
+    barrier_m2<-as.matrix(dist(as.numeric(locs2$VeronDivis %in% barrier[1])))
+    
+    barrier_m2 <- cbind(sample=locs2$sample,as.data.frame(barrier_m2))
+    
+    #if there aren't enough samples on either side of this barrier, then record this as non testable and go to next barrier
+    if(Numpops1+Numpops2 < 3){cat("Less than three sampled populations; not testable\n"); barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,F,F);next}
+    if( Numpops1 < 1) {cat("not enough populations within",barrier[1],"\n") ; barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,F,F);next}
+    if( Numpops2 < 1) {cat("not enough populations within",barrier[2],"\n") ; barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,F,F);next}
+    
+    ############################################################################
+    # 6. Run through gdm with the barrier and without. Save the deviance values.
+    
+    locs2$sample<-as.character(locs2$sample)
+    gslFSTm2$sample<-as.character(gslFSTm2$sample)
+    gcdist_km2$sample<-as.character(gcdist_km2$sample)
+    
+    gdm.format<-formatsitepair(bioData=gslFSTm2, bioFormat=3, predData=locs2[,1:3],XColumn = "decimalLongitude", YColumn = "decimalLatitude", siteColumn="sample", distPreds=list(gcdist_km2,barrier_m2))
+    
+    #run gdm with and without the barrier
+    gdm.barrier<-gdm(gdm.format)
+    gdm.no.barrier<-gdm(gdm.format[,-grep("matrix_2",names(gdm.format))])
+    
+    # run mrdm
+    mrdm<-MRM(formula = distance ~ s2.matrix_1 + s2.matrix_2, data=gdm.format,nperm = 10000)
+    
+    #TROUBLESHOOTING: save fst matrices from gdm models that obtain no solution
+    if(is.null(gdm.barrier) | is.null(gdm.no.barrier))
+      {cat("No Solution Obtained \n");
+      nosolution[[paste(gsl,barrier[1],Numpops1,barrier[2],Numpops2,sep=",")]]<-list(locs2,gdm.format);
+      barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,T,F);
+      next}
+    
+    #difference in deviance
+    deltadev<-gdm.no.barrier$gdmdeviance-gdm.barrier$gdmdeviance
+    
+    ##############################################################################
+    # 7. Perform Monte-Carlo permutations to develop a null distribution 
+    #    of deviance values and determine significance (pvalue)
+    gdm.format.rand<-gdm.format
+    rand.deltas<-vector() 
+    
+    while(length(rand.deltas) < 1000) {
+      gdm.format.rand$distance<-sample(gdm.format.rand$distance,size=length(gdm.format.rand$distance))
+      gdm.barrier.rand<-gdm(gdm.format.rand)
+      gdm.no.barrier.rand<-gdm(gdm.format.rand[,-grep("matrix_2",
+                                                      names(gdm.format))])
+      if(is.null(gdm.barrier.rand) | is.null(gdm.no.barrier.rand)){next}
+      deltadev.rand<-gdm.no.barrier.rand$gdmdeviance-gdm.barrier.rand$gdmdeviance
+      rand.deltas<-c(rand.deltas,deltadev.rand)
+    }
+    pvalue<-length(which(abs(deltadev) < abs(rand.deltas)))/length(rand.deltas)
+    
+    cat("Good Solution \n")
+    
+    
+    #save stats
+    gdm.barrier.deviance<-gdm.barrier$gdmdeviance
+    gdm.barrier.explained<-gdm.barrier$explained
+
+    gdm.no.barrier.deviance<-gdm.no.barrier$gdmdeviance
+    gdm.no.barrier.explained<-gdm.no.barrier$explained
+
+    impt.dist.gdm.barrier<-sum(gdm.barrier$coefficients[1:gdm.barrier$splines[1]])
+    impt.barrier.gdm.barrier<-sum(gdm.barrier$coefficients[gdm.barrier$splines[1]+1:gdm.barrier$splines[1]])
+    impt.dist.gdm.no.barrier<-sum(gdm.no.barrier$coefficients[1:gdm.no.barrier$splines[1]])
+    
+    mrdm.rsquared<-mrdm$r.squared[1]
+    mrdm.rsquared.pvalue<-mrdm$r.squared[2]
+    mrdm.dist.pvalue<-mrdm$coef[2,2]
+    mrdm.barrier.pvalue<-mrdm$coef[3,2]
+    
+    
+   
+    stats_model<-c(gsl,paste(barrier[1],barrier[2],sep="-"),gdm.barrier.deviance,gdm.barrier.explained, impt.dist.gdm.barrier, impt.barrier.gdm.barrier, gdm.no.barrier.deviance, gdm.no.barrier.explained,impt.dist.gdm.no.barrier, deltadev,pvalue,mrdm.rsquared,mrdm.rsquared.pvalue,mrdm.dist.pvalue,mrdm.barrier.pvalue)
+    
+    stats[nrow(stats)+1,]<-stats_model
+    
+    #record this in the table
+    barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,T,T)
+    
+  }
+  
+
+  
+}
+
+stats$GDM.qvalue<-p.adjust(as.numeric(stats$Pvalue),method="fdr")
+stats$MRDM.r2.qvalue<-p.adjust(as.numeric(stats$MRDM.rsquared.pvalue),method="fdr")
+stats$MRDM.dist.qvalue<-p.adjust(as.numeric(stats$MRDM.dist.pvalue),method="fdr")
+stats$MRDM.barrier.qvalue<-p.adjust(as.numeric(stats$MRDM.barrier.pvalue),method="fdr")
+
+
+
+# do some figuring with the results
+length(barriertests[which(barriertests$Test==T),1])
+#working GDM tests
+length(barriertests[which(barriertests$Solution==T & barriertests$Test==T),1])
+#failed GDM tests
+length(barriertests[which(barriertests$Solution==F & barriertests$Test==T),1])
+
+
+
+length(stats[which(stats$GDM.qvalue <= 0.02),1])
+
+length(stats[which(stats$MRDM.barrier.qvalue <= 0.02),1])
+
+#overlap between MRDM and GDM
+length(stats[which(stats$GDM.qvalue <= 0.02 & stats$MRDM.barrier.qvalue <= 0.02),1])
+
+
+
+
+
+goodbarriers<-stats %>% filter(GDM.qvalue < 0.02) %>% group_by(Barrier) %>% summarize(goodbarriers = n())
+
+allbarriers<-stats %>% group_by(Barrier) %>% summarize(barrier_tests = n())
+
+barrier_ratios<-left_join(allbarriers,goodbarriers,by="Barrier")
+
+barrier_ratios$goodbarriers[which(is.na(barrier_ratios$goodbarriers))]<-0
+
+barrier_ratios<-mutate(barrier_ratios, goodbarriers/barrier_tests)
+
+
+kable(barrier_ratios)
+
+write.csv(stats,"./output/GDM_output_JostD_1000reps.csv")
+write.csv(barrier_ratios, "./output/GDM_output_JostD_1000reps_barriers.csv")
+```
+
+
+
