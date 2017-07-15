@@ -24,13 +24,6 @@ source("DIPnet_Stats_Functions.R")
 
 #barriers<-cbind(barriers1,barriers2)
 
-##1. Dataframe for results
-stats<-data.frame(Species_Locus=character(0),constrained.inertia=numeric(0),totalInertia=numeric(0),ProportionConstrained=numeric(0),adj.R2.total=numeric(0),modelF=numeric(0),modelPvalue=numeric(0),pcx_Var=numeric(0),pcx_p=numeric(0),pcy_Var=numeric(0),pcy_p=numeric(0),bestmodel=character(0), constrained.inertia.best=numeric(0), total.inertia.best=numeric(0), proportion.constrained.inertia.best=numeric(0), adj.R2.best.model=numeric(0), stringsAsFactors = F)
-stats$Species_Locus<-as.character(stats$Species_Locus)
-stats$Barrier<-as.character(stats$Barrier)
-stats$bestmodel<-as.character(stats$bestmodel)
-
-
 ######################################################################
 # 2. Import the IPDB and Fst tables
 ipdb<-read.table(ipdb_path,sep="\t",header=T,stringsAsFactors = F,quote="", na.strings=c("NA"," ","")) 
@@ -56,10 +49,17 @@ ipdb<-join(ipdb,abgd[,c(1,3)], by = "IPDB_ID",type = "left")
 ipdb<-ipdb[ipdb$IPDB_ID %in% drops == FALSE, ] 
 
 # read in the Fst/PhiSt table 
-load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_PhiST_042817.Rdata")
+load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_WCTheta.Rdata")
 #load("~/Desktop/DIPnet_structure_sample_PhiST_042817.Rdata")
 
-# Make an empty list to save gdm output for each species
+
+##1. Dataframe for results
+stats<-data.frame(Species_Locus=character(0),constrained.inertia=numeric(0),totalInertia=numeric(0),ProportionConstrained=numeric(0),adj.R2.total=numeric(0),modelF=numeric(0),modelPvalue=numeric(0),pcx_Var=numeric(0),pcx_p=numeric(0),pcy_Var=numeric(0),pcy_p=numeric(0),bestmodel=character(0), constrained.inertia.best=numeric(0), total.inertia.best=numeric(0), proportion.constrained.inertia.best=numeric(0), adj.R2.best.model=numeric(0), stringsAsFactors = F)
+stats$Species_Locus<-as.character(stats$Species_Locus)
+#stats$Barrier<-as.character(stats$Barrier)
+stats$bestmodel<-as.character(stats$bestmodel)
+
+# Make an empty list to save rda output for each species
 esu_loci <- unique(ipdb$Genus_species_locus)
 all.gsl.rda<-sapply(esu_loci, function(x) NULL)
 
@@ -161,6 +161,8 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     proportion.constrained.inertia<-constrained.inertia/total.inertia
     
     adj.R2.total.model<-RsquareAdj(RDA.res)$adj.r.squared
+    if(is.na(adj.R2.total.model)){cat("Predictors >= Observations! No solution");all.gsl.rda[[gsl]]<-"Predictors >= Observations! No solution";next}
+    
     model.sig<-anova.cca(RDA.res, step=1000)
     modelF<-model.sig$F[1]
     modelPvalue<-model.sig$`Pr(>F)`[1]
@@ -208,9 +210,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     
 
 
- 
+ save(all.gsl.rda,file="./output/multibarrier_dbRDA_FST.Rdata")
   
-write.csv(stats, "dbRDA_allpops_13July.csv")
+write.csv(stats, "./output/multibarrier_dbRDA_FST.csv")
   
   
 #}

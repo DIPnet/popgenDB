@@ -76,8 +76,7 @@ amova_abgd_path<-"/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first
 # Read in Veron barriers
 barriers<-read.csv("VeronBarriers.csv",header=F,stringsAsFactors = F)
 
-# read in the Fst/PhiSt table 
-load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_060715_WC Theta_sample.Rdata")
+
 
 ```
 
@@ -471,12 +470,12 @@ By sample
 
 ```{r, eval=F}
 diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb, gdist = "WC Theta", minseqs = 5, minsamps = 3, mintotalseqs = 0, nrep = 0, num.cores = 2, ABGD = T, regionalization = "sample")
-save(diffstats, file = )
 
-write(diffstats, file=file.path("/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_ESU/Pairwise_statistics/DIPnet_structure_sample_WC Theta_ABGD.Rdata"))
 
-diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb, gdist = "PhiST", minseqs = 5, minsamps = 3, mintotalseqs = 0, nrep = 0, num.cores = 2, ABGD = T, regionalization = "sample")
-save(diffstats, file = )
+save(diffstats, file="/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_ESU/Pairwise_statistics/DIPnet_structure_sample_WCTheta_ABGD.Rdata")
 
-write(diffstats, file=file.path("/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_ESU/Pairwise_statistics/DIPnet_structure_sample_WC Theta_ABGD.Rdata"))
+diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb, gdist = "Jost D", minseqs = 5, minsamps = 3, mintotalseqs = 0, nrep = 0, num.cores = 2, ABGD = T, regionalization = "sample")
+
+
+save(diffstats, file="/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_ESU/Pairwise_statistics/DIPnet_structure_sample_JostD_ABGD.Rdata")
 ```
