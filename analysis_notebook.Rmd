@@ -6,7 +6,7 @@ output:
 ---
 
 # Setup
-```{r Setup}
+```{r Setup, message=FALSE, warning=FALSE}
 library(seqinr)  #might have to download .tgz file directly from CRAN site and install locally, not directly from CRAN repository
 library(ape)  
 library(pegas)

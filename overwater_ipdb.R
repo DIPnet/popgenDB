@@ -2,7 +2,7 @@ library(gdistance)
 library(ncdf4) #requires unix/linux install of netcdf
 library(rasterVis)
 
-#futz with the two rasters I downloaded and make a single merged raster
+#futz with the two rasters I downloaded and make a single merged raster, no need to repeat this step
 mapTheme <- rasterTheme(region = rev(brewer.pal(10, "RdBu")))
 
 IP_West<-raster("etopo_IP_West.nc") #read in the topographic raster
@@ -29,9 +29,20 @@ IPtopo<-raster::merge(IP_West,IP_East3,filename="IPtopo.raster")
 # Prelude using already loaded ipdb to get to the same set of population 
 # names that were measured for great-circle distance
 ########################################################################################################################
+setwd("~/github/popgenDB/output")
 esu_loci <- unique(ipdb$Genus_species_locus)
+
+
 #read in the topo raster
-IPtopo<-raster("./IPtopo.grd")
+IPtopo<-raster("IPtopo.grd")
+#convert values greater than 0 to 0, values less than 0 to 1
+IPtopo[IPtopo>0]<-0 #or the other way?
+IPtopo[IPtopo<0]<-1
+#add the sites on the map using a 1 for each site
+IPtopo<-rasterize(sites2,IPtopo,1,fun="max",update=T)
+#create a trarasnsition matrix
+IPtrans<-transition(IPtopo,transitionFunction=min,directions=8)
+IPtrans.c<-geoCorrection(IPtrans,type="c")
 
 
 for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutjanus_kasmira_CYB" "Acanthaster_planci_CO1"
@@ -103,12 +114,6 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   gcdist_km[upper.tri(gcdist_km)]<-t(gcdist_km)[upper.tri(gcdist_km)]
 #Calculate Overwater Distance  
 ########################################################################################################
- 
-  setwd("~/github/popgenDB/output")
-  
-  
-  
-
   
   #correct negative west-latitude values to positive values
   locs$decimalLongitude[which(locs$decimalLongitude<0)]<-locs$decimalLongitude[which(locs$decimalLongitude<0)] + 360
@@ -124,19 +129,11 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
 
   
   #crop the topographic raster to appropriate size, and convert values greater than 0 to 0 and values less than zero to 1
-  IPtopo2<-crop(IPtopo,extent(sites2)) 
+  #IPtopo2<-crop(IPtopo,extent(sites2)) 
   
   
-  NAvalue(IPtopo2)<-0
-  IPtopo2[IPtopo2>0]<-0 #or the other way?
-  IPtopo2[IPtopo2<0]<-1
-  
-  
-  #add the sites on the map using a 1 for each site
-  IPtopo2<-rasterize(sites2,IPtopo2,1,fun="max",update=T)
-  #create a transition matrix
-  IPtrans<-transition(IPtopo2,transitionFunction=min,directions=8)
-  IPtrans.c<-geoCorrection(IPtrans,type="c")
+  #NAvalue(IPtopo2)<-0
+
 
 test<-costDistance(IPtrans.c,sites2,sites2)
   
