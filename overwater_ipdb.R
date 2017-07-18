@@ -1,7 +1,13 @@
 library(gdistance)
 library(ncdf4) #requires unix/linux install of netcdf
 library(rasterVis)
+library(rgeos)
+library(rgdal)
 
+
+
+# Prelude using already loaded ipdb to get to the same set of population 
+# names that were measured for great-circle distance
 #futz with the two rasters I downloaded and make a single merged raster, no need to repeat this step
 mapTheme <- rasterTheme(region = rev(brewer.pal(10, "RdBu")))
 
@@ -25,24 +31,22 @@ IPtopo<-raster::merge(IP_West,IP_East3,filename="IPtopo.raster")
 
 
 
-
-# Prelude using already loaded ipdb to get to the same set of population 
-# names that were measured for great-circle distance
+#
 ########################################################################################################################
 setwd("~/github/popgenDB/output")
 esu_loci <- unique(ipdb$Genus_species_locus)
-
+load("/Users/cran5048/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_PhiST.Rdata")
 
 #read in the topo raster
 IPtopo<-raster("IPtopo.grd")
 #convert values greater than 0 to 0, values less than 0 to 1
 IPtopo[IPtopo>0]<-0 #or the other way?
 IPtopo[IPtopo<0]<-1
-#add the sites on the map using a 1 for each site
-IPtopo<-rasterize(sites2,IPtopo,1,fun="max",update=T)
-#create a trarasnsition matrix
-IPtrans<-transition(IPtopo,transitionFunction=min,directions=8)
-IPtrans.c<-geoCorrection(IPtrans,type="c")
+
+#making an IP-wide transition matrix is too computationally intensive, apparently.
+#create a transition matrix
+#IPtrans<-transition(IPtopo,transitionFunction=min,directions=8)
+#IPtrans.c<-geoCorrection(IPtrans,type="c")
 
 
 for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutjanus_kasmira_CYB" "Acanthaster_planci_CO1"
@@ -112,8 +116,20 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   gcdist_km <- pointDistance(locs[,2:3],lonlat=T)/1000
   #symmetricize the matrix
   gcdist_km[upper.tri(gcdist_km)]<-t(gcdist_km)[upper.tri(gcdist_km)]
+
+####Eric T. Start Here:
+  
 #Calculate Overwater Distance  
 ########################################################################################################
+  
+  #read in the topo raster
+  IPtopo<-raster("IPtopo.grd")
+  #convert values greater than 0 to 0, values less than 0 to 1
+  IPtopo[IPtopo>0]<-0 #or the other way?
+  IPtopo[IPtopo<0]<-1
+  
+  #read in the localities
+  locs<-read.csv("Linckia_localities.csv")
   
   #correct negative west-latitude values to positive values
   locs$decimalLongitude[which(locs$decimalLongitude<0)]<-locs$decimalLongitude[which(locs$decimalLongitude<0)] + 360
@@ -124,16 +140,28 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   projection(sites2)<-"+proj=longlat +datum=WGS84 +ellps=WGS84" #add a projection
   sites3<-as.matrix(sites1) #convert to a matrix
   
+  #create a 10km buffer around sites
+  sites4<-buffer(sites2,width=10000)
+  
+## Warning message:
+##  In rgeos::gBuffer(x, byid = !dissolve, width = width, ...) :
+##  Spatial object is not projected; GEOS expects planar coordinates
+  
+  sites5<-spTransform(sites4,CRS("+proj +proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"))
   #Create a source raster at the same res as your land/water mask, where the GPS point is the uniqueID, everything else is zero 
-  gps_src<-rasterize(sites2,IPtopo,1:length(locs$sample),fun="max",background=0) 
-
+  gps_src<-rasterize(sites2,IPtopo2,2,fun="max",update=T) 
   
-  #crop the topographic raster to appropriate size, and convert values greater than 0 to 0 and values less than zero to 1
-  #IPtopo2<-crop(IPtopo,extent(sites2)) 
+##Error in .spTransform_Polygon(input[[i]], to_args = to_args, from_args = from_args,  : 
+##failure in Polygons 1 Polygon 1 points 1
+##In addition: Warning message:
+##In .spTransform_Polygon(input[[i]], to_args = to_args, from_args = from_args,  :
+                              
+  #crop the topographic raster to appropriate size
+  IPtopo2<-crop(IPtopo,extent(sites2)) 
+  IPtrans<-transition(IPtopo2,transitionFunction=min,directions=8)
+  IPtrans.c<-geoCorrection(IPtrans,type="c")
   
-  
-  #NAvalue(IPtopo2)<-0
 
-
-test<-costDistance(IPtrans.c,sites2,sites2)
+  # create a distance matrix
+  test<-costDistance(IPtrans.c,sites2,sites2)
   
