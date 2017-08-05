@@ -487,7 +487,7 @@ save(diffstats, file="/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_f
 ## Traditional Species Boundaries
 ```{r GDM1, message=FALSE, warning=FALSE}
 
-  load("/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_PhiST.Rdata")
+  load("/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_JostD.Rdata")
 
 esu_loci <- unique(ipdb$Genus_species_locus)
 solution<-list()
@@ -526,8 +526,8 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   gslFSTm<-as.matrix(gslFST)
   
   gslFSTm[which(gslFSTm > 1)] <- 1 #some values that look like 1.0000 are registering as greater than 1
-  #gslFSTm[which(gslFSTm < 0)] <- 0 #get rid of artifactual negative values
-  gslFSTm<-rescale(gslFSTm)
+  gslFSTm[which(gslFSTm < 0)] <- 0 #get rid of artifactual negative values
+  #gslFSTm<-rescale(gslFSTm)
   #gslFSTm<-gslFSTm/(1-gslFSTm)
   
   #zap weird slashes in the names
@@ -572,10 +572,22 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   #cbind on the sample names
   gcdist_km <- cbind(sample=locs$sample,as.data.frame(gcdist_km))
   
+  ####################################################################
+  #4. Full Model
+  regions<-cbind(locs[,c(1,2,3)],with(locs, data.frame(model.matrix(~VeronDivis+0))))
+  
+  gslFSTmll<-cbind(locs[,c(2,3)],gslFSTm)
+  
+  gdm.format.full<-formatsitepair(bioData=gslFSTm, bioFormat=3, predData=regions,XColumn = "decimalLongitude", YColumn = "decimalLatitude", siteColumn="sample", distPreds=list(gcdist_km))
+  
+  # run the full model, and the model with only distance
+  fullgdm<-gdm(gdm.format.full)
+  distgdm<-gdm(gdm.format.full[,c(1:6,grep("matrix_1",names(gdm.format.full)))])
+  
   ####################################################################### Calculate Overwater Distances#
   #Save for later##
   #######################################################################
-  # 4. Create a subset of the distance matrices including only the localities from
+  # 5. Create a subset of the distance matrices including only the localities from
   #    two neighboring Veron regions.
   
   #make a table to keep track of all these tests for each species
@@ -596,7 +608,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     gslFSTm2<-gslFSTm[subset_locs,c(1,subset_locs+1)]
     
     #######################################################################
-    # 5. Create a dummy distance matrix for each putative "barrier" 
+    # 6. Create a dummy distance matrix for each putative "barrier" 
     #     between the two regions (1s and 0s)
     
     barrier_m2<-as.matrix(dist(as.numeric(locs2$VeronDivis %in% barrier[1])))
@@ -609,13 +621,20 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     if( Numpops2 < 1) {cat("not enough populations within",barrier[2],"\n") ; barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,F,F);next}
     
     ############################################################################
-    # 6. Run through gdm with the barrier and without. Save the deviance values.
+    # 7. Run through gdm with the barrier and without. Save the deviance values.
     
     locs2$sample<-as.character(locs2$sample)
     gslFSTm2$sample<-as.character(gslFSTm2$sample)
     gcdist_km2$sample<-as.character(gcdist_km2$sample)
     
     gdm.format<-formatsitepair(bioData=gslFSTm2, bioFormat=3, predData=locs2[,1:3],XColumn = "decimalLongitude", YColumn = "decimalLatitude", siteColumn="sample", distPreds=list(gcdist_km2,barrier_m2))
+    
+     #zap population pairs with 0 geographical distance between them. Troubling.
+    zaps<-which(gdm.format$s2.matrix_1==0)
+    
+    if(length(drops)>0) {
+    gdm.format<-gdm.format[-zaps,]
+    }
     
     #run gdm with and without the barrier
     gdm.barrier<-gdm(gdm.format)
@@ -627,7 +646,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     #TROUBLESHOOTING: save fst matrices from gdm models that obtain no solution
     if(is.null(gdm.barrier) | is.null(gdm.no.barrier))
       {cat("No Solution Obtained \n");
-      nosolution[[paste(gsl,barrier[1],Numpops1,barrier[2],Numpops2,sep=",")]]<-list(locs2,gdm.format);
+      nosolution[[paste(gsl,barrier[1],Numpops1,barrier[2],Numpops2,sep=",")]]<-list(locs2,gcdist_km2,gslFSTm2,gdm.format);
       barriertests[k,]<-c(gsl,barrier[1],Numpops1,barrier[2],Numpops2,T,F);
       next}
     
@@ -638,7 +657,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     explaineddev<-gdm.no.barrier$explained
     
     ##############################################################################
-    # 7. Perform Monte-Carlo permutations to develop a null distribution 
+    # 8. Perform Monte-Carlo permutations to develop a null distribution 
     #    of deviance values and determine significance (pvalue)
     gdm.format.rand<-gdm.format
     rand.deltas<-vector() 
@@ -733,8 +752,8 @@ barrier_ratios<-mutate(barrier_ratios, goodbarriers/barrier_tests)
 
 kable(barrier_ratios)
 
-write.csv(stats,"./output/GDM_output_PhiST_1000reps.csv")
-write.csv(barrier_ratios, "./output/GDM_PhiST_1000reps_barriers.csv")
+write.csv(stats,"./output/GDM_output_JostD_1000reps.csv")
+write.csv(barrier_ratios, "./output/GDM_JostD_1000reps_barriers.csv")
 ```
 
 
