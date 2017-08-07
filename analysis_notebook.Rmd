@@ -490,8 +490,13 @@ save(diffstats, file="/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_f
   load("/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_JostD.Rdata")
 
 esu_loci <- unique(ipdb$Genus_species_locus)
+
+gdm.full<-list()
+
 solution<-list()
 nosolution<-list()
+
+stats.full<-data.frame(Species_Locus=character(0),WithRegionsDeviance=numeric(0),WithRegionsExplainedDeviance=numeric(0),NoRegionsDeviance=numeric(0),NoRegionsExplainedDeviance=numeric(0),DeltaDeviance=numeric(0),Pvalue_regions=numeric(0),Pvalue_dist=numeric(0),stringsAsFactors = F)
 
 stats<-data.frame(Species_Locus=character(0),Barrier=character(0),WithBarrierDeviance=numeric(0),WithBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithBarrier=numeric(0),ImportanceBarrierWithBarrier=numeric(0),NoBarrierDeviance=numeric(0),NoBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithoutBarrier=numeric(0),DeltaDeviance=numeric(0),Pvalue_barrier=numeric(0),Pvalue_dist=numeric(0),MRDM.rsquared=numeric(0),MRDM.rsquared.pvalue=numeric(0),MRDM.dist.pvalue=numeric(0), MRDM.barrier.pvalue=numeric(0),stringsAsFactors = F)
 
@@ -574,7 +579,13 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   
   ####################################################################
   #4. Full Model
-  regions<-cbind(locs[,c(1,2,3)],with(locs, data.frame(model.matrix(~VeronDivis+0))))
+  
+  cat("Running Full Model")
+  
+  regions<-cbind(locs[,c(1,2,3)],VeronDivis=rep_len(1,length(locs[,1])))
+  if(length(unique(locs$VeronDivis)) > 1){
+    regions<-cbind(locs[,c(1,2,3)],with(locs, data.frame(model.matrix(~VeronDivis+0))))
+  }
   
   gslFSTmll<-cbind(locs[,c(2,3)],gslFSTm)
   
@@ -583,6 +594,56 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   # run the full model, and the model with only distance
   fullgdm<-gdm(gdm.format.full)
   distgdm<-gdm(gdm.format.full[,c(1:6,grep("matrix_1",names(gdm.format.full)))])
+  
+  if(is.null(fullgdm) | is.null(distgdm)){
+        cat("No solution obtained on Full Model")
+        gdm.full[[gsl]]<-"No solution obtained"
+        next}
+  
+  # pull out stats
+   #difference in deviance
+    deltadev.regions<-distgdm$gdmdeviance-fullgdm$gdmdeviance
+    
+    #percent of null deviance explained by the model with just distance
+    explaineddev.dist<-distgdm$explained
+    
+    gdm.regions.deviance<-fullgdm$gdmdeviance
+    gdm.regions.explained<-fullgdm$explained
+
+    gdm.no.regions.deviance<-distgdm$gdmdeviance
+    gdm.no.regions.explained<-distgdm$explained
+  
+  ##############################################################################
+    # 4A. Perform Monte-Carlo permutations to develop a null distribution 
+    #    of deviance values and determine significance (pvalue)
+    gdm.format.rand.full<-gdm.format.full
+    rand.deltas.full<-vector() 
+    rand.explained.full<-vector()
+  
+    while(length(rand.deltas.full) < 1000) {
+      gdm.format.rand.full$distance<-sample(gdm.format.rand.full$distance,size=length(gdm.format.rand.full$distance))
+      gdm.barrier.rand.full<-gdm(gdm.format.rand.full)
+      gdm.no.barrier.rand.full<-gdm(gdm.format.rand.full[,c(1:6,grep("matrix_1",
+                                                          names(gdm.format.rand.full)))])
+    
+        # if not solution obtained, go to next gsl
+      if(is.null(gdm.barrier.rand.full) | is.null(gdm.no.barrier.rand.full)){next}
+      
+      deltadev.rand.full<-gdm.no.barrier.rand.full$gdmdeviance-gdm.barrier.rand.full$gdmdeviance
+      explained.rand.full<-gdm.no.barrier.rand.full$explained
+      
+      rand.deltas.full<-c(rand.deltas.full,deltadev.rand.full)
+      rand.explained.full<-c(rand.explained.full,explained.rand.full)
+    }
+    pvalue_regions.full<-length(which(abs(deltadev.regions) < abs(rand.deltas.full)))/length(rand.deltas.full)
+    pvalue_dist.full<-length(which(abs(explaineddev.dist) < abs(rand.explained.full)))/length(rand.explained.full)
+    
+    stats.1<-c(gsl,gdm.regions.deviance,gdm.regions.explained,gdm.no.regions.deviance,gdm.no.regions.explained,deltadev.regions,pvalue_regions.full,pvalue_dist.full)
+    
+    stats.full[nrow(stats.full)+1,]<-stats.1
+    
+    gdm.full[[gsl]]<-fullgdm
+    
   
   ####################################################################### Calculate Overwater Distances#
   #Save for later##
@@ -670,7 +731,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
                                                       names(gdm.format))])
       if(is.null(gdm.barrier.rand) | is.null(gdm.no.barrier.rand)){next}
       deltadev.rand<-gdm.no.barrier.rand$gdmdeviance-gdm.barrier.rand$gdmdeviance
-      explained.rand<-gdm.no.barrier$explained
+      explained.rand<-gdm.no.barrier.rand$explained
       
       rand.deltas<-c(rand.deltas,deltadev.rand)
       rand.explained<-c(rand.explained,explained.rand)
