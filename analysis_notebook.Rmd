@@ -487,7 +487,7 @@ save(diffstats, file="/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_f
 ## Traditional Species Boundaries
 ```{r GDM1, message=FALSE, warning=FALSE}
 
-  load("/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_JostD.Rdata")
+  load("/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_PhiST.Rdata")
 
 esu_loci <- unique(ipdb$Genus_species_locus)
 
@@ -495,6 +495,7 @@ gdm.full<-list()
 
 solution<-list()
 nosolution<-list()
+nosolution.full<-list()
 
 stats.full<-data.frame(Species_Locus=character(0),WithRegionsDeviance=numeric(0),WithRegionsExplainedDeviance=numeric(0),NoRegionsDeviance=numeric(0),NoRegionsExplainedDeviance=numeric(0),DeltaDeviance=numeric(0),Pvalue_regions=numeric(0),Pvalue_dist=numeric(0),stringsAsFactors = F)
 
@@ -531,7 +532,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   gslFSTm<-as.matrix(gslFST)
   
   gslFSTm[which(gslFSTm > 1)] <- 1 #some values that look like 1.0000 are registering as greater than 1
-  gslFSTm[which(gslFSTm < 0)] <- 0 #get rid of artifactual negative values
+  gslFSTm[which(gslFSTm < 0)] <- 0.0001 #get rid of artifactual negative values
   #gslFSTm<-rescale(gslFSTm)
   #gslFSTm<-gslFSTm/(1-gslFSTm)
   
@@ -582,6 +583,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   
   cat("Running Full Model")
   
+  
   regions<-cbind(locs[,c(1,2,3)],VeronDivis=rep_len(1,length(locs[,1])))
   if(length(unique(locs$VeronDivis)) > 1){
     regions<-cbind(locs[,c(1,2,3)],with(locs, data.frame(model.matrix(~VeronDivis+0))))
@@ -591,13 +593,20 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   
   gdm.format.full<-formatsitepair(bioData=gslFSTm, bioFormat=3, predData=regions,XColumn = "decimalLongitude", YColumn = "decimalLatitude", siteColumn="sample", distPreds=list(gcdist_km))
   
+     #zap population pairs with 0 geographical distance between them. Troubling.
+    zaps<-which(gdm.format.full$s2.matrix_1==0)
+    
+    if(length(zaps)>0) {
+    gdm.format.full<-gdm.format.full[-zaps,]
+    }
+  
   # run the full model, and the model with only distance
   fullgdm<-gdm(gdm.format.full)
   distgdm<-gdm(gdm.format.full[,c(1:6,grep("matrix_1",names(gdm.format.full)))])
   
   if(is.null(fullgdm) | is.null(distgdm)){
         cat("No solution obtained on Full Model")
-        gdm.full[[gsl]]<-"No solution obtained"
+        nosolution.full[[gsl]]<-c(regions,gdm.format.full)
         next}
   
   # pull out stats
@@ -626,7 +635,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
       gdm.no.barrier.rand.full<-gdm(gdm.format.rand.full[,c(1:6,grep("matrix_1",
                                                           names(gdm.format.rand.full)))])
     
-        # if not solution obtained, go to next gsl
+        # if no solution obtained, go to next gsl
       if(is.null(gdm.barrier.rand.full) | is.null(gdm.no.barrier.rand.full)){next}
       
       deltadev.rand.full<-gdm.no.barrier.rand.full$gdmdeviance-gdm.barrier.rand.full$gdmdeviance
@@ -644,7 +653,8 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     
     gdm.full[[gsl]]<-fullgdm
     
-  
+    
+}
   ####################################################################### Calculate Overwater Distances#
   #Save for later##
   #######################################################################
@@ -693,7 +703,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
      #zap population pairs with 0 geographical distance between them. Troubling.
     zaps<-which(gdm.format$s2.matrix_1==0)
     
-    if(length(drops)>0) {
+    if(length(zaps)>0) {
     gdm.format<-gdm.format[-zaps,]
     }
     
@@ -770,8 +780,11 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   }
   
 
-  
-}
+
+
+
+stats.full$GDM.regions.qvalue<-p.adjust(as.numeric(stats.full$Pvalue_regions),method="fdr")
+stats.full$GDM.distance.qvalue<-p.adjust(as.numeric(stats.full$Pvalue_dist),method="fdr")
 
 stats$GDM.qvalue<-p.adjust(as.numeric(stats$Pvalue_barrier),method="fdr")
 stats$MRDM.r2.qvalue<-p.adjust(as.numeric(stats$MRDM.rsquared.pvalue),method="fdr")
@@ -817,6 +830,79 @@ write.csv(stats,"./output/GDM_output_JostD_1000reps.csv")
 write.csv(barrier_ratios, "./output/GDM_JostD_1000reps_barriers.csv")
 ```
 
+# Create a heatmap from GDM regions
+```{r GDM Heatmap}
+
+#extract the isplines
+isplines<-lapply(gdm.full,isplineExtract)
+
+#create a function that takes the last row of each ispline = importance, and lapply it
+gdm.importance<-function(p){
+  p$y[200,]
+}
+importance<-lapply(isplines,gdm.importance)
+
+# create a function that transposes and converts to a data frame, and lapply it
+dataframer<-function(p){
+  q<-as.data.frame(t(p))
+}
+
+importance2<-lapply(importance,dataframer)
+
+importance_df<-Reduce(function(t1,t2) merge(t1,t2,all=T,sort=F), importance2)
+
+#importance_df<-importance_df[order(stats.full$GDM.regions.qvalue),]
+#stats.full<-stats.full[order(stats.full$GDM.regions.qvalue),]
+
+# convert to matrix
+importance_matrix<-as.matrix(importance_df)
+# split into regions component
+regions_matrix<-importance_matrix[,2:17]
+# and distance component
+distance_matrix<-importance_matrix[,1]
+
+# set importance values for models that with non-significant regions component at q<0.01 to zero
+regions_matrix[which(stats.full$GDM.regions.qvalue > 0.01),][!is.na(regions_matrix[which(stats.full$GDM.regions.qvalue > 0.01),])]<-0
+
+# set importance values for models with non-significant distance component at q<0.01 to zero
+distance_matrix[which(stats.full$GDM.distance.qvalue > 0.01)]<-0
+
+# stick the matrix back together and then scale importance to relative values based on max importance
+
+
+rownames(importance_df)<-names(gdm.full)
+importance_df$gsl<-names(gdm.full)
+
+
+#delete the species that only occurred in one region, then delete that column
+importance_df<-importance_df[which(is.na(importance_df$VeronDivis)),]
+importance_df<-importance_df[,-which(names(importance_df)=="VeronDivis")]
+
+
+
+
+
+## Make a heatmap of
+
+#melt for ggplot2
+importance_melted<-melt(importance_df,id.vars = "gsl")
+colnames(importance_melted)<-c("Species","Variable","Importance")
+importance_melted$Species<-as.factor(importance_melted$Species)
+
+#baseplot
+ip<-ggplot(importance_melted,aes(y=Species,x=Variable,fill=Importance))
+
+#add geom_tile, turn the x-axis elements by 90 degrees, reverse the names on the y-axis, and use a diverging color scheme to highlight hypotheses with >50% rel prob.
+ip<-ip+geom_tile()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  ylim(rev(levels(importance_melted$Species)))+
+  scale_fill_gradient2(low = "white",
+                       high = "red", space = "rgb",
+                       na.value = "grey50", guide = "colourbar")
+ip
+
+
+```
 
 # dbRDA
 
