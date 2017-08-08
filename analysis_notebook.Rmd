@@ -487,7 +487,7 @@ save(diffstats, file="/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_f
 ## Traditional Species Boundaries
 ```{r GDM1, message=FALSE, warning=FALSE}
 
-  load("/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_PhiST.Rdata")
+  load("/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_JostD.Rdata")
 
 esu_loci <- unique(ipdb$Genus_species_locus)
 
@@ -606,7 +606,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   
   if(is.null(fullgdm) | is.null(distgdm)){
         cat("No solution obtained on Full Model")
-        nosolution.full[[gsl]]<-c(regions,gdm.format.full)
+        nosolution.full[[gsl]]<-gdm.format.full
         next}
   
   # pull out stats
@@ -869,14 +869,18 @@ distance_matrix[which(stats.full$GDM.distance.qvalue > 0.01)]<-0
 
 # stick the matrix back together and then scale importance to relative values based on max importance
 
+importance_matrix2<-cbind(distance_matrix,regions_matrix)
 
-rownames(importance_df)<-names(gdm.full)
-importance_df$gsl<-names(gdm.full)
+importance_matrix3<-importance_matrix2/max(importance_matrix2,na.rm = T)
+
+importance_df2<-as.data.frame(importance_matrix3,row.names = stats.full$Species_Locus)
+
+importance_df2$Species<-names(gdm.full)
 
 
 #delete the species that only occurred in one region, then delete that column
-importance_df<-importance_df[which(is.na(importance_df$VeronDivis)),]
-importance_df<-importance_df[,-which(names(importance_df)=="VeronDivis")]
+importance_df2<-importance_df2[which(is.na(importance_df2$VeronDivis)),]
+importance_df2<-importance_df2[,-which(names(importance_df2)=="VeronDivis")]
 
 
 
@@ -885,7 +889,7 @@ importance_df<-importance_df[,-which(names(importance_df)=="VeronDivis")]
 ## Make a heatmap of
 
 #melt for ggplot2
-importance_melted<-melt(importance_df,id.vars = "gsl")
+importance_melted<-melt(importance_df2,id.vars = "Species")
 colnames(importance_melted)<-c("Species","Variable","Importance")
 importance_melted$Species<-as.factor(importance_melted$Species)
 
@@ -896,8 +900,7 @@ ip<-ggplot(importance_melted,aes(y=Species,x=Variable,fill=Importance))
 ip<-ip+geom_tile()+
   theme(axis.text.x = element_text(angle = 45, hjust = 1))+
   ylim(rev(levels(importance_melted$Species)))+
-  scale_fill_gradient2(low = "white",
-                       high = "red", space = "rgb",
+  scale_fill_gradientn(colors=c("white","pink","red"),values = c(0,0.000001,1),
                        na.value = "grey50", guide = "colourbar")
 ip
 
