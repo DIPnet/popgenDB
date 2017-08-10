@@ -487,7 +487,7 @@ save(diffstats, file="/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_f
 ## Traditional Species Boundaries
 ```{r GDM1, message=FALSE, warning=FALSE}
 
-  load("/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_JostD.Rdata")
+  load("/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_WCTHETA.Rdata")
 
 esu_loci <- unique(ipdb$Genus_species_locus)
 
@@ -826,8 +826,8 @@ barrier_ratios<-mutate(barrier_ratios, goodbarriers/barrier_tests)
 
 kable(barrier_ratios)
 
-write.csv(stats,"./output/GDM_output_JostD_1000reps.csv")
-write.csv(barrier_ratios, "./output/GDM_JostD_1000reps_barriers.csv")
+write.csv(stats,"./output/GDM_output_WCTheta_1000reps.csv")
+write.csv(barrier_ratios, "./output/GDM_JostD_WCTheta_barriers.csv")
 ```
 
 # Create a heatmap from GDM regions
@@ -886,7 +886,7 @@ importance_df2<-importance_df2[,-which(names(importance_df2)=="VeronDivis")]
 
 
 
-## Make a heatmap of
+## Make a heatmap of the importance values
 
 #melt for ggplot2
 importance_melted<-melt(importance_df2,id.vars = "Species")
@@ -912,7 +912,7 @@ ip
 ```{r dbRDA}
 
 # read in the Fst/PhiSt table 
-load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_PhiST.Rdata")
+load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_WCTheta.Rdata")
 #load("~/Desktop/DIPnet_structure_sample_PhiST_042817.Rdata")
 
 
@@ -926,6 +926,9 @@ stats$bestmodel<-as.character(stats$bestmodel)
 esu_loci <- unique(ipdb$Genus_species_locus)
 all.gsl.rda<-sapply(esu_loci, function(x) NULL)
 
+#make empty data frames to save variance and pvalues
+term.vars<-data.frame(gsl=character(0))
+term.pvals<-data.frame(gsl=character(0))
 
 ###############################################################################
 # 2. Subsample for each species of interest, and filter based on Phi_ST table.
@@ -1035,6 +1038,36 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     pcx_p<-terms.sig$`Pr(>F)`[1]
     pcy_Var<-terms.sig$Variance[2]
     pcy_p<-terms.sig$`Pr(>F)`[2]
+    
+    #extract all variance values into a dataframe
+    term.var<-as.data.frame(t(terms.sig[,2]))
+    names(term.var)<-rownames(terms.sig)
+   
+    #extract all p-values into a dataframe
+    term.pval<-as.data.frame(t(terms.sig[,4]))
+    names(term.pval)<-rownames(terms.sig)
+    
+     
+    # scale the variance
+    term.var<-term.var/sum(term.var)
+    
+    # set variance to zero if it is not significant
+    term.var[1,which(term.pval[1,] > 0.05 | is.na(term.pval[1,]))]<-0
+    
+    #set all values to zero if the model itself is not significant
+    if(modelPvalue > 0.05){
+    term.var[1,which(names(term.var)!="gsl")]<-0
+    }
+    # add on the species name
+    term.pval$gsl<-gsl
+    term.var$gsl<-gsl
+    
+    #merge them on to each dataframe
+    term.vars<-merge(term.vars,term.var,all=T)
+    term.pvals<-merge(term.pvals,term.pval,all=T)
+    
+    
+    
     #barrier_Var<-terms.sig$Variance[3]   #omitting for now as the number of barriers will differ
     #barrier_p<-terms.sig$`Pr(>F)`[3]
     
@@ -1070,12 +1103,35 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
  
   }
 
-    
+write.csv(term.vars,file="./output/dbRDA_term_vars_WCTHETA.csv")
+write.csv(term.pvals,file="./output/dbRDA_term_pvals_WCTHETA.csv")
 
-
- save(all.gsl.rda,file="./output/multibarrier_dbRDA_FST.Rdata")
+ save(all.gsl.rda,file="./output/multibarrier_dbRDA_WCTHETA.Rdata")
   
-write.csv(stats, "./output/multibarrier_dbRDA_FST.csv")
+write.csv(stats, "./output/multibarrier_dbRDA_JOSTD.csv")
   
 ```
 
+## Make a heatmap of the variance values
+
+
+```{r}
+
+
+#melt for ggplot2
+variance_melted<-melt(term.vars,id.vars = "gsl")
+colnames(variance_melted)<-c("Species","Variable","Proportion_of_Variance")
+variance_melted$Species<-as.factor(variance_melted$Species)
+
+#baseplot
+dbrda<-ggplot(variance_melted,aes(y=Species,x=Variable,fill=Proportion_of_Variance))
+
+#add geom_tile, turn the x-axis elements by 90 degrees, reverse the names on the y-axis, and use a diverging color scheme to highlight hypotheses with >50% rel prob.
+dbrda<-dbrda+geom_tile()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  ylim(rev(levels(variance_melted$Species)))+
+  scale_fill_gradientn(colors=c("white","pink","red"),values = c(0,0.000001,1),
+                       na.value = "grey50", guide = "colourbar")
+
+dbrda
+```
