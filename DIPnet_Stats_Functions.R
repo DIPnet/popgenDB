@@ -755,7 +755,7 @@ summarize_AMOVA<-function(amova_list=amova_list,hypotheses="My_Hypothesis", keep
       names(amova_table)<-c("level2_SSD","level1_SSD","error_SSD","total_SSD","level2_MSD","level1_MSD","error_MSD","total_MSD","level2_df","level1_df","error_df","total_df")
       var_comp<-unlist(amova$raw_amova_output$varcomp)
       names(var_comp)<-c("level2_sigma2","level1_sigma2","error_sigma2","p_level2","p_level1","p_value3")
-      BIC<-level1_k * log(amova_table["level2_SSD"]+amova_table["error_SSD"]) + level2_k*log(level1_k)
+      BIC<-level1_k * log(amova_table["error_MSD"]) + level2_k*log(level1_k)
       
       # TO ADD - use merge to create stats instead of c so that multiple levels can be summarized
       
