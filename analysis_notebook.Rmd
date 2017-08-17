@@ -135,13 +135,13 @@ for(h in hypotheses){
   amova_list[[h]]<-hierstats
 }
   
-
+#load(file.path(amova_ts_path,"PHIST_TradSpecies_raw_amova_output.Rdata"))
 ## Summarize AMOVA results
 amovastats<-summarize_AMOVA(amova_list,hypotheses,specieslist=unique(ipdb$Genus_species_locus))
 
-WriteXLS(amovastats,ExcelFileName=file.path(amova_ts_path,"FST_TradSpec_raw_amova_output.Rdata.xlsx"))
-save(amova_list,file=file.path(amova_ts_path,"FST_TradSpec_raw_amova_output.Rdata"))
-save(amovastats,file=file.path(amova_ts_path,"FST_TradSpec_table_amova_output.Rdata"))
+WriteXLS(amovastats,ExcelFileName=file.path(amova_ts_path,"PhiST_TradSpec_table_amova_output.Rdata.xlsx"),row.names = T)
+#save(amova_list,file=file.path(amova_ts_path,"FST_TradSpec_raw_amova_output.Rdata"))
+save(amovastats,file=file.path(amova_ts_path,"Phi_TradSpec_table_amova_output.Rdata"))
 ```
 
 
