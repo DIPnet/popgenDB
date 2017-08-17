@@ -131,7 +131,7 @@ hypotheses<-c("ECOREGION", "PROVINCE","REALM","Bowen","Keith","Kulbicki_r","Kulb
 amova_list<-list()
 
 for(h in hypotheses){
-  hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb_ip,level1 = "sample",level2=h,model="none",ABGD=F,nperm=1)
+  hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb_ip,level1 = "sample",level2=h,model="raw",ABGD=F,nperm=1)
   amova_list[[h]]<-hierstats
 }
   
@@ -234,7 +234,7 @@ Code is suppressed for the other 3 examples
 
 ### Measure Support
 ```{r Measure Support2, echo=F}
-load(file=file.path(amova_ts_path,"PHIST_TradSpecies_table_amova_output.Rdata"))
+load(file=file.path(amova_ts_path,"PHIST_TradSpec_table_amova_output.Rdata"))
 
 # Measure support for each hypothesis
 
