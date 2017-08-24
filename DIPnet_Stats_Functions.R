@@ -758,7 +758,7 @@ summarize_AMOVA<-function(amova_list=amova_list,hypotheses="My_Hypothesis", keep
       
       #this is based on equation 12 of Jombart 2010 (DAPC paper), but we are also adding in the variance from level 1, because we want to maximize FCT, not FSC. 
       #We are therefore also treating n as the number of population samples, not the number of individual sequences
-      BIC<-level1_k * log(amova_table["error_MSD"]+amova_table["level1_MSD"]) + level2_k*log(level1_k)
+      BIC<-level1_k * log(var_comp["error_sigma2"]+var_comp["level1_sigma2"]) + level2_k*log(level1_k)
       
       # TO ADD - use merge to create stats instead of c so that multiple levels can be summarized
       

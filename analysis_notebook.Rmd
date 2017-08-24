@@ -139,9 +139,9 @@ for(h in hypotheses){
 ## Summarize AMOVA results
 amovastats<-summarize_AMOVA(amova_list,hypotheses,specieslist=unique(ipdb$Genus_species_locus))
 
-WriteXLS(amovastats,ExcelFileName=file.path(amova_ts_path,"PhiST_TradSpec_table_amova_output.Rdata.xlsx"),row.names = T)
-#save(amova_list,file=file.path(amova_ts_path,"FST_TradSpec_raw_amova_output.Rdata"))
-save(amovastats,file=file.path(amova_ts_path,"Phi_TradSpec_table_amova_output.Rdata"))
+WriteXLS(amovastats,ExcelFileName=file.path(amova_ts_path,"PHIST_ts_raw_table_amova_output.Rdata.xlsx"),row.names = T)
+save(amova_list,file=file.path(amova_abgd_path,"FST_abgd_raw_amova_output.Rdata"))
+save(amovastats,file=file.path(amova_abgd_path,"FST_abgd_table_amova_output.Rdata"))
 ```
 
 
@@ -562,8 +562,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   names(locs)<-"sample"
   #locs$Long<-sp$decimalLongitude[which(locs %in% sp$sample)]
   #can't do a unique on sample, lats and longs because some samples have non-unique lats and longs! So I do a join and take the first match.
-  locs<-join(locs,sp[c("sample","decimalLongitude","decimalLatitude"
-                       ,"VeronDivis")], by="sample", match="first")
+  locs<-join(locs,sp[c("sample","decimalLongitude","decimalLatitude",
+                       "Bowen","Kulbicki_r","REALM")], by="sample", match="first")
+  
   
   #sort gslFSTm
   gslFSTm<-gslFSTm[order(rownames(gslFSTm)),order(colnames(gslFSTm))]
@@ -585,9 +586,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   cat("Running Full Model")
   
   
-  regions<-cbind(locs[,c(1,2,3)],VeronDivis=rep_len(1,length(locs[,1])))
-  if(length(unique(locs$VeronDivis)) > 1){
-    regions<-cbind(locs[,c(1,2,3)],with(locs, data.frame(model.matrix(~VeronDivis+0))))
+  regions<-cbind(locs[,c(1,2,3)],REALM=rep_len(1,length(locs[,1])))
+  if(length(unique(locs$REALM)) > 1){
+    regions<-cbind(locs[,c(1,2,3)],with(locs, data.frame(model.matrix(~REALM+0))))
   }
   
   gslFSTmll<-cbind(locs[,c(2,3)],gslFSTm)
@@ -875,7 +876,7 @@ nosolution_df<-Reduce(function(t1,t2) merge(t1,t2,all=T,sort=F), nosolution.full
 # convert to matrix
 importance_matrix<-as.matrix(importance_df)
 # split into regions component
-regions_matrix<-importance_matrix[,2:17]
+regions_matrix<-importance_matrix[,2:dim(importance_matrix)[2]]
 # and distance component
 distance_matrix<-importance_matrix[,1]
 
@@ -901,7 +902,7 @@ importance_df2<-merge(importance_df2, nosolution_df,all=T)
 
 #delete the species that only occurred in one region, then delete that column
 #importance_df2<-importance_df2[which(is.na(importance_df2$VeronDivis)),]
-importance_df2<-importance_df2[,-which(names(importance_df2)=="VeronDivis")]
+importance_df2<-importance_df2[,-which(names(importance_df2)=="REALM")]
 
 
 
