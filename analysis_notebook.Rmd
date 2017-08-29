@@ -131,7 +131,7 @@ hypotheses<-c("ECOREGION", "PROVINCE","REALM","Bowen","Keith","Kulbicki_r","Kulb
 amova_list<-list()
 
 for(h in hypotheses){
-  hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb_ip,level1 = "sample",level2=h,model="raw",ABGD=F,nperm=1)
+  hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb_ip,level1 = "sample",level2=h,model="N",ABGD=F,nperm=1)
   amova_list[[h]]<-hierstats
 }
   
@@ -139,9 +139,9 @@ for(h in hypotheses){
 ## Summarize AMOVA results
 amovastats<-summarize_AMOVA(amova_list,hypotheses,specieslist=unique(ipdb$Genus_species_locus))
 
-WriteXLS(amovastats,ExcelFileName=file.path(amova_ts_path,"PHIST_ts_raw_table_amova_output.Rdata.xlsx"),row.names = T)
-save(amova_list,file=file.path(amova_abgd_path,"FST_abgd_raw_amova_output.Rdata"))
-save(amovastats,file=file.path(amova_abgd_path,"FST_abgd_table_amova_output.Rdata"))
+WriteXLS(amovastats,ExcelFileName=file.path(amova_ts_path,"PHIST_ts_rawN_table_amova_output.Rdata.xlsx"),row.names = T)
+save(amova_list,file=file.path(amova_ts_path,"PHIST_ts_rawN_amova_output.Rdata"))
+save(amovastats,file=file.path(amova_ts_path,"PHIST_ts_tableN_amova_output.Rdata"))
 ```
 
 
@@ -234,7 +234,7 @@ Code is suppressed for the other 3 examples
 
 ### Measure Support
 ```{r Measure Support2, echo=F}
-load(file=file.path(amova_ts_path,"PHIST_TradSpec_table_amova_output.Rdata"))
+load(file=file.path(amova_ts_path,"PHIST_ts_rawN_amova_output.Rdata"))
 
 # Measure support for each hypothesis
 
@@ -905,7 +905,7 @@ importance_df2<-merge(importance_df2, nosolution_df,all=T)
 importance_df2<-importance_df2[,-which(names(importance_df2)=="REALM")]
 
 
-
+write.csv(importance_df2,"./output/gdm_phist_importance.csv")
 
 
 ## Make a heatmap of the importance values
@@ -934,7 +934,7 @@ ip
 ```{r dbRDA}
 
 # read in the Fst/PhiSt table 
-load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_WCTheta.Rdata")
+load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_PhiST.Rdata")
 #load("~/Desktop/DIPnet_structure_sample_PhiST_042817.Rdata")
 
 
@@ -968,8 +968,8 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   
   sp$sample<-paste(sp$locality,round(sp$decimalLatitude, digits=0),round(sp$decimalLongitude, digits=0),sep="_")  #sets up a variable that matches the name in Fst table
   sp<-sp[order(sp$sample),]
-  # Not all localities are included in Veron's regionalization (e.g. Guam), so get their names and then zap NAs
-  nonVeronpops<-unique(sp$sample[is.na(sp$VeronDivis)])
+  # Not all localities are included in REALM 
+  #nonpops<-unique(sp$sample[is.na(sp$REALM)])
   sp<-sp[!is.na(sp$VeronDivis),]
   
   #subsample Fst 
@@ -983,9 +983,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   colnames(gslFSTm)<-rownames(gslFSTm)
   
   #zap the same na populations from the list of non existent pops from VeronDivis
-  if(any(rownames(gslFSTm) %in% nonVeronpops)){
-    gslFSTm<-gslFSTm[-(which(rownames(gslFSTm) %in% nonVeronpops)),-(which(colnames(gslFSTm) %in% nonVeronpops))]
-  }
+  # if(any(rownames(gslFSTm) %in% nonVeronpops)){
+  #   gslFSTm<-gslFSTm[-(which(rownames(gslFSTm) %in% nonVeronpops)),-(which(colnames(gslFSTm) %in% nonVeronpops))]
+  # }
   if(length(rownames(gslFSTm))<5){all.gsl.rda[[gsl]]<-"Fewer than 5 sampled populations";cat("Fewer than 5 sampled populations");next}
   
   #and filter sp based on the localities that have Fst values
@@ -1004,8 +1004,8 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   #locs$Long<-sp$decimalLongitude[which(locs %in% sp$sample)]
   #can't do a unique on sample, lats and longs because some samples have non-unique lats and longs! So I do a join and take the first match.
   locs<-join(locs,sp[c("sample","decimalLongitude","decimalLatitude"
-                       ,"VeronDivis")], by="sample", match="first")
-  if (length(unique(locs$VeronDivis)) < 2) {"Only one region!"; cat("Only one region!"); next}
+                       ,"REALM")], by="sample", match="first")
+  if (length(unique(locs$REALM)) < 2) {"Only one region!"; cat("Only one region!"); next}
   
   #sort gslFSTm
   gslFSTm<-gslFSTm[order(rownames(gslFSTm)),order(colnames(gslFSTm))]
@@ -1024,7 +1024,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   ##############################################################################
   #5. Create a matrix of regional identities
   
-  regions<-with(locs, data.frame(model.matrix(~VeronDivis+0)))   #one of the predictors is superfluous but will get knocked out during RDA
+  regions<-with(locs, data.frame(model.matrix(~REALM+0)))   #one of the predictors is superfluous but will get knocked out during RDA
   row.names(regions)<-row.names(locs)
   
 
@@ -1125,12 +1125,12 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
  
   }
 
-write.csv(term.vars,file="./output/dbRDA_term_vars_WCTHETA.csv")
-write.csv(term.pvals,file="./output/dbRDA_term_pvals_WCTHETA.csv")
+write.csv(term.vars,file="./output/dbRDA_term_vars_PHIST.csv")
+write.csv(term.pvals,file="./output/dbRDA_term_pvals_PHIST.csv")
 
- save(all.gsl.rda,file="./output/multibarrier_dbRDA_WCTHETA.Rdata")
+ save(all.gsl.rda,file="./output/multibarrier_dbRDA_PHIST.Rdata")
   
-write.csv(stats, "./output/multibarrier_dbRDA_JOSTD.csv")
+write.csv(stats, "./output/multibarrier_dbRDA_PHIST.csv")
   
 ```
 
