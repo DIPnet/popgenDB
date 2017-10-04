@@ -639,6 +639,17 @@ uncorrected.diversity<-function (x){
   out<-1- sum(x.freq^2)
 }
 
+corrected.diversity<-function (x){ 
+  #adapted from diversity() in StrataG
+  if (!(is.vector(x) | is.factor(x))) 
+    stop("'x' must be a character or numeric vector, or a factor")
+  x <- na.omit(x)
+  n <- length(x)
+  x.freq <- prop.table(table(x))
+  out<-(1- sum(x.freq^2))/(n-1)
+}
+
+
 shannon.wiener.diversity<-function (x){ 
   #adapted from diversity() in StrataG
   if (!(is.vector(x) | is.factor(x))) 
