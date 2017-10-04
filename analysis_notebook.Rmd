@@ -78,7 +78,12 @@ amova_abgd_path<-"/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first
 # Read in Veron barriers
 barriers<-read.csv("VeronBarriers.csv",header=F,stringsAsFactors = F)
 
+#duplicate GSLs that need to be dropped
+dups<-c("Acanthaster_planciSIO_CR","Acanthaster_planciRedSea_CR","Acanthaster_planciNIO_CR","Acanthaster_planciPac_CR","Acanthurus_nigrofuscus_CO1","Cephalopholis_argus_CO1","Chaetodon_auriga_CO1","Halichoeres_claudia_CR","Halichoeres_hortulanus_CO1","Halichoeres_hortulanus_CYB","Halichoeres_trimaculatus_CR","Lutjanus_kasmira_CO1","Neoniphon_sammara_CO1","Pomacentrus_coelestis_CO1","Pygoplites_diacanthus_CYB")
 
+remove.dup.gsls<-function(amovatable){
+  amovatable<-amovatable[-which(rownames(amovatable) %in% dups),]
+}
 
 ```
 
@@ -131,17 +136,17 @@ hypotheses<-c("ECOREGION", "PROVINCE","REALM","Bowen","Keith","Kulbicki_r","Kulb
 amova_list<-list()
 
 for(h in hypotheses){
-  hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb_ip,level1 = "sample",level2=h,model="none",ABGD=F,nperm=1)
+  hierstats<-hierarchical.structure.mtDNA.db(ipdb = ipdb_ip,level1 = "sample",level2=h,model="N",ABGD=F,nperm=1)
   amova_list[[h]]<-hierstats
 }
   
-
+#load(file.path(amova_ts_path,"PHIST_TradSpecies_raw_amova_output.Rdata"))
 ## Summarize AMOVA results
 amovastats<-summarize_AMOVA(amova_list,hypotheses,specieslist=unique(ipdb$Genus_species_locus))
 
-WriteXLS(amovastats,ExcelFileName=file.path(amova_ts_path,"FST_TradSpec_raw_amova_output.Rdata.xlsx"))
-save(amova_list,file=file.path(amova_ts_path,"FST_TradSpec_raw_amova_output.Rdata"))
-save(amovastats,file=file.path(amova_ts_path,"FST_TradSpec_table_amova_output.Rdata"))
+WriteXLS(amovastats,ExcelFileName=file.path(amova_ts_path,"PHIST_ts_rawN_table_amova_output.Rdata.xlsx"),row.names = T)
+save(amova_list,file=file.path(amova_ts_path,"PHIST_ts_rawN_amova_output.Rdata"))
+save(amovastats,file=file.path(amova_ts_path,"PHIST_ts_tableN_amova_output.Rdata"))
 ```
 
 
@@ -154,6 +159,11 @@ This takes a long time, so we are not running this code in the document, but loa
 ### Measure Support
 ```{r Measure Support1}
 load(file=file.path(amova_ts_path,"FST_TradSpec_table_amova_output.Rdata"))
+#remove duplicate gsls
+amovastats<-lapply(amovastats,remove.dup.gsls)
+
+
+
 
 # Measure support for each hypothesis
 
@@ -172,8 +182,11 @@ for(h in names(amovastats)){
 #get the hypothesis names in there
 row.names(crit_df)<-names(amovastats)
 
+#filter for species that test at least 4 of the 8 hypotheses
+crit_df2<-crit_df[,which(apply(is.na(t(crit_df)),MARGIN=1,FUN=sum) < 5)]
+
 #rank the hypotheses for each species
-crit_rank<-as.data.frame(sapply(crit_df,rank,na.last="keep",ties.method="average"))
+crit_rank<-as.data.frame(sapply(crit_df2,rank,na.last="keep",ties.method="average"))
 row.names(crit_rank)<-names(amovastats)
 
 ## remove gsls with more than 3 missing models
@@ -234,7 +247,9 @@ Code is suppressed for the other 3 examples
 
 ### Measure Support
 ```{r Measure Support2, echo=F}
-load(file=file.path(amova_ts_path,"PHIST_TradSpecies_table_amova_output.Rdata"))
+load(file=file.path(amova_ts_path,"PHIST_ts_rawN_amova_output.Rdata"))
+#remove duplicate gsls
+amovastats<-lapply(amovastats,remove.dup.gsls)
 
 # Measure support for each hypothesis
 
@@ -313,6 +328,8 @@ rp
 ### Measure Support
 ```{r Measure Support3, echo=F}
 load(file=file.path(amova_abgd_path,"FST_ABGD_table_amova_output.Rdata"))
+#remove duplicate gsls
+amovastats<-lapply(amovastats,remove.dup.gsls)
 
 # Measure support for each hypothesis
 
@@ -392,6 +409,8 @@ rp
 ### Measure Support
 ```{r Measure Support4, echo=F}
 load(file=file.path(amova_abgd_path,"PHIST_ABGD_table_amova_output.Rdata"))
+#remove duplicate gsls
+amovastats<-lapply(amovastats,remove.dup.gsls)
 
 # Measure support for each hypothesis
 
@@ -490,6 +509,7 @@ save(diffstats, file="/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_f
   load("/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_PhiST.Rdata")
 
 esu_loci <- unique(ipdb$Genus_species_locus)
+esu_loci <- esu_loci[-which(esu_loci %in% dups)]
 
 gdm.full<-list()
 
@@ -498,7 +518,7 @@ nosolution<-list()
 nosolution.full<-list()
 nosolution.list<-list()
 
-stats.full<-data.frame(Species_Locus=character(0),WithRegionsDeviance=numeric(0),WithRegionsExplainedDeviance=numeric(0),NoRegionsDeviance=numeric(0),NoRegionsExplainedDeviance=numeric(0),DeltaDeviance=numeric(0),Pvalue_regions=numeric(0),Pvalue_dist=numeric(0),stringsAsFactors = F)
+stats.full<-data.frame(Species_Locus=character(0),FullDeviance=numeric(0),FullExplainedDeviance=numeric(0),DistDeviance=numeric(0),FullExplainedDeviance=numeric(0),DeltaDeviance=numeric(0),Pvalue_regions=numeric(0),Pvalue_dist=numeric(0),region_deviance_explained=numeric(0), dist_deviance_explained=numeric(0), both_deviance_explained=numeric(0),unexplained_deviance=numeric(0), stringsAsFactors = F)
 
 stats<-data.frame(Species_Locus=character(0),Barrier=character(0),WithBarrierDeviance=numeric(0),WithBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithBarrier=numeric(0),ImportanceBarrierWithBarrier=numeric(0),NoBarrierDeviance=numeric(0),NoBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithoutBarrier=numeric(0),DeltaDeviance=numeric(0),Pvalue_barrier=numeric(0),Pvalue_dist=numeric(0),MRDM.rsquared=numeric(0),MRDM.rsquared.pvalue=numeric(0),MRDM.dist.pvalue=numeric(0), MRDM.barrier.pvalue=numeric(0),stringsAsFactors = F)
 
@@ -533,7 +553,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   gslFSTm<-as.matrix(gslFST)
   
   gslFSTm[which(gslFSTm > 1)] <- 1 #some values that look like 1.0000 are registering as greater than 1
-  gslFSTm[which(gslFSTm < 0)] <- 0.0001 #get rid of artifactual negative values
+  gslFSTm[which(gslFSTm < 0)] <- 0.00001 #get rid of artifactual negative values
   #gslFSTm<-rescale(gslFSTm)
   #gslFSTm<-gslFSTm/(1-gslFSTm)
   
@@ -562,8 +582,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   names(locs)<-"sample"
   #locs$Long<-sp$decimalLongitude[which(locs %in% sp$sample)]
   #can't do a unique on sample, lats and longs because some samples have non-unique lats and longs! So I do a join and take the first match.
-  locs<-join(locs,sp[c("sample","decimalLongitude","decimalLatitude"
-                       ,"VeronDivis")], by="sample", match="first")
+  locs<-join(locs,sp[c("sample","decimalLongitude","decimalLatitude",
+                       "Bowen","Kulbicki_r","REALM")], by="sample", match="first")
+  
   
   #sort gslFSTm
   gslFSTm<-gslFSTm[order(rownames(gslFSTm)),order(colnames(gslFSTm))]
@@ -585,9 +606,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   cat("Running Full Model")
   
   
-  regions<-cbind(locs[,c(1,2,3)],VeronDivis=rep_len(1,length(locs[,1])))
-  if(length(unique(locs$VeronDivis)) > 1){
-    regions<-cbind(locs[,c(1,2,3)],with(locs, data.frame(model.matrix(~VeronDivis+0))))
+  regions<-cbind(locs[,c(1,2,3)],REALM=rep_len(1,length(locs[,1])))
+  if(length(unique(locs$REALM)) > 1){
+    regions<-cbind(locs[,c(1,2,3)],with(locs, data.frame(model.matrix(~REALM+0))))
   }
   
   gslFSTmll<-cbind(locs[,c(2,3)],gslFSTm)
@@ -601,13 +622,35 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     gdm.format.full<-gdm.format.full[-zaps,]
     }
   
-  # run the full model, and the model with only distance
+  # run the full model, and the model with only distance, and the model with only regions
   fullgdm<-gdm(gdm.format.full)
   distgdm<-gdm(gdm.format.full[,c(1:6,grep("matrix_1",names(gdm.format.full)))])
+  regiongdm<-gdm(gdm.format.full[,c(1:6,grep("REALM",names(gdm.format.full)))])
   
+  if(is.null(distgdm)){distgdm<-list(gdmdeviance=fullgdm$nulldeviance,explained=0)}
+  if(is.null(regiongdm)){regiongdm<-list(gdmdeviance=fullgdm$nulldeviance,explained=0)}
+  #calculate the relative contributions to deviance explained for geographical distance and regions and both
   
-  #if no solution, then keep the names of the regions for this species in a matrix with zero values
-  if(is.null(fullgdm) | is.null(distgdm)){
+# Code from Cynthia Riginos 9/10/17
+#Following Borcard et al. 1992 
+#a = regions
+#b = regions & dist
+#c = distance
+#d = unexplained variance
+
+ABC<-(fullgdm$nulldeviance-fullgdm$gdmdeviance)/fullgdm$nulldeviance
+D<- 1-ABC
+AB<-(fullgdm$nulldeviance-regiongdm$gdmdeviance)/fullgdm$nulldeviance
+BC<-(fullgdm$nulldeviance-distgdm$gdmdeviance)/fullgdm$nulldeviance
+
+A<-ABC-BC
+C<-ABC-AB
+B<-ABC-A-C
+  
+
+  
+  #if no solution on full model, then keep the names of the regions for this species in a matrix with zero values
+  if(is.null(fullgdm)){
         cat("No solution obtained on Full Model")
         regions2<-regions[1,-c(1:3)]
         
@@ -629,11 +672,11 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     #percent of null deviance explained by the model with just distance
     explaineddev.dist<-distgdm$explained
     
-    gdm.regions.deviance<-fullgdm$gdmdeviance
-    gdm.regions.explained<-fullgdm$explained
+    gdm.full.deviance<-fullgdm$gdmdeviance
+    gdm.full.explained<-fullgdm$explained
 
-    gdm.no.regions.deviance<-distgdm$gdmdeviance
-    gdm.no.regions.explained<-distgdm$explained
+    gdm.dist.deviance<-distgdm$gdmdeviance
+    gdm.dist.explained<-distgdm$explained
   
   ##############################################################################
     # 4A. Perform Monte-Carlo permutations to develop a null distribution 
@@ -660,7 +703,8 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     pvalue_regions.full<-length(which(abs(deltadev.regions) < abs(rand.deltas.full)))/length(rand.deltas.full)
     pvalue_dist.full<-length(which(abs(explaineddev.dist) < abs(rand.explained.full)))/length(rand.explained.full)
     
-    stats.1<-c(gsl,gdm.regions.deviance,gdm.regions.explained,gdm.no.regions.deviance,gdm.no.regions.explained,deltadev.regions,pvalue_regions.full,pvalue_dist.full)
+    stats.1<-c(gsl,gdm.full.deviance,gdm.full.explained,gdm.dist.deviance,gdm.dist.explained,deltadev.regions,pvalue_regions.full,pvalue_dist.full, A, C, B, D)
+
     
     stats.full[nrow(stats.full)+1,]<-stats.1
     
@@ -875,7 +919,7 @@ nosolution_df<-Reduce(function(t1,t2) merge(t1,t2,all=T,sort=F), nosolution.full
 # convert to matrix
 importance_matrix<-as.matrix(importance_df)
 # split into regions component
-regions_matrix<-importance_matrix[,2:17]
+regions_matrix<-importance_matrix[,2:dim(importance_matrix)[2]]
 # and distance component
 distance_matrix<-importance_matrix[,1]
 
@@ -901,10 +945,10 @@ importance_df2<-merge(importance_df2, nosolution_df,all=T)
 
 #delete the species that only occurred in one region, then delete that column
 #importance_df2<-importance_df2[which(is.na(importance_df2$VeronDivis)),]
-importance_df2<-importance_df2[,-which(names(importance_df2)=="VeronDivis")]
+importance_df2<-importance_df2[,-which(names(importance_df2)=="REALM")]
 
 
-
+write.csv(importance_df2,"./output/gdm_phist_importance.csv")
 
 
 ## Make a heatmap of the importance values
@@ -928,12 +972,50 @@ ip
 
 ```
 
+# Plot stacked bars 
+of deviance explained by distance, regions, distance+regions, unexplained
+```{r}
+stats.bars<-stats.full[,c("Species_Locus","region_deviance_explained","dist_deviance_explained","both_deviance_explained","unexplained_deviance")]
+
+#temp until I figure out what is going on with this one
+stats.bars<-stats.bars[-which(stats.bars$Species_Locus=="Cellana_sandwicensis_CO1"),]
+
+stats.bars$region_deviance_explained<-as.numeric(stats.bars$region_deviance_explained)
+stats.bars$dist_deviance_explained<-as.numeric(stats.bars$dist_deviance_explained)
+stats.bars$both_deviance_explained<-as.numeric(stats.bars$both_deviance_explained)
+stats.bars$unexplained_deviance<-as.numeric(stats.bars$unexplained_deviance)
+
+bars.sum<-stats.bars$region_deviance_explained+stats.bars$dist_deviance_explained+stats.bars$both_deviance_explained+stats.bars$unexplained_deviance
+
+
+bars.melt<-melt(stats.bars, id.vars="Species_Locus")
+bars.melt$variable<-factor(bars.melt$variable, levels=rev(levels(bars.melt$variable)))
+
+bars<-ggplot(bars.melt[order(bars.melt$variable,decreasing=T),],aes(x=Species_Locus, y=value, fill=variable)) + geom_col() + coord_flip() + scale_fill_manual(values=c("Grey50","Green","Blue","Yellow"))
+
+```
+
+# Plot distance splines
+```{r}
+splinegrab<-function(ispline){
+  x<-as.data.frame(ispline$x)
+  y<-as.data.frame(ispline$y)
+  xy<-as.data.frame(cbind(x$matrix_1,y$matrix_1))
+}
+
+distsplines<-lapply(isplines,splinegrab)
+distsplines2<-melt(test,id.vars=c("V1","V2"))
+
+s<-ggplot(distsplines2,aes(x=V1,y=V2,group=L1,color=L1)) + geom_line() + guides(color=FALSE)
+s<-s + facet_grid(L1 ~ .)
+
+```
 # dbRDA
 
 ```{r dbRDA}
 
 # read in the Fst/PhiSt table 
-load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_WCTheta.Rdata")
+load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_PhiST.Rdata")
 #load("~/Desktop/DIPnet_structure_sample_PhiST_042817.Rdata")
 
 
@@ -967,8 +1049,8 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   
   sp$sample<-paste(sp$locality,round(sp$decimalLatitude, digits=0),round(sp$decimalLongitude, digits=0),sep="_")  #sets up a variable that matches the name in Fst table
   sp<-sp[order(sp$sample),]
-  # Not all localities are included in Veron's regionalization (e.g. Guam), so get their names and then zap NAs
-  nonVeronpops<-unique(sp$sample[is.na(sp$VeronDivis)])
+  # Not all localities are included in REALM 
+  #nonpops<-unique(sp$sample[is.na(sp$REALM)])
   sp<-sp[!is.na(sp$VeronDivis),]
   
   #subsample Fst 
@@ -982,9 +1064,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   colnames(gslFSTm)<-rownames(gslFSTm)
   
   #zap the same na populations from the list of non existent pops from VeronDivis
-  if(any(rownames(gslFSTm) %in% nonVeronpops)){
-    gslFSTm<-gslFSTm[-(which(rownames(gslFSTm) %in% nonVeronpops)),-(which(colnames(gslFSTm) %in% nonVeronpops))]
-  }
+  # if(any(rownames(gslFSTm) %in% nonVeronpops)){
+  #   gslFSTm<-gslFSTm[-(which(rownames(gslFSTm) %in% nonVeronpops)),-(which(colnames(gslFSTm) %in% nonVeronpops))]
+  # }
   if(length(rownames(gslFSTm))<5){all.gsl.rda[[gsl]]<-"Fewer than 5 sampled populations";cat("Fewer than 5 sampled populations");next}
   
   #and filter sp based on the localities that have Fst values
@@ -1003,8 +1085,8 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   #locs$Long<-sp$decimalLongitude[which(locs %in% sp$sample)]
   #can't do a unique on sample, lats and longs because some samples have non-unique lats and longs! So I do a join and take the first match.
   locs<-join(locs,sp[c("sample","decimalLongitude","decimalLatitude"
-                       ,"VeronDivis")], by="sample", match="first")
-  if (length(unique(locs$VeronDivis)) < 2) {"Only one region!"; cat("Only one region!"); next}
+                       ,"REALM")], by="sample", match="first")
+  if (length(unique(locs$REALM)) < 2) {"Only one region!"; cat("Only one region!"); next}
   
   #sort gslFSTm
   gslFSTm<-gslFSTm[order(rownames(gslFSTm)),order(colnames(gslFSTm))]
@@ -1023,7 +1105,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   ##############################################################################
   #5. Create a matrix of regional identities
   
-  regions<-with(locs, data.frame(model.matrix(~VeronDivis+0)))   #one of the predictors is superfluous but will get knocked out during RDA
+  regions<-with(locs, data.frame(model.matrix(~REALM+0)))   #one of the predictors is superfluous but will get knocked out during RDA
   row.names(regions)<-row.names(locs)
   
 
@@ -1124,12 +1206,12 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
  
   }
 
-write.csv(term.vars,file="./output/dbRDA_term_vars_WCTHETA.csv")
-write.csv(term.pvals,file="./output/dbRDA_term_pvals_WCTHETA.csv")
+write.csv(term.vars,file="./output/dbRDA_term_vars_PHIST.csv")
+write.csv(term.pvals,file="./output/dbRDA_term_pvals_PHIST.csv")
 
- save(all.gsl.rda,file="./output/multibarrier_dbRDA_WCTHETA.Rdata")
+ save(all.gsl.rda,file="./output/multibarrier_dbRDA_PHIST.Rdata")
   
-write.csv(stats, "./output/multibarrier_dbRDA_JOSTD.csv")
+write.csv(stats, "./output/multibarrier_dbRDA_PHIST.csv")
   
 ```
 
@@ -1156,3 +1238,8 @@ dbrda<-dbrda+geom_tile()+
 
 dbrda
 ```
+
+
+# Cull species to match what is in AMOVA
+# Make stacked bars that give importance due to distance, due to regionalization and residual.
+# Stack significant distance splines on top of each other.
