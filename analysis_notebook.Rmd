@@ -79,7 +79,7 @@ amova_abgd_path<-"/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first
 barriers<-read.csv("VeronBarriers.csv",header=F,stringsAsFactors = F)
 
 #duplicate GSLs that need to be dropped
-dups<-c("Acanthaster_planciSIO_CR","Acanthaster_planciRedSea_CR","Acanthaster_planciNIO_CR","Acanthaster_planciPac_CR","Acanthurus_nigrofuscus_CO1","Cephalopholis_argus_CO1","Chaetodon_auriga_CO1","Halichoeres_claudia_CR","Halichoeres_hortulanus_CO1","Halichoeres_hortulanus_CYB","Halichoeres_trimaculatus_CR","Lutjanus_kasmira_CO1","Neoniphon_sammara_CO1","Pomacentrus_coelestis_CO1","Pygoplites_diacanthus_CYB")
+dups<-c("Acanthaster_planciSIO_CR","Acanthaster_planciRedSea_CR","Acanthaster_planciNIO_CR","Acanthaster_planciPac_CR","Acanthurus_nigrofuscus_CO1","Cephalopholis_argus_CO1","Chaetodon_auriga_CO1","Halichoeres_claudia_CR","Halichoeres_hortulanus_CO1","Halichoeres_hortulanus_CYB","Halichoeres_trimaculatus_CR","Lutjanus_kasmira_CO1","Neoniphon_sammara_CO1","Pomacentrus_coelestis_CO1","Pygoplites_diacanthus_CYB", "Stenella_longirostris_CYB")
 
 remove.dup.gsls<-function(amovatable){
   amovatable<-amovatable[-which(rownames(amovatable) %in% dups),]
@@ -154,10 +154,133 @@ This takes a long time, so we are not running this code in the document, but loa
 
 # Visualize AMOVA results
 
-## FST and Traditional Species Boundaries
+
+## PHIST and Traditional Species Boundaries
+
 
 ### Measure Support
-```{r Measure Support1}
+```{r Measure Support2}
+load(file=file.path(amova_ts_path,"PHIST_ts_rawN_amova_output.Rdata"))
+#remove duplicate gsls
+amovastats<-lapply(amovastats,remove.dup.gsls)
+
+# Measure support for each hypothesis
+
+#Get the values for each hypothesis for a given criterion - here I use BIC - and rank them for #each species, then choose the "best" hypothesis for each species based on the criterion.
+
+criterion<-"BIC"
+# find the maximum number of species from any of the 8 hypotheses
+maxlength<-max(sapply(amovastats,function(x) length(x[[1]]))) 
+# create an empty data frame with row names from the hypothesis with the most values
+crit_df<-data.frame(setNames(replicate(maxlength,numeric(0), simplify = F),nm=row.names(amovastats[["PROVINCE"]]))) 
+
+#Loop through the hypotheses, pulling out the values for criterion,transpose it, and then merge these values into the dataframe from the previous hypothesis 
+for(h in names(amovastats)){
+  crit_df<-merge(crit_df,t(amovastats[[h]][criterion]),all=T,sort=F)
+}
+#get the hypothesis names in there
+row.names(crit_df)<-names(amovastats)
+
+#rank the hypotheses for each species
+crit_rank<-as.data.frame(sapply(crit_df,rank,na.last="keep",ties.method="average"))
+row.names(crit_rank)<-names(amovastats)
+
+## remove gsls with more than 3 missing models
+crit_rank<-crit_rank[, colSums(is.na(crit_rank)) < nrow(crit_rank)-4]  
+
+## choose the best hypothesis or set of hypotheses for each species  
+best_hypothesis<-sapply(crit_rank,function(x){row.names(crit_rank)[which(x==min(x,na.rm=T)) ]})
+
+
+## Make a bar graph of best support for each hypothesis among species
+
+barplot<-ggplot(data=as.data.frame(unlist(best_hypothesis)), aes(x=unlist(best_hypothesis) )) + geom_bar(aes(y = (..count..)/sum(..count..))) + labs(x="Hypothesis",y="Proportion of Species", title="Proportional Support for Biogeographic Hypotheses based on BIC")
+
+barplot
+```
+
+
+### Calculate relative probability from Johnson and Omland 2004 and visualize with a heatmap
+```{r Relative Probability Heatmap2, echo=F}
+# lookup the minimum BIC value for each species (which.min works better here, because it returns only the first instance of the minimum value)
+minBIC<-sapply(crit_df,function(x){x[which.min(x)]}) 
+
+#J&O box 4 eqn 1. scale() seems to be the way to go here, using the minBIC as the centering vector
+crit_df_deltaI<-scale(crit_df, center=minBIC, scale=F) 
+
+#J&O box 4 eqn 4. numerator, plus make it a data frame
+crit_df_deltaI_b<-as.data.frame(exp(-0.5*crit_df_deltaI)) 
+
+#J&O box 4 eqn 4. denominator
+crit_df_deltaI_sums<-sapply(crit_df_deltaI_b,sum,na.rm=T) 
+
+# this time use the scale argument of scale to divide each column by the corresponding sum
+crit_df_relative_prob<-scale(crit_df_deltaI_b,center=F,scale=crit_df_deltaI_sums) 
+
+
+## Make a heatmap of relative probability of each hypothesis
+
+#melt for ggplot2
+relprob<-melt(crit_df_relative_prob)
+colnames(relprob)<-c("Hypothesis","Species","Relative_Probability")
+
+#baseplot
+rp<-ggplot(relprob,aes(y=Species,x=Hypothesis,fill=Relative_Probability))
+
+#add geom_tile, turn the x-axis elements by 90 degrees, reverse the names on the y-axis, and use a diverging color scheme to highlight hypotheses with >50% rel prob.
+rp<-rp+geom_tile()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ylim(rev(levels(relprob$Species)))+
+  scale_fill_gradient2(low = "blue", mid = "white",
+                       high = "red", midpoint = 0.5, space = "rgb",
+                       na.value = "grey50", guide = "colourbar")
+rp
+```
+
+Now zap all GSLs that test less than 5 hypotheses
+```{r}
+
+
+naCount<-colSums(is.na(crit_df_relative_prob))
+
+na4<-names(naCount)[which(naCount<4)]
+
+
+crit_df_relative_prob_na4<-crit_df_relative_prob[,na4]
+
+```
+There are `r length(na4)` GSLs that test at least 5 hypotheses
+
+So now make a trimmed heatmap of just these.
+
+```{r}
+## Make a new heatmap of relative probability of each hypothesis
+
+#melt for ggplot2
+relprob<-melt(crit_df_relative_prob_na4)
+colnames(relprob)<-c("Hypothesis","Species","Relative_Probability")
+
+#baseplot
+rp<-ggplot(relprob,aes(y=Species,x=Hypothesis,fill=Relative_Probability))
+
+#add geom_tile, turn the x-axis elements by 90 degrees, reverse the names on the y-axis, and use a diverging color scheme to highlight hypotheses with >50% rel prob.
+rp<-rp+geom_tile()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ylim(rev(levels(relprob$Species)))+
+  scale_fill_gradient2(low = "blue", mid = "white",
+                       high = "red", midpoint = 0.5, space = "rgb",
+                       na.value = "grey50", guide = "colourbar")
+rp
+```
+
+
+
+## FST and Traditional Species Boundaries
+
+Code is suppressed for the other 3 examples
+
+### Measure Support
+```{r Measure Support1, echo=F}
 load(file=file.path(amova_ts_path,"FST_TradSpec_table_amova_output.Rdata"))
 #remove duplicate gsls
 amovastats<-lapply(amovastats,remove.dup.gsls)
@@ -190,7 +313,7 @@ crit_rank<-as.data.frame(sapply(crit_df2,rank,na.last="keep",ties.method="averag
 row.names(crit_rank)<-names(amovastats)
 
 ## remove gsls with more than 3 missing models
-crit_rank<-crit_rank[, colSums(is.na(crit_rank)) < nrow(crit_rank)-5]  
+crit_rank<-crit_rank[, colSums(is.na(crit_rank)) < nrow(crit_rank)-4]  
 
 ## choose the best hypothesis or set of hypotheses for each species  
 best_hypothesis<-sapply(crit_rank,function(x){row.names(crit_rank)[which(x==min(x,na.rm=T)) ]})
@@ -241,88 +364,6 @@ rp
 ```
 
 
-## PHIST and Traditional Species Boundaries
-
-Code is suppressed for the other 3 examples
-
-### Measure Support
-```{r Measure Support2, echo=F}
-load(file=file.path(amova_ts_path,"PHIST_ts_rawN_amova_output.Rdata"))
-#remove duplicate gsls
-amovastats<-lapply(amovastats,remove.dup.gsls)
-
-# Measure support for each hypothesis
-
-#Get the values for each hypothesis for a given criterion - here I use BIC - and rank them for #each species, then choose the "best" hypothesis for each species based on the criterion.
-
-criterion<-"BIC"
-# find the maximum number of species from any of the 8 hypotheses
-maxlength<-max(sapply(amovastats,function(x) length(x[[1]]))) 
-# create an empty data frame with row names from the hypothesis with the most values
-crit_df<-data.frame(setNames(replicate(maxlength,numeric(0), simplify = F),nm=row.names(amovastats[["PROVINCE"]]))) 
-
-#Loop through the hypotheses, pulling out the values for criterion,transpose it, and then merge these values into the dataframe from the previous hypothesis 
-for(h in names(amovastats)){
-  crit_df<-merge(crit_df,t(amovastats[[h]][criterion]),all=T,sort=F)
-}
-#get the hypothesis names in there
-row.names(crit_df)<-names(amovastats)
-
-#rank the hypotheses for each species
-crit_rank<-as.data.frame(sapply(crit_df,rank,na.last="keep",ties.method="average"))
-row.names(crit_rank)<-names(amovastats)
-
-## remove gsls with more than 3 missing models
-crit_rank<-crit_rank[, colSums(is.na(crit_rank)) < nrow(crit_rank)-5]  
-
-## choose the best hypothesis or set of hypotheses for each species  
-best_hypothesis<-sapply(crit_rank,function(x){row.names(crit_rank)[which(x==min(x,na.rm=T)) ]})
-
-
-## Make a bar graph of best support for each hypothesis among species
-
-barplot<-ggplot(data=as.data.frame(unlist(best_hypothesis)), aes(x=unlist(best_hypothesis) )) + geom_bar(aes(y = (..count..)/sum(..count..))) + labs(x="Hypothesis",y="Proportion of Species", title="Proportional Support for Biogeographic Hypotheses based on BIC")
-
-barplot
-```
-
-
-### Calculate relative probability from Johnson and Omland 2004 and visualize with a heatmap
-```{r Relative Probability Heatmap2, echo=F}
-# lookup the minimum BIC value for each species (which.min works better here, because it returns only the first instance of the minimum value)
-minBIC<-sapply(crit_df,function(x){x[which.min(x)]}) 
-
-#J&O box 4 eqn 1. scale() seems to be the way to go here, using the minBIC as the centering vector
-crit_df_deltaI<-scale(crit_df, center=minBIC, scale=F) 
-
-#J&O box 4 eqn 4. numerator, plus make it a data frame
-crit_df_deltaI_b<-as.data.frame(exp(-0.5*crit_df_deltaI)) 
-
-#J&O box 4 eqn 4. denominator
-crit_df_deltaI_sums<-sapply(crit_df_deltaI_b,sum,na.rm=T) 
-
-# this time use the scale argument of scale to divide each column by the corresponding sum
-crit_df_relative_prob<-scale(crit_df_deltaI_b,center=F,scale=crit_df_deltaI_sums) 
-
-
-## Make a heatmap of relative probability of each hypothesis
-
-#melt for ggplot2
-relprob<-melt(crit_df_relative_prob)
-colnames(relprob)<-c("Hypothesis","Species","Relative_Probability")
-
-#baseplot
-rp<-ggplot(relprob,aes(y=Species,x=Hypothesis,fill=Relative_Probability))
-
-#add geom_tile, turn the x-axis elements by 90 degrees, reverse the names on the y-axis, and use a diverging color scheme to highlight hypotheses with >50% rel prob.
-rp<-rp+geom_tile()+
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-  ylim(rev(levels(relprob$Species)))+
-  scale_fill_gradient2(low = "blue", mid = "white",
-                       high = "red", midpoint = 0.5, space = "rgb",
-                       na.value = "grey50", guide = "colourbar")
-rp
-```
 ## FST and ABGD Boundaries
 
 ### Measure Support
@@ -353,7 +394,7 @@ crit_rank<-as.data.frame(sapply(crit_df,rank,na.last="keep",ties.method="average
 row.names(crit_rank)<-names(amovastats)
 
 ## remove gsls with more than 3 missing models
-crit_rank<-crit_rank[, colSums(is.na(crit_rank)) < nrow(crit_rank)-5]  
+crit_rank<-crit_rank[, colSums(is.na(crit_rank)) < nrow(crit_rank)-4]  
 
 ## choose the best hypothesis or set of hypotheses for each species  
 best_hypothesis<-sapply(crit_rank,function(x){row.names(crit_rank)[which(x==min(x,na.rm=T)) ]})
@@ -434,7 +475,7 @@ crit_rank<-as.data.frame(sapply(crit_df,rank,na.last="keep",ties.method="average
 row.names(crit_rank)<-names(amovastats)
 
 ## remove gsls with more than 3 missing models
-crit_rank<-crit_rank[, colSums(is.na(crit_rank)) < nrow(crit_rank)-5]  
+crit_rank<-crit_rank[, colSums(is.na(crit_rank)) < nrow(crit_rank)-4]  
 
 ## choose the best hypothesis or set of hypotheses for each species  
 best_hypothesis<-sapply(crit_rank,function(x){row.names(crit_rank)[which(x==min(x,na.rm=T)) ]})
@@ -508,8 +549,10 @@ save(diffstats, file="/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_f
 
   load("/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_PhiST.Rdata")
 
-esu_loci <- unique(ipdb$Genus_species_locus)
-esu_loci <- esu_loci[-which(esu_loci %in% dups)]
+#esu_loci <- unique(ipdb$Genus_species_locus)
+#esu_loci <- esu_loci[-which(esu_loci %in% dups)]
+
+esu_loci<-na4
 
 gdm.full<-list()
 
@@ -518,7 +561,7 @@ nosolution<-list()
 nosolution.full<-list()
 nosolution.list<-list()
 
-stats.full<-data.frame(Species_Locus=character(0),FullDeviance=numeric(0),FullExplainedDeviance=numeric(0),DistDeviance=numeric(0),FullExplainedDeviance=numeric(0),DeltaDeviance=numeric(0),Pvalue_regions=numeric(0),Pvalue_dist=numeric(0),region_deviance_explained=numeric(0), dist_deviance_explained=numeric(0), both_deviance_explained=numeric(0),unexplained_deviance=numeric(0), stringsAsFactors = F)
+stats.full<-data.frame(Species_Locus=character(0),FullDeviance=numeric(0),FullExplainedDeviance=numeric(0),DistDeviance=numeric(0),FullExplainedDeviance=numeric(0),DeltaDeviance=numeric(0),region_deviance_explained=numeric(0), dist_deviance_explained=numeric(0), both_deviance_explained=numeric(0),unexplained_deviance=numeric(0), stringsAsFactors = F)
 
 stats<-data.frame(Species_Locus=character(0),Barrier=character(0),WithBarrierDeviance=numeric(0),WithBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithBarrier=numeric(0),ImportanceBarrierWithBarrier=numeric(0),NoBarrierDeviance=numeric(0),NoBarrierExplainedDeviance=numeric(0),ImportanceDistanceWithoutBarrier=numeric(0),DeltaDeviance=numeric(0),Pvalue_barrier=numeric(0),Pvalue_dist=numeric(0),MRDM.rsquared=numeric(0),MRDM.rsquared.pvalue=numeric(0),MRDM.dist.pvalue=numeric(0), MRDM.barrier.pvalue=numeric(0),stringsAsFactors = F)
 
@@ -532,9 +575,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   
   cat("\n","\n","\n","Now starting", gsl, "\n")
   
-  if(any(is.na(diffstats[[gsl]]))){cat("NAs in FST table, No gdm calculated"); next}
+# skipping this because we are deleting individual rows/columns with NAs  if(any(is.na(diffstats[[gsl]]))){cat("NAs in FST table, No gdm calculated"); nostats<-c(nostats,paste(gsl,"NAs in FST"));next}
   
-  if(diffstats[[gsl]]=="Fewer than 3 sampled populations after filtering. No stats calculated"){nostats<-c(nostats,gsl);next}
+  if(diffstats[[gsl]]=="Fewer than 3 sampled populations after filtering. No stats calculated"){nostats<-c(nostats,paste(gsl,"N<3 NO FST"));next}
   
   #pull out the data for this genus-species-locus (gsl)
   sp<-ipdb[which(ipdb$Genus_species_locus==gsl),]
@@ -552,6 +595,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   #make a matrix out of gslFST
   gslFSTm<-as.matrix(gslFST)
   
+  #remove rows and columns with NAs
+  gslFSTm<-gslFSTm[complete.cases(gslFSTm),complete.cases(gslFSTm)]
+  
   gslFSTm[which(gslFSTm > 1)] <- 1 #some values that look like 1.0000 are registering as greater than 1
   gslFSTm[which(gslFSTm < 0)] <- 0.00001 #get rid of artifactual negative values
   #gslFSTm<-rescale(gslFSTm)
@@ -566,7 +612,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     gslFSTm<-gslFSTm[-(which(rownames(gslFSTm) %in% nonVeronpops)),-(which(colnames(gslFSTm) %in% nonVeronpops))]
   }
   
-  if(length(rownames(gslFSTm))<5){nostats<-c(nostats,gsl);cat("Fewer than 5 sampled populations");next}
+#  if(length(rownames(gslFSTm))<5){nostats<-c(nostats,paste(gsl,"pops<5"));cat("Fewer than 5 sampled populations");next}
   
   #and filter sp based on the localities that have Fst values
   sp<-sp[sp$sample %in% rownames(gslFSTm),]
@@ -627,10 +673,35 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   distgdm<-gdm(gdm.format.full[,c(1:6,grep("matrix_1",names(gdm.format.full)))])
   regiongdm<-gdm(gdm.format.full[,c(1:6,grep("REALM",names(gdm.format.full)))])
   
-  if(is.null(distgdm)){distgdm<-list(gdmdeviance=fullgdm$nulldeviance,explained=0)}
-  if(is.null(regiongdm)){regiongdm<-list(gdmdeviance=fullgdm$nulldeviance,explained=0)}
+  if(is.null(distgdm)){
+      cat("Distance GDM no solution!")
+      distgdm<-list(gdmdeviance=fullgdm$nulldeviance,explained=0)
+  }
+  
+  if(is.null(regiongdm)){
+    cat("Region GDM no solution!")
+    regiongdm<-list(gdmdeviance=fullgdm$nulldeviance,explained=0)}
+  
   #calculate the relative contributions to deviance explained for geographical distance and regions and both
   
+    #if no solution on full model, then keep the names of the regions for this species in a matrix with zero values
+  # if(is.null(fullgdm)){
+  #       cat("No solution obtained on Full Model")
+  #       regions2<-regions[1,-c(1:3)]
+  #       nostats<-c(nostats,paste(gsl,"No Solution"))
+  #       
+  #       #some futzing to deal with datasets with no predictors but distance matrix
+  #       if(length(regions2)>1){regions2[1,]<-0}
+  #       regions2$matrix_1<-0
+  #       regions2$Species<-gsl
+  #       if(!is.data.frame(regions2)){regions2<-data.frame(matrix_1=0)}
+  #       
+  #       nosolution.full[[gsl]]<-regions2
+  #       nosolution.list[[gsl]]<-gdm.format.full
+  #       plot(gdm.format.full$s2.matrix_1,gdm.format.full$distance, main=gsl)
+  #       next}
+  
+
 # Code from Cynthia Riginos 9/10/17
 #Following Borcard et al. 1992 
 #a = regions
@@ -638,32 +709,45 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
 #c = distance
 #d = unexplained variance
 
+if(is.null(fullgdm)){
+  fullgdm<-list(gdmdeviance=0.00001,explained=0.00001,nulldeviance=0.00001)
+  if(is.null(regiongdm$gdmdeviance)){
+    regiongdm<-list(gdmdeviance=0.00001,explained=0.00001,nulldeviance=0.00001)}
+  if(is.null(distgdm$gdmdeviance)){
+    distgdm<-list(gdmdeviance=0.00001,explained=0.00001,nulldeviance=0.00001)}
+}
+  
 ABC<-(fullgdm$nulldeviance-fullgdm$gdmdeviance)/fullgdm$nulldeviance
-D<- 1-ABC
 AB<-(fullgdm$nulldeviance-regiongdm$gdmdeviance)/fullgdm$nulldeviance
 BC<-(fullgdm$nulldeviance-distgdm$gdmdeviance)/fullgdm$nulldeviance
 
 A<-ABC-BC
 C<-ABC-AB
 B<-ABC-A-C
-  
+if(B<0){B<-0; A<-0}
+D<- 1-ABC
 
-  
-  #if no solution on full model, then keep the names of the regions for this species in a matrix with zero values
-  if(is.null(fullgdm)){
+
+if(fullgdm$nulldeviance==0.00001){
         cat("No solution obtained on Full Model")
-        regions2<-regions[1,-c(1:3)]
-        
-        #some futzing to deal with datasets with no predictors but distance matrix
-        if(length(regions2)>1){regions2[1,]<-0}
-        regions2$matrix_1<-0
-        regions2$Species<-gsl
-        if(!is.data.frame(regions2)){regions2<-data.frame(matrix_1=0)}
-        
-        nosolution.full[[gsl]]<-regions2
-        nosolution.list[[gsl]]<-gdm.format.full
-        plot(gdm.format.full$s2.matrix_1,gdm.format.full$distance, main=gsl)
-        next}
+  
+   if(regiongdm$nulldeviance==0.00001 & distgdm$nulldeviance==0.00001){
+     A<-0;B<-0;C<-0;D<-1
+   }
+   
+   if(regiongdm$nulldeviance==0.00001 & distgdm$nulldeviance!=0.00001){
+          A<-0
+          B<-0
+          C<-(distgdm$nulldeviance-distgdm$gdmdeviance)/distgdm$nulldeviance
+          D<-1-C}
+   if(regiongdm$nulldeviance!=0.00001 & distgdm$nulldeviance==0.00001){
+          
+          A<-(regiongdm$nulldeviance-regiongdm$gdmdeviance)/regiongdm$nulldeviance
+          B<-0
+          C<-0
+          D<-1-A}
+   }
+     
   
   # pull out stats
    #difference in deviance
@@ -678,32 +762,31 @@ B<-ABC-A-C
     gdm.dist.deviance<-distgdm$gdmdeviance
     gdm.dist.explained<-distgdm$explained
   
-  ##############################################################################
-    # 4A. Perform Monte-Carlo permutations to develop a null distribution 
-    #    of deviance values and determine significance (pvalue)
-    gdm.format.rand.full<-gdm.format.full
-    rand.deltas.full<-vector() 
-    rand.explained.full<-vector()
-  
-    while(length(rand.deltas.full) < 1000) {
-      gdm.format.rand.full$distance<-sample(gdm.format.rand.full$distance,size=length(gdm.format.rand.full$distance))
-      gdm.barrier.rand.full<-gdm(gdm.format.rand.full)
-      gdm.no.barrier.rand.full<-gdm(gdm.format.rand.full[,c(1:6,grep("matrix_1",
-                                                          names(gdm.format.rand.full)))])
-    
-        # if no solution obtained, go to next gsl
-      if(is.null(gdm.barrier.rand.full) | is.null(gdm.no.barrier.rand.full)){next}
-      
-      deltadev.rand.full<-gdm.no.barrier.rand.full$gdmdeviance-gdm.barrier.rand.full$gdmdeviance
-      explained.rand.full<-gdm.no.barrier.rand.full$explained
-      
-      rand.deltas.full<-c(rand.deltas.full,deltadev.rand.full)
-      rand.explained.full<-c(rand.explained.full,explained.rand.full)
-    }
-    pvalue_regions.full<-length(which(abs(deltadev.regions) < abs(rand.deltas.full)))/length(rand.deltas.full)
-    pvalue_dist.full<-length(which(abs(explaineddev.dist) < abs(rand.explained.full)))/length(rand.explained.full)
-    
-    stats.1<-c(gsl,gdm.full.deviance,gdm.full.explained,gdm.dist.deviance,gdm.dist.explained,deltadev.regions,pvalue_regions.full,pvalue_dist.full, A, C, B, D)
+  # ##############################################################################
+  #   # 4A. Perform Monte-Carlo permutations to develop a null distribution 
+  #   #    of deviance values and determine significance (pvalue)
+  #   gdm.format.rand.full<-gdm.format.full
+  #   rand.deltas.full<-vector() 
+  #   rand.explained.full<-vector()
+  # 
+  #   while(length(rand.deltas.full) < 1000) {
+  #     gdm.format.rand.full$distance<-sample(gdm.format.rand.full$distance,size=length(gdm.format.rand.full$distance))
+  #     gdm.barrier.rand.full<-gdm(gdm.format.rand.full)
+  #     gdm.no.barrier.rand.full<-gdm(gdm.format.rand.full[,c(1:6,grep("matrix_1",names(gdm.format.rand.full)))])
+  #   
+  #       # if no solution obtained, go to next gsl
+  #     if(is.null(gdm.barrier.rand.full) | is.null(gdm.no.barrier.rand.full)){next}
+  #     
+  #     deltadev.rand.full<-gdm.no.barrier.rand.full$gdmdeviance-gdm.barrier.rand.full$gdmdeviance
+  #     explained.rand.full<-gdm.no.barrier.rand.full$explained
+  #     
+  #     rand.deltas.full<-c(rand.deltas.full,deltadev.rand.full)
+  #     rand.explained.full<-c(rand.explained.full,explained.rand.full)
+  #   }
+  #   pvalue_regions.full<-length(which(abs(deltadev.regions) < abs(rand.deltas.full)))/length(rand.deltas.full)
+  #   pvalue_dist.full<-length(which(abs(explaineddev.dist) < abs(rand.explained.full)))/length(rand.explained.full)
+  #   
+    stats.1<-c(gsl,gdm.full.deviance,gdm.full.explained,gdm.dist.deviance,gdm.dist.explained,deltadev.regions, A, C, B, D)
 
     
     stats.full[nrow(stats.full)+1,]<-stats.1
@@ -978,7 +1061,7 @@ of deviance explained by distance, regions, distance+regions, unexplained
 stats.bars<-stats.full[,c("Species_Locus","region_deviance_explained","dist_deviance_explained","both_deviance_explained","unexplained_deviance")]
 
 #temp until I figure out what is going on with this one
-stats.bars<-stats.bars[-which(stats.bars$Species_Locus=="Cellana_sandwicensis_CO1"),]
+#stats.bars<-stats.bars[-which(stats.bars$Species_Locus=="Cellana_sandwicensis_CO1"),]
 
 stats.bars$region_deviance_explained<-as.numeric(stats.bars$region_deviance_explained)
 stats.bars$dist_deviance_explained<-as.numeric(stats.bars$dist_deviance_explained)
