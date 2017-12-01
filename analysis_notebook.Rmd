@@ -739,7 +739,9 @@ if(fullgdm$nulldeviance==0.00001){
           A<-0
           B<-0
           C<-(distgdm$nulldeviance-distgdm$gdmdeviance)/distgdm$nulldeviance
-          D<-1-C}
+          D<-1-C
+          if(distgdm$explained<0){A<-0;B<-0;C<-0;D<-1}
+   }
    if(regiongdm$nulldeviance!=0.00001 & distgdm$nulldeviance==0.00001){
           
           A<-(regiongdm$nulldeviance-regiongdm$gdmdeviance)/regiongdm$nulldeviance
@@ -972,7 +974,7 @@ stats.full$GDM.distance.qvalue<-p.adjust(as.numeric(stats.full$Pvalue_dist),meth
 ```
 
 # Create a heatmap from GDM regions
-```{r GDM Heatmap}
+```{r GDM Heatmap, eval=F}
 
 #extract the isplines
 isplines<-lapply(gdm.full,isplineExtract)
@@ -1076,6 +1078,7 @@ bars.melt$variable<-factor(bars.melt$variable, levels=rev(levels(bars.melt$varia
 
 bars<-ggplot(bars.melt[order(bars.melt$variable,decreasing=T),],aes(x=Species_Locus, y=value, fill=variable)) + geom_col() + coord_flip() + scale_fill_manual(values=c("Grey50","Green","Blue","Yellow"))
 
+bars
 ```
 
 # Plot distance splines
