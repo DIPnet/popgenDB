@@ -160,7 +160,7 @@ This takes a long time, so we are not running this code in the document, but loa
 
 ### Measure Support
 ```{r Measure Support2}
-load(file=file.path(amova_ts_path,"PHIST_ts_rawN_amova_output.Rdata"))
+load(file=file.path(amova_ts_path,"PHIST_ts_tableN_amova_output.Rdata"))
 #remove duplicate gsls
 amovastats<-lapply(amovastats,remove.dup.gsls)
 
@@ -266,7 +266,7 @@ rp<-ggplot(relprob,aes(y=Species,x=Hypothesis,fill=Relative_Probability))
 #add geom_tile, turn the x-axis elements by 90 degrees, reverse the names on the y-axis, and use a diverging color scheme to highlight hypotheses with >50% rel prob.
 rp<-rp+geom_tile()+
   theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-  ylim(rev(levels(relprob$Species)))+
+  ylim(rev(sort(levels(relprob$Species))))+
   scale_fill_gradient2(low = "blue", mid = "white",
                        high = "red", midpoint = 0.5, space = "rgb",
                        na.value = "grey50", guide = "colourbar")
@@ -628,8 +628,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   names(locs)<-"sample"
   #locs$Long<-sp$decimalLongitude[which(locs %in% sp$sample)]
   #can't do a unique on sample, lats and longs because some samples have non-unique lats and longs! So I do a join and take the first match.
-  locs<-join(locs,sp[c("sample","decimalLongitude","decimalLatitude",
-                       "Bowen","Kulbicki_r","REALM")], by="sample", match="first")
+  locs<-join(locs,sp[c("IPDB_index","sample","decimalLongitude",
+                       "decimalLatitude","Bowen","Kulbicki_r","REALM")],
+                        by="sample", match="first")
   
   
   #sort gslFSTm
@@ -645,6 +646,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   
   #cbind on the sample names
   gcdist_km <- cbind(sample=locs$sample,as.data.frame(gcdist_km))
+  
+  ######################################################################
+  # 5. Lookup Overwater Distances
   
   ####################################################################
   #4. Full Model
