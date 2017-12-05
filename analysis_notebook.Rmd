@@ -90,6 +90,11 @@ remove.dup.gsls<-function(amovatable){
   amovatable<-amovatable[-which(rownames(amovatable) %in% dups),]
 }
 
+splinegrab<-function(ispline){
+  x<-as.data.frame(ispline$x)
+  y<-as.data.frame(ispline$y)
+  xy<-as.data.frame(cbind(x$matrix_1,y$matrix_1))
+}
 ```
 
 
@@ -574,6 +579,8 @@ nostats<-NULL
 
 barriertests<-data.frame(Species=character(0),Region1=character(0),NumPops1=numeric(0),Region2=character(0),Numpops2=numeric(0), Test=logical(0), Solution=logical(0),stringsAsFactors = F)
 
+plotlist<-list()
+
 k<-0
 
 for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutjanus_kasmira_CYB" "Acanthaster_planci_CO1"
@@ -732,9 +739,38 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   #       
   #       nosolution.full[[gsl]]<-regions2
   #       nosolution.list[[gsl]]<-gdm.format.full
-  #       plot(gdm.format.full$s2.matrix_1,gdm.format.full$distance, main=gsl)
+  #       
   #       next}
+
+# plot each species
+  # if fullgdm is not null plot the ispline and linear model
+if(!is.null(fullgdm)){
+  ibd<-as.data.frame(cbind(distance=gdm.format.full$s2.matrix_1, phist=gdm.format.full$distance))
   
+  #extract the ispline
+
+  ispline<-isplineExtract(fullgdm)
+  ispline2<-splinegrab(ispline)
+
+    #plot both the ispline (red) and the linear model (blue)
+ibdplot<- ggplot(data=ibd,mapping=aes(x=distance,y=phist)) + geom_point() +
+      geom_smooth(method=lm) +
+      geom_line(data=ispline2,mapping=aes(x=V1,y=V2), color="red") +
+      ggtitle(label=gsl)
+
+plotlist[[gsl]]<-ibdplot
+}
+
+  #if fullgdm is null, then still plot the linear model  
+if(is.null(fullgdm)){
+  ibd<-as.data.frame(cbind(distance=gdm.format.full$s2.matrix_1, phist=gdm.format.full$distance))
+  
+  ibdplot<- ggplot(data=ibd,mapping=aes(x=distance,y=phist)) +geom_point()+
+    geom_smooth(method=lm) + ggtitle(gsl)
+  plotlist[[gsl]]<-ibdplot
+}
+
+#plot(gdm.format.full$s2.matrix_1,gdm.format.full$distance, main=gsl)
 
 # Code from Cynthia Riginos 9/10/17
 #Following Borcard et al. 1992 
