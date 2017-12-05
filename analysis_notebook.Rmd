@@ -49,6 +49,11 @@ spatial<-read.table(spatial_path, header=T, sep="\t",stringsAsFactors = F, na.st
 #read in geographical regionalizations from Beger
 spatial2<-read.table(spatial2_path, header=T,sep="\t", stringsAsFactors = F, na.strings=c("NA"," ",""), quote="")
 
+#read in overwater distances and lookup table from Treml
+outMat <-read.table("~/github/IPDB/distances/IPDB_OW.dist.csv", header=TRUE, sep=",", row.names=c(1))
+  
+LookUp <-read.table("~/github/IPDB/distances/ID_Lookup.csv", header=TRUE, sep=",")
+
 #read in ABGD groups
 abgd<-read.table(abgd_path, header=T, sep="\t", stringsAsFactors = F)
 
@@ -640,7 +645,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   
   ######################################################################
   # 3. Calculate Great Circle Distance
-  gcdist_km <- pointDistance(locs[,2:3],lonlat=T)/1000
+  gcdist_km <- pointDistance(locs[,3:4],lonlat=T)/1000
   #symmetricize the matrix
   gcdist_km[upper.tri(gcdist_km)]<-t(gcdist_km)[upper.tri(gcdist_km)]
   
@@ -648,22 +653,47 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   gcdist_km <- cbind(sample=locs$sample,as.data.frame(gcdist_km))
   
   ######################################################################
-  # 5. Lookup Overwater Distances
+  # 4. Lookup Overwater Distances - Code and Distances from Eric Treml and his RA Jutta
+  mySites<-locs$IPDB_index
+  
+  SubSet.Sites<-setDT(LookUp, key = 'IPDB_index')[list(mySites)]
+
+  myIndex<-SubSet.Sites$Rid
+  
+  # some distances were not measurable due to point being 20km from water
+  # zap these points from both matrices
+  #rownames(mySubOutMat)<-mySites
+  #colnames(mySubOutMat)<-mySites
+  if(anyNA(myIndex)){
+  nazaps<-which(is.na(myIndex))
+  myIndex<-myIndex[-nazaps]
+  gcdist_km<-gcdist_km[-nazaps,-(nazaps+1)]
+  gslFSTm<-gslFSTm[-nazaps,-(nazaps+1)]
+  locs<-locs[-nazaps,]
+ 
+  }
+  
+  owdist_km<-outMat[myIndex,myIndex]
+  
+  #cbind on the sample names
+  owdist_km <- cbind(sample=locs$sample,as.data.frame(owdist_km))
+  
+ 
   
   ####################################################################
-  #4. Full Model
+  #5. Format the data and run in full, distance and region models
   
   cat("Running Full Model")
   
   
-  regions<-cbind(locs[,c(1,2,3)],REALM=rep_len(1,length(locs[,1])))
+  regions<-cbind(locs[,c(1,3,4)],REALM=rep_len(1,length(locs[,1])))
   if(length(unique(locs$REALM)) > 1){
-    regions<-cbind(locs[,c(1,2,3)],with(locs, data.frame(model.matrix(~REALM+0))))
+    regions<-cbind(locs[,c(1,3,4)],with(locs, data.frame(model.matrix(~REALM+0))))
   }
   
-  gslFSTmll<-cbind(locs[,c(2,3)],gslFSTm)
+  gslFSTmll<-cbind(locs[,c(3,4)],gslFSTm)
   
-  gdm.format.full<-formatsitepair(bioData=gslFSTm, bioFormat=3, predData=regions,XColumn = "decimalLongitude", YColumn = "decimalLatitude", siteColumn="sample", distPreds=list(gcdist_km))
+  gdm.format.full<-formatsitepair(bioData=gslFSTm, bioFormat=3, predData=regions,XColumn = "decimalLongitude", YColumn = "decimalLatitude", siteColumn="sample", distPreds=list(owdist_km))
   
      #zap population pairs with 0 geographical distance between them. Troubling.
     zaps<-which(gdm.format.full$s2.matrix_1==0)
@@ -801,6 +831,9 @@ if(fullgdm$nulldeviance==0.00001){
     
     
 }
+# code to fix Naso Hexacanthus
+stats.full[which(stats.full$Species_Locus=="Naso_hexacanthus_CR"),"dist_deviance_explained"]<-1
+stats.full[which(stats.full$Species_Locus=="Naso_hexacanthus_CR"),"unexplained_deviance"]<-0
   ####################################################################### Calculate Overwater Distances#
   #Save for later##
   #######################################################################
@@ -930,8 +963,8 @@ if(fullgdm$nulldeviance==0.00001){
 
 
 
-stats.full$GDM.regions.qvalue<-p.adjust(as.numeric(stats.full$Pvalue_regions),method="fdr")
-stats.full$GDM.distance.qvalue<-p.adjust(as.numeric(stats.full$Pvalue_dist),method="fdr")
+#stats.full$GDM.regions.qvalue<-p.adjust(as.numeric(stats.full$Pvalue_regions),method="fdr")
+#stats.full$GDM.distance.qvalue<-p.adjust(as.numeric(stats.full$Pvalue_dist),method="fdr")
 
 # stats$GDM.qvalue<-p.adjust(as.numeric(stats$Pvalue_barrier),method="fdr")
 # stats$MRDM.r2.qvalue<-p.adjust(as.numeric(stats$MRDM.rsquared.pvalue),method="fdr")
