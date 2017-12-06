@@ -25,6 +25,7 @@ library(WriteXLS)
 library(ggplot2)
 library(knitr)
 library(vegan)
+library(gridExtra)
 
 
 source("config.R")
@@ -84,7 +85,7 @@ amova_abgd_path<-"/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first
 barriers<-read.csv("VeronBarriers.csv",header=F,stringsAsFactors = F)
 
 #duplicate GSLs that need to be dropped
-dups<-c("Acanthaster_planciSIO_CR","Acanthaster_planciRedSea_CR","Acanthaster_planciNIO_CR","Acanthaster_planciPac_CR","Acanthurus_nigrofuscus_CO1","Cephalopholis_argus_CO1","Chaetodon_auriga_CO1","Halichoeres_claudia_CR","Halichoeres_hortulanus_CO1","Halichoeres_hortulanus_CYB","Halichoeres_trimaculatus_CR","Lutjanus_kasmira_CO1","Neoniphon_sammara_CO1","Pomacentrus_coelestis_CO1","Pygoplites_diacanthus_CYB", "Stenella_longirostris_CYB")
+dups<-c("Acanthaster_planciSIO_CR","Acanthaster_planciRedSea_CR","Acanthaster_planciNIO_CR","Acanthaster_planciPac_CR","Acanthurus_nigrofuscus_CO1","Cephalopholis_argus_CO1","Chaetodon_auriga_CO1","Halichoeres_claudia_CR","Halichoeres_hortulanus_CO1","Halichoeres_hortulanus_CYB","Halichoeres_trimaculatus_CR","Lutjanus_kasmira_CO1","Naso_hexacanthus_CR","Neoniphon_sammara_CO1","Pomacentrus_coelestis_CO1","Pygoplites_diacanthus_CYB", "Stenella_longirostris_CYB")
 
 remove.dup.gsls<-function(amovatable){
   amovatable<-amovatable[-which(rownames(amovatable) %in% dups),]
@@ -564,6 +565,8 @@ save(diffstats, file="/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_f
 
 esu_loci<-na4
 
+esu_loci<-sort(esu_loci)
+
 gdm.full<-list()
 
 solution<-list()
@@ -723,26 +726,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     cat("Region GDM no solution!")
     regiongdm<-list(gdmdeviance=fullgdm$nulldeviance,explained=0)}
   
-  #calculate the relative contributions to deviance explained for geographical distance and regions and both
-  
-    #if no solution on full model, then keep the names of the regions for this species in a matrix with zero values
-  # if(is.null(fullgdm)){
-  #       cat("No solution obtained on Full Model")
-  #       regions2<-regions[1,-c(1:3)]
-  #       nostats<-c(nostats,paste(gsl,"No Solution"))
-  #       
-  #       #some futzing to deal with datasets with no predictors but distance matrix
-  #       if(length(regions2)>1){regions2[1,]<-0}
-  #       regions2$matrix_1<-0
-  #       regions2$Species<-gsl
-  #       if(!is.data.frame(regions2)){regions2<-data.frame(matrix_1=0)}
-  #       
-  #       nosolution.full[[gsl]]<-regions2
-  #       nosolution.list[[gsl]]<-gdm.format.full
-  #       
-  #       next}
 
-# plot each species
+#6.  plot each species
+  
   # if fullgdm is not null plot the ispline and linear model
 if(!is.null(fullgdm)){
   ibd<-as.data.frame(cbind(distance=gdm.format.full$s2.matrix_1, phist=gdm.format.full$distance))
@@ -770,6 +756,8 @@ if(is.null(fullgdm)){
   plotlist[[gsl]]<-ibdplot
 }
 
+#7. calculate the relative contributions to deviance explained for geographical distance and regions and both
+  
 #plot(gdm.format.full$s2.matrix_1,gdm.format.full$distance, main=gsl)
 
 # Code from Cynthia Riginos 9/10/17
@@ -868,8 +856,11 @@ if(fullgdm$nulldeviance==0.00001){
     
 }
 # code to fix Naso Hexacanthus
-stats.full[which(stats.full$Species_Locus=="Naso_hexacanthus_CR"),"dist_deviance_explained"]<-1
-stats.full[which(stats.full$Species_Locus=="Naso_hexacanthus_CR"),"unexplained_deviance"]<-0
+#stats.full[which(stats.full$Species_Locus=="Naso_hexacanthus_CR"),"dist_deviance_explained"]<-1
+#stats.full[which(stats.full$Species_Locus=="Naso_hexacanthus_CR"),"unexplained_deviance"]<-0
+
+ibdplots<-marrangeGrob(plotlist, nrow=2,ncol=2)
+ggsave("./output/ibdplots.pdf",ibdplots)
   ####################################################################### Calculate Overwater Distances#
   #Save for later##
   #######################################################################
@@ -1148,6 +1139,7 @@ bars.sum<-stats.bars$region_deviance_explained+stats.bars$dist_deviance_explaine
 
 bars.melt<-melt(stats.bars, id.vars="Species_Locus")
 bars.melt$variable<-factor(bars.melt$variable, levels=rev(levels(bars.melt$variable)))
+bars.melt$Species_Locus<-factor(bars.melt$Species_Locus,levels=rev(levels(bars.melt$Species_Locus)))
 
 bars<-ggplot(bars.melt[order(bars.melt$variable,decreasing=T),],aes(x=Species_Locus, y=value, fill=variable)) + geom_col() + coord_flip() + scale_fill_manual(values=c("Grey50","Green","Blue","Yellow"))
 
