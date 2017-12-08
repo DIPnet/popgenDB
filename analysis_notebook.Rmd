@@ -26,6 +26,7 @@ library(ggplot2)
 library(knitr)
 library(vegan)
 library(gridExtra)
+library(data.table)
 
 
 source("config.R")
@@ -34,6 +35,22 @@ source("DIPnet_Stats_Functions.R")
 rescale<-function(x){
   normalized<-(x-min(x))/(max(x)-min(x))
   return(normalized)
+}
+
+remove.dup.gsls<-function(amovatable){
+  amovatable<-amovatable[-which(rownames(amovatable) %in% dups),]
+}
+
+splinegrab<-function(ispline){
+  x<-as.data.frame(ispline$x)
+  y<-as.data.frame(ispline$y)
+  xy<-as.data.frame(cbind(x$matrix_1,y$matrix_1))
+}
+
+splinegrab2<-function(ispline){
+  x<-as.data.frame(x=ispline$x)
+  melted<-melt(ispline$y)
+  xy<-as.data.frame(cbind(d=x$matrix_1,spline=as.character(melted$Var2),value=melted$value))
 }
 
 ```
@@ -87,15 +104,7 @@ barriers<-read.csv("VeronBarriers.csv",header=F,stringsAsFactors = F)
 #duplicate GSLs that need to be dropped
 dups<-c("Acanthaster_planciSIO_CR","Acanthaster_planciRedSea_CR","Acanthaster_planciNIO_CR","Acanthaster_planciPac_CR","Acanthurus_nigrofuscus_CO1","Cephalopholis_argus_CO1","Chaetodon_auriga_CO1","Halichoeres_claudia_CR","Halichoeres_hortulanus_CO1","Halichoeres_hortulanus_CYB","Halichoeres_trimaculatus_CR","Lutjanus_kasmira_CO1","Naso_hexacanthus_CR","Neoniphon_sammara_CO1","Pomacentrus_coelestis_CO1","Pygoplites_diacanthus_CYB", "Stenella_longirostris_CYB")
 
-remove.dup.gsls<-function(amovatable){
-  amovatable<-amovatable[-which(rownames(amovatable) %in% dups),]
-}
 
-splinegrab<-function(ispline){
-  x<-as.data.frame(ispline$x)
-  y<-as.data.frame(ispline$y)
-  xy<-as.data.frame(cbind(x$matrix_1,y$matrix_1))
-}
 ```
 
 
@@ -738,21 +747,39 @@ if(!is.null(fullgdm)){
   ispline<-isplineExtract(fullgdm)
   ispline2<-splinegrab(ispline)
 
-    #plot both the ispline (red) and the linear model (blue)
+    #plot both the ispline (green) and the linear model (purple)
 ibdplot<- ggplot(data=ibd,mapping=aes(x=distance,y=phist)) + geom_point() +
-      geom_smooth(method=lm) +
-      geom_line(data=ispline2,mapping=aes(x=V1,y=V2), color="red") +
+      geom_smooth(method=lm, color="purple") +
+      geom_line(data=ispline2,mapping=aes(x=V1,y=V2), color="green") +
       ggtitle(label=gsl)
 
 plotlist[[gsl]]<-ibdplot
 }
 
+  
+
+if(!(is.null(distgdm) | is.null(distgdm$gdmdeviance) | distgdm$explained==0)){
+  ibd<-as.data.frame(cbind(distance=gdm.format.full$s2.matrix_1, phist=gdm.format.full$distance))
+  
+  #extract the ispline
+
+  ispline<-isplineExtract(distgdm)
+  ispline3<-splinegrab(ispline)
+
+    #plot the ispline
+ibdplot<-ibdplot + geom_line(data=ispline3,mapping=aes(x=V1,y=V2), color="blue")
+    
+
+plotlist[[gsl]]<-ibdplot
+}
+
+  
   #if fullgdm is null, then still plot the linear model  
 if(is.null(fullgdm)){
   ibd<-as.data.frame(cbind(distance=gdm.format.full$s2.matrix_1, phist=gdm.format.full$distance))
   
   ibdplot<- ggplot(data=ibd,mapping=aes(x=distance,y=phist)) +geom_point()+
-    geom_smooth(method=lm) + ggtitle(gsl)
+    geom_smooth(method=lm, color="purple") + ggtitle(gsl)
   plotlist[[gsl]]<-ibdplot
 }
 
@@ -855,9 +882,6 @@ if(fullgdm$nulldeviance==0.00001){
     
     
 }
-# code to fix Naso Hexacanthus
-#stats.full[which(stats.full$Species_Locus=="Naso_hexacanthus_CR"),"dist_deviance_explained"]<-1
-#stats.full[which(stats.full$Species_Locus=="Naso_hexacanthus_CR"),"unexplained_deviance"]<-0
 
 ibdplots<-marrangeGrob(plotlist, nrow=2,ncol=2)
 ggsave("./output/ibdplots.pdf",ibdplots)
@@ -1139,6 +1163,7 @@ bars.sum<-stats.bars$region_deviance_explained+stats.bars$dist_deviance_explaine
 
 bars.melt<-melt(stats.bars, id.vars="Species_Locus")
 bars.melt$variable<-factor(bars.melt$variable, levels=rev(levels(bars.melt$variable)))
+bars.melt$Species_Locus<-factor(bars.melt$Species_Locus)
 bars.melt$Species_Locus<-factor(bars.melt$Species_Locus,levels=rev(levels(bars.melt$Species_Locus)))
 
 bars<-ggplot(bars.melt[order(bars.melt$variable,decreasing=T),],aes(x=Species_Locus, y=value, fill=variable)) + geom_col() + coord_flip() + scale_fill_manual(values=c("Grey50","Green","Blue","Yellow"))
