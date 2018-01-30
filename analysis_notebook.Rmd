@@ -217,6 +217,8 @@ best_hypothesis<-sapply(crit_rank,function(x){row.names(crit_rank)[which(x==min(
 barplot<-ggplot(data=as.data.frame(unlist(best_hypothesis)), aes(x=unlist(best_hypothesis) )) + geom_bar(aes(y = (..count..)/sum(..count..))) + labs(x="Hypothesis",y="Proportion of Species", title="Proportional Support for Biogeographic Hypotheses based on BIC")
 
 barplot
+
+#go through best_hypotheses and cull to the simplest hypothesis in case of ties.
 ```
 
 
@@ -1436,6 +1438,7 @@ variance_melted<-melt(term.vars,id.vars = "gsl")
 colnames(variance_melted)<-c("Species","Variable","Proportion_of_Variance")
 variance_melted$Species<-as.factor(variance_melted$Species)
 
+
 #baseplot
 dbrda<-ggplot(variance_melted,aes(y=Species,x=Variable,fill=Proportion_of_Variance))
 
@@ -1450,6 +1453,30 @@ dbrda
 ```
 
 
-# Cull species to match what is in AMOVA
-# Make stacked bars that give importance due to distance, due to regionalization and residual.
-# Stack significant distance splines on top of each other.
+
+# Stacked Bars for dbRDA
+
+```{r}
+
+#sum all non distance, non residual variance terms - these will be the structure component.
+
+term.vars$Structure<-rowSums(term.vars[,-which(names(term.vars) %in% c("gsl","pcx","pcy","Residual"))],na.rm=TRUE)
+
+#Subset just the values that will be plotted
+term.vars.structure<-term.vars[,c("gsl","Residual","Structure","pcx","pcy")]
+
+#melt into long format
+term.vars.melt<-melt(term.vars.structure, id.vars="gsl")
+
+term.vars.melt$gsl<-factor(term.vars.melt$gsl)
+term.vars.melt$gsl<-factor(term.vars.melt$gsl,levels=rev(levels(term.vars.melt$gsl)))
+
+bars<-ggplot(data=term.vars.melt, mapping=aes(x=gsl,y=value,fill=variable)) +
+  geom_col() + coord_flip() +
+  scale_fill_manual(values=c("Grey50","Green","Blue","Blue4"))
+
+bars<-ggplot(bars.melt[order(term.vars.melt$variable,decreasing=T),],aes(x=Species_Locus, y=value, fill=variable)) + geom_col() + coord_flip() + scale_fill_manual(values=c("Grey50","Green","Blue","Yellow"))
+
+bars
+```
+
