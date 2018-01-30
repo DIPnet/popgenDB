@@ -1202,7 +1202,7 @@ stats$Species_Locus<-as.character(stats$Species_Locus)
 stats$bestmodel<-as.character(stats$bestmodel)
 
 # Make an empty list to save rda output for each species
-esu_loci <- unique(ipdb$Genus_species_locus)
+esu_loci <- na4
 all.gsl.rda<-sapply(esu_loci, function(x) NULL)
 
 #make empty data frames to save variance and pvalues
@@ -1215,9 +1215,10 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   
   cat("\n","\n","\n","Now starting", gsl, "\n")
   
-  if(any(is.na(diffstats[[gsl]]))){cat("NAs in FST table, No dbRDA calculated"); next}
+  if(any(is.na(diffstats[[gsl]]))){cat("NAs in FST table, No dbRDA calculated"); all.gsl.rda[[gsl]]<-"NAs in FST table, No dbRDA calculated"; next}
   
-  if(diffstats[[gsl]]=="Fewer than 3 sampled populations after filtering. No stats calculated"){all.gsl.rda[[gsl]]<-"Fewer than 5 sampled populations after filtering."; cat("Fewer than 5 sampled populations after filtering.");next}
+  if(diffstats[[gsl]]=="Fewer than 3 sampled populations after filtering. No stats calculated"){all.gsl.rda[[gsl]]<-"Fewer than 4 sampled populations after filtering."; cat("Fewer than 4 sampled populations after filtering.");next}
+  
    sp<-ipdb[which(ipdb$Genus_species_locus==gsl),]
   
   #clean weird backslashes from names
@@ -1227,7 +1228,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   sp<-sp[order(sp$sample),]
   # Not all localities are included in REALM 
   #nonpops<-unique(sp$sample[is.na(sp$REALM)])
-  sp<-sp[!is.na(sp$VeronDivis),]
+  sp<-sp[!is.na(sp$REALM),]
   
   #subsample Fst 
   gslFST<-diffstats[[gsl]]
@@ -1243,7 +1244,10 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   # if(any(rownames(gslFSTm) %in% nonVeronpops)){
   #   gslFSTm<-gslFSTm[-(which(rownames(gslFSTm) %in% nonVeronpops)),-(which(colnames(gslFSTm) %in% nonVeronpops))]
   # }
-  if(length(rownames(gslFSTm))<5){all.gsl.rda[[gsl]]<-"Fewer than 5 sampled populations";cat("Fewer than 5 sampled populations");next}
+  if(length(rownames(gslFSTm))<4){
+    all.gsl.rda[[gsl]]<-"Fewer than 4 sampled populations"
+    cat("Fewer than 4 sampled populations")
+    next}
   
   #and filter sp based on the localities that have Fst values
   sp<-sp[sp$sample %in% rownames(gslFSTm),]
@@ -1253,16 +1257,15 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   gslFSTm<- gslFSTm[which(rownames(gslFSTm) %in% unique(sp$sample)),which(rownames(gslFSTm) %in% unique(sp$sample))]
   
 
-  if(length(rownames(gslFSTm))<5){all.gsl.rda[[gsl]]<-"Fewer than 5 sampled populations";cat("Fewer than 5 sampled populations");next}
+  #if(length(rownames(gslFSTm))<5){all.gsl.rda[[gsl]]<-"Fewer than 5 sampled populations";cat("Fewer than 5 sampled populations");next}
   
   #create a locations data frame that has all the localities plus lats and longs and their Veron region.
   locs<-as.data.frame(unique(sp$sample))
   names(locs)<-"sample"
   #locs$Long<-sp$decimalLongitude[which(locs %in% sp$sample)]
   #can't do a unique on sample, lats and longs because some samples have non-unique lats and longs! So I do a join and take the first match.
-  locs<-join(locs,sp[c("sample","decimalLongitude","decimalLatitude"
-                       ,"REALM")], by="sample", match="first")
-  if (length(unique(locs$REALM)) < 2) {"Only one region!"; cat("Only one region!"); next}
+  locs<-join(locs,sp[c("IPDB_index","sample","decimalLongitude","decimalLatitude","REALM")], by="sample", match="first")
+  #if (length(unique(locs$REALM)) < 2) {"Only one region!"; cat("Only one region!"); next}
   
   #sort gslFSTm
   gslFSTm<-gslFSTm[order(rownames(gslFSTm)),order(colnames(gslFSTm))]
@@ -1270,20 +1273,51 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   
   ######################################################################
   # 4. Calculate Great Circle Distance
-  gcdist_km <- pointDistance(locs[,2:3],lonlat=T)/1000
+  gcdist_km <- pointDistance(locs[,3:4],lonlat=T)/1000
   # and symmetricise it
   gcdist_km[upper.tri(gcdist_km)]<-0
   gcdist_km<-gcdist_km + t(gcdist_km)
    
   ####################################################################### Calculate Overwater Distances#
   #Save for later##
+   mySites<-locs$IPDB_index
+  
+  SubSet.Sites<-setDT(LookUp, key = 'IPDB_index')[list(mySites)]
+
+  myIndex<-SubSet.Sites$Rid
+  
+  # some distances were not measurable due to point being 20km from water
+  # zap these points from both matrices
+  #rownames(mySubOutMat)<-mySites
+  #colnames(mySubOutMat)<-mySites
+  if(anyNA(myIndex)){
+  nazaps<-which(is.na(myIndex))
+  myIndex<-myIndex[-nazaps]
+  gcdist_km<-gcdist_km[-nazaps,-(nazaps)]
+  gslFSTm<-gslFSTm[-nazaps,-(nazaps)]
+  locs<-locs[-nazaps,]
+ 
+  }
+  
+  owdist_km<-outMat[myIndex,myIndex]
+  
+  #add the sample names
+  rownames(owdist_km) <- locs$sample
+  
+ 
 
   ##############################################################################
   #5. Create a matrix of regional identities
-  
+  if(length(unique(locs$REALM))==1){
+    name<-gsub(unique(locs$REALM),pattern = "[ -]", replacement=".")
+    name<-paste0("REALM",name)
+    regions<-data.frame(name=rep(1,length(locs$sample)))
+    colnames(regions)<-name
+  }
+  else{
   regions<-with(locs, data.frame(model.matrix(~REALM+0)))   #one of the predictors is superfluous but will get knocked out during RDA
   row.names(regions)<-row.names(locs)
-  
+  }
 
     ############################################################################
     # 7. Calculate the principal coordinates
@@ -1291,10 +1325,10 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     FST.pcoa<-cmdscale(gslFSTm, k=dim(as.matrix(gslFSTm))[1] - 1, eig=TRUE, add=FALSE) #ignore warnings - OK to have negatives according to Anderson
     FST.scores<-FST.pcoa$points
     
-    gcdist.pcoa<-cmdscale(gcdist_km, k=2, eig=TRUE, add=FALSE)
-    gcdist.scores<-gcdist.pcoa$points
-    gcdist.scores<-data.frame("pcx"=gcdist.pcoa$points[,1],"pcy"=gcdist.pcoa$points[,2])
-    locs2<-cbind(regions,gcdist.scores)
+    owdist.pcoa<-cmdscale(owdist_km, k=2, eig=TRUE, add=FALSE)
+    owdist.scores<-owdist.pcoa$points
+    owdist.scores<-data.frame("pcx"=owdist.pcoa$points[,1],"pcy"=owdist.pcoa$points[,2])
+    locs2<-cbind(regions,owdist.scores)
     
     ###########################################################################
     # 8. Calculate the RDA and extract statistics
@@ -1331,12 +1365,12 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     term.var<-term.var/sum(term.var)
     
     # set variance to zero if it is not significant
-    term.var[1,which(term.pval[1,] > 0.05 | is.na(term.pval[1,]))]<-0
+    #term.var[1,which(term.pval[1,] > 0.05 | is.na(term.pval[1,]))]<-0
     
     #set all values to zero if the model itself is not significant
-    if(modelPvalue > 0.05){
-    term.var[1,which(names(term.var)!="gsl")]<-0
-    }
+    #if(modelPvalue > 0.05){
+    #term.var[1,which(names(term.var)!="gsl")]<-0
+    #}
     # add on the species name
     term.pval$gsl<-gsl
     term.var$gsl<-gsl
@@ -1382,12 +1416,12 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
  
   }
 
-write.csv(term.vars,file="./output/dbRDA_term_vars_PHIST.csv")
-write.csv(term.pvals,file="./output/dbRDA_term_pvals_PHIST.csv")
+write.csv(term.vars,file="./output/dbRDA_term_vars_PHIST_012918.csv")
+write.csv(term.pvals,file="./output/dbRDA_term_pvals_PHIST_012918.csv")
 
- save(all.gsl.rda,file="./output/multibarrier_dbRDA_PHIST.Rdata")
+ save(all.gsl.rda,file="./output/multibarrier_dbRDA_PHIST_012918.Rdata")
   
-write.csv(stats, "./output/multibarrier_dbRDA_PHIST.csv")
+write.csv(stats, "./output/multibarrier_dbRDA_PHIST_012918.csv")
   
 ```
 
