@@ -1196,6 +1196,8 @@ s<-s + facet_grid(L1 ~ .)
 load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_PhiST.Rdata")
 #load("~/Desktop/DIPnet_structure_sample_PhiST_042817.Rdata")
 
+# read in the best hypotheses
+best_hypotheses<-read.csv("best_hypothesis.csv")
 
 ##1. Dataframe for results
 stats<-data.frame(Species_Locus=character(0),constrained.inertia=numeric(0),totalInertia=numeric(0),ProportionConstrained=numeric(0),adj.R2.total=numeric(0),modelF=numeric(0),modelPvalue=numeric(0),pcx_Var=numeric(0),pcx_p=numeric(0),pcy_Var=numeric(0),pcy_p=numeric(0),bestmodel=character(0), constrained.inertia.best=numeric(0), total.inertia.best=numeric(0), proportion.constrained.inertia.best=numeric(0), adj.R2.best.model=numeric(0), stringsAsFactors = F)
@@ -1217,6 +1219,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   
   cat("\n","\n","\n","Now starting", gsl, "\n")
   
+  #lookup the best hypothesis
+  best_h<-as.character(best_hypotheses[which(gsl==best_hypotheses$gsl),2])
+  
   if(any(is.na(diffstats[[gsl]]))){cat("NAs in FST table, No dbRDA calculated"); all.gsl.rda[[gsl]]<-"NAs in FST table, No dbRDA calculated"; next}
   
   if(diffstats[[gsl]]=="Fewer than 3 sampled populations after filtering. No stats calculated"){all.gsl.rda[[gsl]]<-"Fewer than 4 sampled populations after filtering."; cat("Fewer than 4 sampled populations after filtering.");next}
@@ -1228,9 +1233,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   
   sp$sample<-paste(sp$locality,round(sp$decimalLatitude, digits=0),round(sp$decimalLongitude, digits=0),sep="_")  #sets up a variable that matches the name in Fst table
   sp<-sp[order(sp$sample),]
-  # Not all localities are included in REALM 
+  # Not all localities are included in every realization - zap the ones that are NA
   #nonpops<-unique(sp$sample[is.na(sp$REALM)])
-  sp<-sp[!is.na(sp$REALM),]
+  sp<-sp[!is.na(sp[,best_h]),]
   
   #subsample Fst 
   gslFST<-diffstats[[gsl]]
@@ -1310,16 +1315,16 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
 
   ##############################################################################
   #5. Create a matrix of regional identities
-  if(length(unique(locs$REALM))==1){
-    name<-gsub(unique(locs$REALM),pattern = "[ -]", replacement=".")
-    name<-paste0("REALM",name)
-    regions<-data.frame(name=rep(1,length(locs$sample)))
-    colnames(regions)<-name
-  }
-  else{
+  #if(length(unique(locs$REALM))==1){
+   # name<-gsub(unique(locs$REALM),pattern = "[ -]", replacement=".")
+  #  name<-paste0("REALM",name)
+   # regions<-data.frame(name=rep(1,length(locs$sample)))
+    #colnames(regions)<-name
+ # }
+#  else{
   regions<-with(locs, data.frame(model.matrix(~REALM+0)))   #one of the predictors is superfluous but will get knocked out during RDA
   row.names(regions)<-row.names(locs)
-  }
+ # }
 
     ############################################################################
     # 7. Calculate the principal coordinates
