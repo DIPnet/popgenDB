@@ -1251,9 +1251,9 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   # if(any(rownames(gslFSTm) %in% nonVeronpops)){
   #   gslFSTm<-gslFSTm[-(which(rownames(gslFSTm) %in% nonVeronpops)),-(which(colnames(gslFSTm) %in% nonVeronpops))]
   # }
-  if(length(rownames(gslFSTm))<4){
-    all.gsl.rda[[gsl]]<-"Fewer than 4 sampled populations"
-    cat("Fewer than 4 sampled populations")
+  if(length(rownames(gslFSTm))<5){
+    all.gsl.rda[[gsl]]<-"Fewer than 5 sampled populations"
+    cat("Fewer than 5 sampled populations")
     next}
   
   #and filter sp based on the localities that have Fst values
@@ -1271,7 +1271,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   names(locs)<-"sample"
   #locs$Long<-sp$decimalLongitude[which(locs %in% sp$sample)]
   #can't do a unique on sample, lats and longs because some samples have non-unique lats and longs! So I do a join and take the first match.
-  locs<-join(locs,sp[c("IPDB_index","sample","decimalLongitude","decimalLatitude","REALM")], by="sample", match="first")
+  locs<-join(locs,sp[c("IPDB_index","sample","decimalLongitude","decimalLatitude","REALM","PROVINCE","ECOREGION","VeronDivis","Kulbicki_b","Kulbicki_r","Bowen","Keith")], by="sample", match="first")
   #if (length(unique(locs$REALM)) < 2) {"Only one region!"; cat("Only one region!"); next}
   
   #sort gslFSTm
@@ -1315,16 +1315,16 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
 
   ##############################################################################
   #5. Create a matrix of regional identities
-  #if(length(unique(locs$REALM))==1){
-   # name<-gsub(unique(locs$REALM),pattern = "[ -]", replacement=".")
-  #  name<-paste0("REALM",name)
-   # regions<-data.frame(name=rep(1,length(locs$sample)))
-    #colnames(regions)<-name
- # }
-#  else{
-  regions<-with(locs, data.frame(model.matrix(~REALM+0)))   #one of the predictors is superfluous but will get knocked out during RDA
-  row.names(regions)<-row.names(locs)
- # }
+  if(length(unique(locs[,best_h]))==1){
+    name<-gsub(unique(locs[,best_h]),pattern = "[ -]", replacement=".")
+    name<-paste0("get.best_h.",name)
+    regions<-data.frame(name=rep(1,length(locs$sample)))
+    colnames(regions)<-name
+    }
+  else{
+    regions<-with(locs, data.frame(model.matrix(~get(best_h)+0)))   #one of the predictors is superfluous but will get knocked out during RDA
+    row.names(regions)<-row.names(locs)
+    }
 
     ############################################################################
     # 7. Calculate the principal coordinates
@@ -1423,12 +1423,12 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
  
   }
 
-write.csv(term.vars,file="./output/dbRDA_term_vars_PHIST_012918.csv")
-write.csv(term.pvals,file="./output/dbRDA_term_pvals_PHIST_012918.csv")
+write.csv(term.vars,file="./output/dbRDA_term_vars_PHIST_013018.csv")
+write.csv(term.pvals,file="./output/dbRDA_term_pvals_PHIST_013018.csv")
 
- save(all.gsl.rda,file="./output/multibarrier_dbRDA_PHIST_012918.Rdata")
+ save(all.gsl.rda,file="./output/multibarrier_dbRDA_PHIST_013018.Rdata")
   
-write.csv(stats, "./output/multibarrier_dbRDA_PHIST_012918.csv")
+write.csv(stats, "./output/multibarrier_dbRDA_PHIST_013018.csv")
   
 ```
 
@@ -1470,6 +1470,9 @@ term.vars$Structure<-rowSums(term.vars[,-which(names(term.vars) %in% c("gsl","pc
 #Subset just the values that will be plotted
 term.vars.structure<-term.vars[,c("gsl","Residual","Structure","pcx","pcy")]
 
+term.vars.structure[which(stats$modelPvalue>0.05),2]<-1
+term.vars.structure[which(stats$modelPvalue>0.05),c(3,4,5)]<-0
+
 #melt into long format
 term.vars.melt<-melt(term.vars.structure, id.vars="gsl")
 
@@ -1480,7 +1483,7 @@ bars<-ggplot(data=term.vars.melt, mapping=aes(x=gsl,y=value,fill=variable)) +
   geom_col() + coord_flip() +
   scale_fill_manual(values=c("Grey50","Green","Blue","Blue4"))
 
-bars<-ggplot(bars.melt[order(term.vars.melt$variable,decreasing=T),],aes(x=Species_Locus, y=value, fill=variable)) + geom_col() + coord_flip() + scale_fill_manual(values=c("Grey50","Green","Blue","Yellow"))
+
 
 bars
 ```
