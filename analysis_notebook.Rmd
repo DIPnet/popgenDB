@@ -1488,3 +1488,36 @@ bars<-ggplot(data=term.vars.melt, mapping=aes(x=gsl,y=value,fill=variable)) +
 bars
 ```
 
+# Structure as Lines on a Map
+
+Now I am going to come up with code to measure the mean PhiST across the Spalding Realms
+
+
+## Mixing Bowen and Spalding Realms
+First step is to distinguish Hawaii, Easter Island and the Marquesas, thereby mixing in a little bit of Briggs and Bowen
+
+
+```{r}
+unique(ipdb$Bowen)
+
+unique(ipdb$REALM)
+
+# first get rid of non-Indo-Pacific samples
+
+dim(ipdb)
+
+ipdb2<-ipdb[ipdb$REALM %in% c("Central Indo-Pacific","Eastern Indo-Pacific","Western Indo-Pacific"),]
+
+
+dim(ipdb)[1]-dim(ipdb2)[1]
+# Removed about 3600 samples
+
+ipdb2$REALM[which(ipdb2$Bowen=="Hawaiian")]<-"Hawaii"
+ipdb2$REALM[which(ipdb2$Bowen=="Marquesas")]<-"Marquesas"
+ipdb2$REALM[which(ipdb2$Bowen=="Easter")]<-"Easter"
+
+unique(ipdb2$REALM)
+
+```
+
+
