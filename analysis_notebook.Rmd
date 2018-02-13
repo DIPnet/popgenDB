@@ -1518,6 +1518,14 @@ ipdb2$REALM[which(ipdb2$Bowen=="Easter")]<-"Easter"
 
 unique(ipdb2$REALM)
 
+# Now limit the list of critters to just those that worked for AMOVA. This removes a further 14147 samples
+ipdb2<-ipdb2[ipdb2$Genus_species_locus %in% esu_loci,]
+
 ```
 
 
+
+```{r}
+diffstats2<-pairwise.structure.mtDNA.db(ipdb=ipdb2, gdist = "PhiST", minseqs = 5, minsamps = 3, mintotalseqs = 0, nrep = 1000, num.cores = 2, ABGD = F, regionalization = "REALM")
+
+```
