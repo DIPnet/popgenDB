@@ -1518,14 +1518,82 @@ ipdb2$REALM[which(ipdb2$Bowen=="Easter")]<-"Easter"
 
 unique(ipdb2$REALM)
 
-# Now limit the list of critters to just those that worked for AMOVA. This removes a further 14147 samples
-ipdb2<-ipdb2[ipdb2$Genus_species_locus %in% esu_loci,]
+# Remove dups
+ipdb2<-ipdb2[!ipdb2$Genus_species_locus %in% c(dups,"Ctenochaetus_marginatus_A68"),]
 
 ```
 
 
+## Calculate the diffstats
+```{r}
+#diffstats2<-pairwise.structure.mtDNA.db(ipdb=ipdb2, gdist = "PhiST", minseqs = 5, minsamps = 2, mintotalseqs = 0, nrep = 1000, num.cores = 2, ABGD = F, regionalization = "REALM")
+#save(diffstats2,"./output/PHIst_for_map.R")
+
+load("./output/PHIst_for_map.R")
+
+```
+
+## Function to pull out pairwise values for putative barriers
 
 ```{r}
-diffstats2<-pairwise.structure.mtDNA.db(ipdb=ipdb2, gdist = "PhiST", minseqs = 5, minsamps = 3, mintotalseqs = 0, nrep = 1000, num.cores = 2, ABGD = F, regionalization = "REALM")
+# first filter out all species that had fewer than 2 sampled populations
+diffstats3<-diffstats2[lapply(diffstats2, class) =="dist"]
+
+
+barrier_extract<-function(x){
+  
+  a<-as.matrix(x)
+  
+   if("Central Indo-Pacific" %in% rownames(a) && "Western Indo-Pacific" %in% rownames(a))
+   {west_central<- a["Central Indo-Pacific","Western Indo-Pacific"]}
+   else{west_central<- NA}
+  
+   if("Central Indo-Pacific" %in% rownames(a) && "Eastern Indo-Pacific" %in% rownames(a))
+   {east_central<- a["Central Indo-Pacific","Eastern Indo-Pacific"]}
+   else{east_central<- NA}
+  
+   if("Hawaii" %in% rownames(a) && "Eastern Indo-Pacific" %in% rownames(a))
+   {east_hawaii<- a["Hawaii","Eastern Indo-Pacific"]}
+   else{east_hawaii<- NA}
+   
+   if("Marquesas" %in% rownames(a) && "Eastern Indo-Pacific" %in% rownames(a))
+   {east_marquesas<- a["Marquesas","Eastern Indo-Pacific"]}
+   else{east_marquesas<- NA}
+   
+
+   return(c(west_central,east_central,east_hawaii,east_marquesas))
+}
+```
+
+## Pull them out and plot them
+
+```{r}
+
+extracted_Fst<-lapply(diffstats3,barrier_extract)
+
+extracted_Fst2<-matrix(unlist(extracted_Fst), ncol=4, byrow=T)
+
+rownames(extracted_Fst2)<-names(diffstats3)
+
+colnames(extracted_Fst2)<-c("West_Central","East_Central","East_Hawaii","East_Marquesas")
+
+#set values less than 0 to 0
+extracted_Fst2[which(extracted_Fst2 < 0)] <- 0
+
+extracted_Fst2<-as.data.frame(extracted_Fst2)
+
+
+colMeans(extracted_Fst2, na.rm=T)
+
+extracted_Fst_melt<-melt(extracted_Fst2,measure.vars=names(extracted_Fst2), na.rm=T)
+
+#function to add in n values
+n_fun <- function(x){
+  return(data.frame(y = -0.05, label = paste0("n = ",length(x))))
+}
+
+ggplot(data=extracted_Fst_melt, aes(x=variable,y=value)) + geom_boxplot() + stat_summary(fun.data = n_fun, geom = "text")
+
+ggplot(data=extracted_Fst_melt, aes(x=variable,y=value)) + geom_violin() + stat_summary(fun.data = n_fun, geom = "text") + geom_jitter() + ylab(expression(Phi[ST])) + xlab("")
 
 ```
