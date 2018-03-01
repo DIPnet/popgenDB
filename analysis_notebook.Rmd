@@ -1353,7 +1353,70 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     modelF<-model.sig$F[1]
     modelPvalue<-model.sig$`Pr(>F)`[1]
     
-    terms.sig<-anova(RDA.res, by="term", step=1000)
+    ##Uncomment this section to harvest variances from the full model###
+    # terms.sig<-anova(RDA.res, by="term", step=1000)
+    # pcx_Var<-terms.sig$Variance[1]
+    # pcx_p<-terms.sig$`Pr(>F)`[1]
+    # pcy_Var<-terms.sig$Variance[2]
+    # pcy_p<-terms.sig$`Pr(>F)`[2]
+    # 
+    # #extract all variance values into a dataframe
+    # term.var<-as.data.frame(t(terms.sig[,2]))
+    # names(term.var)<-rownames(terms.sig)
+    # 
+    # #extract all p-values into a dataframe
+    # term.pval<-as.data.frame(t(terms.sig[,4]))
+    # names(term.pval)<-rownames(terms.sig)
+    # 
+    #  
+    # # scale the variance
+    # term.var<-term.var/sum(term.var)
+    # 
+    # # set variance to zero if it is not significant
+    # term.var[1,which(term.pval[1,] > 0.05 | is.na(term.pval[1,]))]<-0
+    # term.var$Residual <- 1 - sum(term.var)
+    # 
+    # #set all values to zero if the model itself is not significant
+    # #if(modelPvalue > 0.05){
+    # #term.var[1,which(names(term.var)!="gsl")]<-0
+    # #}
+    # # add on the species name
+    # term.pval$gsl<-gsl
+    # term.var$gsl<-gsl
+    # 
+    # #merge them on to each dataframe
+    # term.vars<-merge(term.vars,term.var,all=T)
+    # term.pvals<-merge(term.pvals,term.pval,all=T)
+    ##Uncomment this section to harvest variances from the full model###
+    
+    
+    #barrier_Var<-terms.sig$Variance[3]   #omitting for now as the number of barriers will differ
+    #barrier_p<-terms.sig$`Pr(>F)`[3]
+    
+    #marg.sig<-anova(RDA.res, by="margin", step=1000)
+    #barrier_margVar<-marg.sig$Variance[3]
+    #barrier_margp<-marg.sig$`Pr(>F)`[3]
+    
+    #Model selection
+    nullmodel<-rda(FST.scores~1, data=locs2, scale=TRUE )
+    forward.model<-ordiR2step(nullmodel, scope=formula(RDA.res), R2scope=FALSE, psteps=1000)  #ordiR2step implements Blanchets stopping criterion
+    bestmodel<-as.character(forward.model$call[2])
+    if (is.null(summary(forward.model)$constr.chi)) {
+      constrained.inertia.best<-NA
+      total.inertia.best<-summary(forward.model)$tot.chi
+      proportion.constrained.inertia.best<-NA
+      adj.R2.best.model<-NA
+    } else {
+      constrained.inertia.best<-summary(forward.model)$constr.chi
+      total.inertia.best<-summary(forward.model)$tot.chi
+      proportion.constrained.inertia.best<-constrained.inertia.best/total.inertia.best
+      adj.R2.best.model<-RsquareAdj(forward.model)$adj.r.squared
+    }
+
+    
+#### Uncomment this section to harvest variances from the model selection model
+    
+    terms.sig<-anova(forward.model, by="term", step=1000)
     pcx_Var<-terms.sig$Variance[1]
     pcx_p<-terms.sig$`Pr(>F)`[1]
     pcy_Var<-terms.sig$Variance[2]
@@ -1371,13 +1434,6 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     # scale the variance
     term.var<-term.var/sum(term.var)
     
-    # set variance to zero if it is not significant
-    #term.var[1,which(term.pval[1,] > 0.05 | is.na(term.pval[1,]))]<-0
-    
-    #set all values to zero if the model itself is not significant
-    #if(modelPvalue > 0.05){
-    #term.var[1,which(names(term.var)!="gsl")]<-0
-    #}
     # add on the species name
     term.pval$gsl<-gsl
     term.var$gsl<-gsl
@@ -1385,50 +1441,27 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
     #merge them on to each dataframe
     term.vars<-merge(term.vars,term.var,all=T)
     term.pvals<-merge(term.pvals,term.pval,all=T)
-    
-    
-    
-    #barrier_Var<-terms.sig$Variance[3]   #omitting for now as the number of barriers will differ
-    #barrier_p<-terms.sig$`Pr(>F)`[3]
-    
-    #marg.sig<-anova(RDA.res, by="margin", step=1000)
-    #barrier_margVar<-marg.sig$Variance[3]
-    #barrier_margp<-marg.sig$`Pr(>F)`[3]
-    
-    #Model selection
-    nullmodel<-rda(FST.scores~1, data=locs2, scale=TRUE )
-    forward.model<-ordiR2step(nullmodel, scope=formula(RDA.res), directon="forward", psteps=1000)  #ordiR2step implements Blanchets stopping criterion
-    bestmodel<-as.character(forward.model$call[2])
-    if (is.null(summary(forward.model)$constr.chi)) {
-      constrained.inertia.best<-NA
-      total.inertia.best<-summary(forward.model)$tot.chi
-      proportion.constrained.inertia.best<-NA
-      adj.R2.best.model<-NA
-    } else {
-      constrained.inertia.best<-summary(forward.model)$constr.chi
-      total.inertia.best<-summary(forward.model)$tot.chi
-      proportion.constrained.inertia.best<-constrained.inertia.best/total.inertia.best
-      adj.R2.best.model<-RsquareAdj(forward.model)$adj.r.squared
-    }
-     
+
+####Uncomment this section to harvest variances from the model selection model ####
   
     #save stats
     
     stats_model<-c(gsl,constrained.inertia,total.inertia,proportion.constrained.inertia,adj.R2.total.model,modelF,modelPvalue,pcx_Var,pcx_p,pcy_Var,pcy_p, bestmodel, constrained.inertia.best, total.inertia.best, proportion.constrained.inertia.best, adj.R2.best.model)
     
     stats[nrow(stats)+1,]<-stats_model
-    all.gsl.rda[[gsl]]<-RDA.res
+    
+    all.gsl.rda[[gsl]]<-forward.model
     
     
  
   }
 
-write.csv(term.vars,file="./output/dbRDA_term_vars_PHIST_013018.csv")
-write.csv(term.pvals,file="./output/dbRDA_term_pvals_PHIST_013018.csv")
+write.csv(term.vars,file="./output/dbRDA_term_vars_PHIST_022618.csv")
+write.csv(term.pvals,file="./output/dbRDA_term_pvals_PHIST_022618.csv")
 
- save(all.gsl.rda,file="./output/multibarrier_dbRDA_PHIST_013018.Rdata")
+ save(all.gsl.rda,file="./output/multibarrier_dbRDA_PHIST_022618.Rdata")
   
-write.csv(stats, "./output/multibarrier_dbRDA_PHIST_013018.csv")
+write.csv(stats, "./output/multibarrier_dbRDA_PHIST_022618.csv")
   
 ```
 
@@ -1470,8 +1503,8 @@ term.vars$Structure<-rowSums(term.vars[,-which(names(term.vars) %in% c("gsl","pc
 #Subset just the values that will be plotted
 term.vars.structure<-term.vars[,c("gsl","Residual","Structure","pcx","pcy")]
 
-term.vars.structure[which(stats$modelPvalue>0.05),2]<-1
-term.vars.structure[which(stats$modelPvalue>0.05),c(3,4,5)]<-0
+#term.vars.structure[which(stats$modelPvalue>0.05),2]<-1
+#term.vars.structure[which(stats$modelPvalue>0.05),c(3,4,5)]<-0
 
 #melt into long format
 term.vars.melt<-melt(term.vars.structure, id.vars="gsl")
@@ -1594,6 +1627,6 @@ n_fun <- function(x){
 
 ggplot(data=extracted_Fst_melt, aes(x=variable,y=value)) + geom_boxplot() + stat_summary(fun.data = n_fun, geom = "text")
 
-ggplot(data=extracted_Fst_melt, aes(x=variable,y=value)) + geom_violin() + stat_summary(fun.data = n_fun, geom = "text") + geom_jitter() + ylab(expression(Phi[ST])) + xlab("")
+ggplot(data=extracted_Fst_melt, aes(x=variable,y=value)) + geom_violin() + stat_summary(fun.data = n_fun, geom = "text") + geom_jitter() + ylab(expression(Phi[ST])) + xlab("Barrier")
 
 ```
