@@ -739,7 +739,7 @@ summarize_AMOVA<-function(amova_list=amova_list,hypotheses="My_Hypothesis", keep
     
     #Create an empty table the length of all the gsls in the dataset
     len<-length(names(amova_list[[h]]))
-    stat.table<-data.frame(row.names=names(amova_list[[h]]),level1_k=integer(len),level2_k=integer(len),FCT=numeric(len),FSC=numeric(len),FST=numeric(len),level2_SSD=numeric(len),level1_SSD=numeric(len),error_SSD=numeric(len),total_SSD=numeric(len),level2_MSD=numeric(len),level1_MSD=numeric(len),error_MSD=numeric(len),total_MSD=numeric(len),level2_df=numeric(len),level1_df=numeric(len),error_df=numeric(len),total_df=numeric(len),level2_sigma2=numeric(len),level1_sigma2=numeric(len),error_sigma2=numeric(len),p_level2=numeric(len),p_level1=numeric(len), BIC=numeric(len))
+    stat.table<-data.frame(row.names=names(amova_list[[h]]),level1_k=integer(len),level2_k=integer(len),FCT=numeric(len),FSC=numeric(len),FST=numeric(len),level2_SSD=numeric(len),level1_SSD=numeric(len),error_SSD=numeric(len),total_SSD=numeric(len),level2_MSD=numeric(len),level1_MSD=numeric(len),error_MSD=numeric(len),total_MSD=numeric(len),level2_df=numeric(len),level1_df=numeric(len),error_df=numeric(len),total_df=numeric(len),level2_sigma2=numeric(len),level1_sigma2=numeric(len),error_sigma2=numeric(len),p_level2=numeric(len),p_level1=numeric(len), BIC=numeric(len), AIC=numeric(len))
     
 
     
@@ -770,11 +770,11 @@ summarize_AMOVA<-function(amova_list=amova_list,hypotheses="My_Hypothesis", keep
       #this is based on equation 12 of Jombart 2010 (DAPC paper), but we are also adding in the variance from level 1, because we want to maximize FCT, not FSC. 
       #We are therefore also treating n as the number of population samples, not the number of individual sequences
       BIC<-level1_k * log(var_comp["error_sigma2"]+var_comp["level1_sigma2"]) + level2_k*log(level1_k)
-      
+      AIC<- 2 * log(var_comp["error_sigma2"]+var_comp["level1_sigma2"]) + level2_k*2
       # TO ADD - use merge to create stats instead of c so that multiple levels can be summarized
       
       #tie it all up - place it in the appropriate line of the data frame
-      stats<-c(level1_k,level2_k,FCT,FSC,FST,amova_table,var_comp[1:5], BIC)
+      stats<-c(level1_k,level2_k,FCT,FSC,FST,amova_table,var_comp[1:5], BIC, AIC)
       stat.table[gsl,]<-stats
       
       #all skipped gsls replaced with NA
