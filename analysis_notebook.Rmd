@@ -152,7 +152,7 @@ Thus, we need to loop through all of the regionalizations above, running all 4 f
 ```{r AMOVA Loops, eval=F}
 
 ## Loop through hypotheses, calculating AMOVA
-hypotheses<-c("ECOREGION", "PROVINCE","REALM","Bowen","Keith","Kulbicki_r","Kulbicki_b", "VeronDivis")
+hypotheses<-c("Bowen","Keith","Kulbicki_r","Kulbicki_b","REALM","PROVINCE","ECOREGION", "VeronDivis")
 amova_list<-list()
 
 for(h in hypotheses){
@@ -214,15 +214,16 @@ best_hypothesis<-sapply(crit_rank,function(x){row.names(crit_rank)[which(x==min(
 
 ## Make a bar graph of best support for each hypothesis among species
 
-barplot<-ggplot(data=as.data.frame(unlist(best_hypothesis)), aes(x=unlist(best_hypothesis) )) + geom_bar(aes(y = (..count..)/sum(..count..))) + labs(x="Hypothesis",y="Proportion of Species", title="Proportional Support for Biogeographic Hypotheses based on BIC")
+barplot<-ggplot(data=as.data.frame(unlist(best_hypothesis)), aes(x=unlist(best_hypothesis) )) + geom_bar(aes(y = (..count..)/sum(..count..))) +
+   scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 25", "Veron et al. \n k = 12")) +
+  labs(x="Hypothesis",y="Proportion of Species") + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 barplot
 
-#go through best_hypotheses and cull to the simplest hypothesis in case of ties.
 ```
 
 
-### Calculate relative probability from Johnson and Omland 2004 and visualize with a heatmap
+### Calculate relative probability from Johnson and Omland 2004
 ```{r Relative Probability Heatmap2, echo=F}
 # lookup the minimum BIC value for each species (which.min works better here, because it returns only the first instance of the minimum value)
 minBIC<-sapply(crit_df,function(x){x[which.min(x)]}) 
@@ -239,29 +240,7 @@ crit_df_deltaI_sums<-sapply(crit_df_deltaI_b,sum,na.rm=T)
 # this time use the scale argument of scale to divide each column by the corresponding sum
 crit_df_relative_prob<-scale(crit_df_deltaI_b,center=F,scale=crit_df_deltaI_sums) 
 
-
-## Make a heatmap of relative probability of each hypothesis
-
-#melt for ggplot2
-relprob<-melt(crit_df_relative_prob)
-colnames(relprob)<-c("Hypothesis","Species","Relative_Probability")
-
-#baseplot
-rp<-ggplot(relprob,aes(y=Species,x=Hypothesis,fill=Relative_Probability))
-
-#add geom_tile, turn the x-axis elements by 90 degrees, reverse the names on the y-axis, and use a diverging color scheme to highlight hypotheses with >50% rel prob.
-rp<-rp+geom_tile()+
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-  ylim(rev(levels(relprob$Species)))+
-  scale_fill_gradient2(low = "blue", mid = "white",
-                       high = "red", midpoint = 0.5, space = "rgb",
-                       na.value = "grey50", guide = "colourbar")
-rp
-```
-
-Now zap all GSLs that test less than 5 hypotheses
-```{r}
-
+# Now zap all GSLs that test less than 5 hypotheses
 
 naCount<-colSums(is.na(crit_df_relative_prob))
 
@@ -269,10 +248,11 @@ na4<-names(naCount)[which(naCount<4)]
 
 
 crit_df_relative_prob_na4<-crit_df_relative_prob[,na4]
-
 ```
+
 There are `r length(na4)` GSLs that test at least 5 hypotheses
 
+### Heatmap
 So now make a trimmed heatmap of just these.
 
 ```{r}
@@ -282,16 +262,22 @@ So now make a trimmed heatmap of just these.
 relprob<-melt(crit_df_relative_prob_na4)
 colnames(relprob)<-c("Hypothesis","Species","Relative_Probability")
 
+
+#make names
+spnames<-sub("(\\w+)_(\\w+)_\\w+","\\1 \\2",na4, perl=T)
+spnames<-sort(spnames)
+
 #baseplot
 rp<-ggplot(relprob,aes(y=Species,x=Hypothesis,fill=Relative_Probability))
 
 #add geom_tile, turn the x-axis elements by 90 degrees, reverse the names on the y-axis, and use a diverging color scheme to highlight hypotheses with >50% rel prob.
 rp<-rp+geom_tile()+
   theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-  ylim(rev(sort(levels(relprob$Species))))+
   scale_fill_gradient2(low = "blue", mid = "white",
                        high = "red", midpoint = 0.5, space = "rgb",
-                       na.value = "grey50", guide = "colourbar")
+                       na.value = "grey50", guide = "colourbar") +
+  scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 25", "Veron et al. \n k = 12")) +
+  scale_y_discrete(limits=rev(sort(levels(relprob$Species))), labels=rev(spnames))
 rp
 ```
 
@@ -305,7 +291,7 @@ Code is suppressed for the other 3 examples
 ```{r Measure Support1, echo=F}
 load(file=file.path(amova_ts_path,"FST_TradSpec_table_amova_output.Rdata"))
 #remove duplicate gsls
-amovastats<-lapply(amovastats,remove.dup.gsls)
+#amovastats<-lapply(amovastats,remove.dup.gsls)
 
 
 
@@ -327,11 +313,8 @@ for(h in names(amovastats)){
 #get the hypothesis names in there
 row.names(crit_df)<-names(amovastats)
 
-#filter for species that test at least 4 of the 8 hypotheses
-crit_df2<-crit_df[,which(apply(is.na(t(crit_df)),MARGIN=1,FUN=sum) < 5)]
-
 #rank the hypotheses for each species
-crit_rank<-as.data.frame(sapply(crit_df2,rank,na.last="keep",ties.method="average"))
+crit_rank<-as.data.frame(sapply(crit_df,rank,na.last="keep",ties.method="average"))
 row.names(crit_rank)<-names(amovastats)
 
 ## remove gsls with more than 3 missing models
@@ -343,7 +326,9 @@ best_hypothesis<-sapply(crit_rank,function(x){row.names(crit_rank)[which(x==min(
 
 ## Make a bar graph of best support for each hypothesis among species
 
-barplot<-ggplot(data=as.data.frame(unlist(best_hypothesis)), aes(x=unlist(best_hypothesis) )) + geom_bar(aes(y = (..count..)/sum(..count..))) + labs(x="Hypothesis",y="Proportion of Species", title="Proportional Support for Biogeographic Hypotheses based on BIC")
+barplot<-ggplot(data=as.data.frame(unlist(best_hypothesis)), aes(x=unlist(best_hypothesis) )) + geom_bar(aes(y = (..count..)/sum(..count..))) +
+   scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 25", "Veron et al. \n k = 12")) +
+  labs(x="Hypothesis",y="Proportion of Species") + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 barplot
 ```
@@ -392,12 +377,11 @@ rp
 ```{r Measure Support3, echo=F}
 load(file=file.path(amova_abgd_path,"FST_ABGD_table_amova_output.Rdata"))
 #remove duplicate gsls
-amovastats<-lapply(amovastats,remove.dup.gsls)
+#amovastats<-lapply(amovastats,remove.dup.gsls)
 
 # Measure support for each hypothesis
 
 #Get the values for each hypothesis for a given criterion - here I use BIC - and rank them for #each species, then choose the "best" hypothesis for each species based on the criterion.
-
 criterion<-"BIC"
 # find the maximum number of species from any of the 8 hypotheses
 maxlength<-max(sapply(amovastats,function(x) length(x[[1]]))) 
@@ -424,9 +408,21 @@ best_hypothesis<-sapply(crit_rank,function(x){row.names(crit_rank)[which(x==min(
 
 ## Make a bar graph of best support for each hypothesis among species
 
-barplot<-ggplot(data=as.data.frame(unlist(best_hypothesis)), aes(x=unlist(best_hypothesis) )) + geom_bar(aes(y = (..count..)/sum(..count..))) + labs(x="Hypothesis",y="Proportion of Species", title="Proportional Support for Biogeographic Hypotheses based on BIC")
+barplot<-ggplot(data=as.data.frame(unlist(best_hypothesis)), aes(x=unlist(best_hypothesis) )) + geom_bar(aes(y = (..count..)/sum(..count..))) +
+   scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 25", "Veron et al. \n k = 12")) +
+  labs(x="Hypothesis",y="Proportion of Species") + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 barplot
+
+
+
+
+
+
+
+
+
+
 ```
 
 
@@ -473,7 +469,7 @@ rp
 ```{r Measure Support4, echo=F}
 load(file=file.path(amova_abgd_path,"PHIST_ABGD_table_amova_output.Rdata"))
 #remove duplicate gsls
-amovastats<-lapply(amovastats,remove.dup.gsls)
+#amovastats<-lapply(amovastats,remove.dup.gsls)
 
 # Measure support for each hypothesis
 
@@ -505,9 +501,12 @@ best_hypothesis<-sapply(crit_rank,function(x){row.names(crit_rank)[which(x==min(
 
 ## Make a bar graph of best support for each hypothesis among species
 
-barplot<-ggplot(data=as.data.frame(unlist(best_hypothesis)), aes(x=unlist(best_hypothesis) )) + geom_bar(aes(y = (..count..)/sum(..count..))) + labs(x="Hypothesis",y="Proportion of Species", title="Proportional Support for Biogeographic Hypotheses based on BIC")
+barplot<-ggplot(data=as.data.frame(unlist(best_hypothesis)), aes(x=unlist(best_hypothesis) )) + geom_bar(aes(y = (..count..)/sum(..count..))) +
+   scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 25", "Veron et al. \n k = 12")) +
+  labs(x="Hypothesis",y="Proportion of Species") + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 barplot
+
 ```
 
 
@@ -529,11 +528,25 @@ crit_df_deltaI_sums<-sapply(crit_df_deltaI_b,sum,na.rm=T)
 crit_df_relative_prob<-scale(crit_df_deltaI_b,center=F,scale=crit_df_deltaI_sums) 
 
 
+# Now zap all GSLs that test less than 5 hypotheses
+
+naCount<-colSums(is.na(crit_df_relative_prob))
+
+na4<-names(naCount)[which(naCount<4)]
+
+
+crit_df_relative_prob_na4<-crit_df_relative_prob[,na4]
+
 ## Make a heatmap of relative probability of each hypothesis
 
 #melt for ggplot2
-relprob<-melt(crit_df_relative_prob)
+relprob<-melt(crit_df_relative_prob_na4)
 colnames(relprob)<-c("Hypothesis","Species","Relative_Probability")
+
+
+#make names
+#spnames<-sub("(\\w+)_(\\w+)_\\w+","\\1 \\2",na4, perl=T)
+#spnames<-sort(spnames)
 
 #baseplot
 rp<-ggplot(relprob,aes(y=Species,x=Hypothesis,fill=Relative_Probability))
@@ -541,10 +554,11 @@ rp<-ggplot(relprob,aes(y=Species,x=Hypothesis,fill=Relative_Probability))
 #add geom_tile, turn the x-axis elements by 90 degrees, reverse the names on the y-axis, and use a diverging color scheme to highlight hypotheses with >50% rel prob.
 rp<-rp+geom_tile()+
   theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-  ylim(rev(levels(relprob$Species)))+
   scale_fill_gradient2(low = "blue", mid = "white",
                        high = "red", midpoint = 0.5, space = "rgb",
-                       na.value = "grey50", guide = "colourbar")
+                       na.value = "grey50", guide = "colourbar") +
+  scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 25", "Veron et al. \n k = 12")) +
+  scale_y_discrete(limits=rev(sort(levels(relprob$Species))))
 rp
 ```
 
