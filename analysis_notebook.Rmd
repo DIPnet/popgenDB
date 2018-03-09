@@ -1583,6 +1583,9 @@ ipdb2<-ipdb2[!ipdb2$Genus_species_locus %in% c(dups,"Ctenochaetus_marginatus_A68
 
 load("./output/PHIst_for_map.R")
 
+# now 
+str(ipdb2)
+
 ```
 
 ## Function to pull out pairwise values for putative barriers
@@ -1616,6 +1619,31 @@ barrier_extract<-function(x){
    return(c(west_central,east_central,east_hawaii,east_marquesas))
 }
 ```
+
+
+## Randomized Fst
+Randomly sort each locality for each species into two regions and calculate Fst between them.
+
+```{r}
+ipdb3<-ipdb2[which(ipdb2$Genus_species_locus %in% names(diffstats3)),]
+
+ipdb3$randomregion<-NA
+
+for(i in 1:10){
+#randomly assign all localities to 1 or 2
+  for(loc in unique(ipdb3$locality)){
+    ipdb3$randomregion[which(ipdb3$locality==loc)]<-sample(c(1,2),size=1)
+  }
+
+random_diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb3, gdist = "PhiST", minseqs = 5, minsamps = 2, mintotalseqs = 0, nrep = 0, num.cores = 2, ABGD = F, regionalization = "randomregion")
+
+random_diffstats2<-random_diffstats[lapply(random_diffstats, class) =="dist"]
+
+random_diffstats_all<-c(random_diffstats_all,unlist(random_diffstats2))
+}
+
+```
+
 
 ## Pull them out and plot them
 
