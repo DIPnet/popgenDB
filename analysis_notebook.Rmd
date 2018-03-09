@@ -1625,23 +1625,29 @@ barrier_extract<-function(x){
 Randomly sort each locality for each species into two regions and calculate Fst between them.
 
 ```{r}
-ipdb3<-ipdb2[which(ipdb2$Genus_species_locus %in% names(diffstats3)),]
+# ipdb3<-ipdb2[which(ipdb2$Genus_species_locus %in% names(diffstats3)),]
+# 
+# ipdb3$randomregion<-NA
+# 
+# for(i in 1:10){
+# #randomly assign all localities to 1 or 2
+#   for(loc in unique(ipdb3$locality)){
+#     ipdb3$randomregion[which(ipdb3$locality==loc)]<-sample(c(1,2),size=1)
+#   }
+# 
+# random_diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb3, gdist = "PhiST", minseqs = 5, minsamps = 2, mintotalseqs = 0, nrep = 0, num.cores = 2, ABGD = F, regionalization = "randomregion")
+# 
+# random_diffstats2<-random_diffstats[lapply(random_diffstats, class) =="dist"]
+# 
+# random_diffstats_all<-c(random_diffstats_all,unlist(random_diffstats2))
+# }
+# 
+# random_diffstats_all[which(random_diffstats_all < 0)]<-0
+# 
+# random_diffstats_all<-data.frame(variable=factor("Randomized"), value = as.numeric(random_diffstats_all))
 
-ipdb3$randomregion<-NA
-
-for(i in 1:10){
-#randomly assign all localities to 1 or 2
-  for(loc in unique(ipdb3$locality)){
-    ipdb3$randomregion[which(ipdb3$locality==loc)]<-sample(c(1,2),size=1)
-  }
-
-random_diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb3, gdist = "PhiST", minseqs = 5, minsamps = 2, mintotalseqs = 0, nrep = 0, num.cores = 2, ABGD = F, regionalization = "randomregion")
-
-random_diffstats2<-random_diffstats[lapply(random_diffstats, class) =="dist"]
-
-random_diffstats_all<-c(random_diffstats_all,unlist(random_diffstats2))
-}
-
+#save(random_diffstats_all,file="Randomized_PHIst.R")
+load("Randomized_PHIst.R")
 ```
 
 
@@ -1663,9 +1669,10 @@ extracted_Fst2[which(extracted_Fst2 < 0)] <- 0
 extracted_Fst2<-as.data.frame(extracted_Fst2)
 
 
-colMeans(extracted_Fst2, na.rm=T)
-
 extracted_Fst_melt<-melt(extracted_Fst2,measure.vars=names(extracted_Fst2), na.rm=T)
+
+#rbind on the randomized values
+extracted_Fst_melt<-rbind(extracted_Fst_melt,random_diffstats_all)
 
 #function to add in n values
 n_fun <- function(x){
@@ -1674,6 +1681,26 @@ n_fun <- function(x){
 
 ggplot(data=extracted_Fst_melt, aes(x=variable,y=value)) + geom_boxplot() + stat_summary(fun.data = n_fun, geom = "text")
 
-ggplot(data=extracted_Fst_melt, aes(x=variable,y=value)) + geom_violin() + stat_summary(fun.data = n_fun, geom = "text") + geom_jitter() + ylab(expression(Phi[ST])) + xlab("Barrier")
+phist_violins<-ggplot(data=extracted_Fst_melt, aes(x=variable,y=value, alpha=variable)) + geom_violin(alpha=1) + stat_summary(fun.data = n_fun, geom = "text", alpha=1) + geom_jitter(size=0.0) + ylab(expression(Phi[ST])) + xlab("Barrier") + scale_alpha_manual(values=c(1,1,1,1,0), guide=F) + scale_x_discrete(labels=c("Western Indo-Pacific / \n Central Indo-Pacific", "Central Indo-Pacific / \n Eastern Indo-Pacific", "Eastern Indo-Pacific / \n Hawaii", "Eastern Indo-Pacific / \n Marquesas", "Randomized"))
+
+
+#Function for 1000 bootstraps which take 100 samples from the data with replacement and establish 95%CI
+bootstrap_phist<-function(x){
+quantile(sapply(1:1000,function(y) median(sample(x=x,size=100,replace=T),na.rm=T)),probs=c(0.025,0.975))
+}
+
+medians<-c(apply(extracted_Fst2,MARGIN=2,FUN=median, na.rm=T), Randomized=median(random_diffstats_all$value,na.rm=T))
+
+CI95<-cbind(apply(extracted_Fst2,MARGIN=2,FUN=bootstrap_phist),Randomized=bootstrap_phist(random_diffstats_all$value))
+
+medianCI<-as.data.frame(t(rbind(medians,CI95)))
+colnames(medianCI)<-c("medians","low","high")
+medianCI["barrier"]<-rownames(medianCI)
+
+phist_violins2<-phist_violins  + geom_pointrange(data=medianCI,mapping=aes(x=barrier,y=medians,ymin=low,ymax=high), inherit.aes=F,fatten=0.1) + coord_cartesian(ylim=c(0,0.6))
+
+medianCI
+
+#Figure out why N. albicilla is so low!
 
 ```
