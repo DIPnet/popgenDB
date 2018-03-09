@@ -1077,7 +1077,7 @@ ggsave("./output/ibdplots.pdf",ibdplots)
 # write.csv(barrier_ratios, "./output/GDM_JostD_WCTheta_barriers.csv")
 ```
 
-# Create a heatmap from GDM regions
+## Create a heatmap from GDM regions
 ```{r GDM Heatmap, eval=F}
 
 #extract the isplines
@@ -1161,7 +1161,7 @@ ip
 
 ```
 
-# Plot stacked bars 
+## Plot stacked bars 
 of deviance explained by distance, regions, distance+regions, unexplained
 ```{r}
 stats.bars<-stats.full[,c("Species_Locus","region_deviance_explained","dist_deviance_explained","both_deviance_explained","unexplained_deviance")]
@@ -1187,7 +1187,7 @@ bars<-ggplot(bars.melt[order(bars.melt$variable,decreasing=T),],aes(x=Species_Lo
 bars
 ```
 
-# Plot distance splines
+## Plot distance splines
 ```{r}
 splinegrab<-function(ispline){
   x<-as.data.frame(ispline$x)
@@ -1236,8 +1236,13 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   #lookup the best hypothesis
   best_h<-as.character(best_hypotheses[which(gsl==best_hypotheses$gsl),2])
   
-  if(any(is.na(diffstats[[gsl]]))){cat("NAs in FST table, No dbRDA calculated"); all.gsl.rda[[gsl]]<-"NAs in FST table, No dbRDA calculated"; next}
-  
+#  if(any(is.na(diffstats[[gsl]]))){cat("NAs in FST table, No dbRDA calculated"); #all.gsl.rda[[gsl]]<-"NAs in FST table, No dbRDA calculated"; next}
+ 
+  #replace NAs with 1s. NAs occur when no haplotypes are shared.
+   if(any(is.na(diffstats[[gsl]]))){
+    diffstats[[gsl]][which(is.na(diffstats[[gsl]]))]<-1
+  }
+   
   if(diffstats[[gsl]]=="Fewer than 3 sampled populations after filtering. No stats calculated"){all.gsl.rda[[gsl]]<-"Fewer than 4 sampled populations after filtering."; cat("Fewer than 4 sampled populations after filtering.");next}
   
    sp<-ipdb[which(ipdb$Genus_species_locus==gsl),]
@@ -1470,12 +1475,12 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
  
   }
 
-write.csv(term.vars,file="./output/dbRDA_term_vars_PHIST_022618.csv")
-write.csv(term.pvals,file="./output/dbRDA_term_pvals_PHIST_022618.csv")
+write.csv(term.vars,file="./output/dbRDA_term_vars_PHIST_030818.csv")
+write.csv(term.pvals,file="./output/dbRDA_term_pvals_PHIST_030818.csv")
 
- save(all.gsl.rda,file="./output/multibarrier_dbRDA_PHIST_022618.Rdata")
+ save(all.gsl.rda,file="./output/multibarrier_dbRDA_PHIST_030818.Rdata")
   
-write.csv(stats, "./output/multibarrier_dbRDA_PHIST_022618.csv")
+write.csv(stats, "./output/multibarrier_dbRDA_PHIST_030818.csv")
   
 ```
 
