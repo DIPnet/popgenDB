@@ -580,7 +580,7 @@ save(diffstats, file="/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_f
 
 # Generalized Dissimilarity Modeling
 
-## Traditional Species Boundaries
+## GDM code
 ```{r GDM1, message=FALSE, warning=FALSE}
 
   load("/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_PhiST.Rdata")
@@ -1205,10 +1205,14 @@ s<-s + facet_grid(L1 ~ .)
 # dbRDA
 
 ```{r dbRDA}
+#get diffstats for just ip localities
+#diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb_ip, gdist = "PhiST", minseqs = 6, minsamps = 3, mintotalseqs = 0, nrep = 0, num.cores = 2, ABGD = F, regionalization = "sample")
+
+#save(diffstats,file="DIPnet_structure_sample_PhiST_030918.Rdata")
+
 
 # read in the Fst/PhiSt table 
-load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_PhiST.Rdata")
-#load("~/Desktop/DIPnet_structure_sample_PhiST_042817.Rdata")
+load("DIPnet_structure_sample_PhiST_031818.Rdata")
 
 # read in the best hypotheses
 best_hypotheses<-read.csv("best_hypothesis.csv")
@@ -1218,6 +1222,8 @@ stats<-data.frame(Species_Locus=character(0),constrained.inertia=numeric(0),tota
 stats$Species_Locus<-as.character(stats$Species_Locus)
 #stats$Barrier<-as.character(stats$Barrier)
 stats$bestmodel<-as.character(stats$bestmodel)
+
+plotlist<-list()
 
 # Make an empty list to save rda output for each species
 esu_loci <- na4
@@ -1245,7 +1251,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
    
   if(diffstats[[gsl]]=="Fewer than 3 sampled populations after filtering. No stats calculated"){all.gsl.rda[[gsl]]<-"Fewer than 4 sampled populations after filtering."; cat("Fewer than 4 sampled populations after filtering.");next}
   
-   sp<-ipdb[which(ipdb$Genus_species_locus==gsl),]
+   sp<-ipdb_ip[which(ipdb_ip$Genus_species_locus==gsl),]
   
   #clean weird backslashes from names
   sp$locality<-gsub("\"","",sp$locality)
@@ -1343,7 +1349,18 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   else{
     regions<-with(locs, data.frame(model.matrix(~get(best_h)+0)))   #one of the predictors is superfluous but will get knocked out during RDA
     row.names(regions)<-row.names(locs)
-    }
+  }
+  
+  #################################################################################
+  #6. Plot IBD
+  
+  ibd<-as.data.frame(cbind(distance=as.dist(owdist_km), phist=as.dist(gslFSTm)))
+  
+  ibdplot<- ggplot(data=ibd,mapping=aes(x=distance,y=phist)) + geom_point() +
+      geom_smooth(method=lm, color="purple") +
+      ggtitle(label=gsl)
+
+plotlist[[gsl]]<-ibdplot
 
     ############################################################################
     # 7. Calculate the principal coordinates
@@ -1481,6 +1498,9 @@ write.csv(term.pvals,file="./output/dbRDA_term_pvals_PHIST_030818.csv")
  save(all.gsl.rda,file="./output/multibarrier_dbRDA_PHIST_030818.Rdata")
   
 write.csv(stats, "./output/multibarrier_dbRDA_PHIST_030818.csv")
+
+ibdplots<-marrangeGrob(plotlist, nrow=2,ncol=2)
+ggsave("./output/ibdplots_030818.pdf",ibdplots)
   
 ```
 
@@ -1525,6 +1545,9 @@ term.vars.structure<-term.vars[,c("gsl","Residual","Structure","pcx","pcy")]
 #term.vars.structure[which(stats$modelPvalue>0.05),2]<-1
 #term.vars.structure[which(stats$modelPvalue>0.05),c(3,4,5)]<-0
 
+#species names
+spnames<-sub("(\\w+)_(\\w+)_\\w+","\\1 \\2",term.vars.structure$gsl)
+
 #melt into long format
 term.vars.melt<-melt(term.vars.structure, id.vars="gsl")
 
@@ -1533,7 +1556,8 @@ term.vars.melt$gsl<-factor(term.vars.melt$gsl,levels=rev(levels(term.vars.melt$g
 
 bars<-ggplot(data=term.vars.melt, mapping=aes(x=gsl,y=value,fill=variable)) +
   geom_col() + coord_flip() +
-  scale_fill_manual(values=c("Grey50","Green","Blue","Blue4"))
+  scale_fill_manual(values=c("Grey50","Green","Blue","Blue4")) +
+  scale_x_discrete(labels=rev(spnames)) + xlab(element_blank()) + ylab("Proportion")
 
 
 
@@ -1681,7 +1705,7 @@ n_fun <- function(x){
 
 ggplot(data=extracted_Fst_melt, aes(x=variable,y=value)) + geom_boxplot() + stat_summary(fun.data = n_fun, geom = "text")
 
-phist_violins<-ggplot(data=extracted_Fst_melt, aes(x=variable,y=value, alpha=variable)) + geom_violin(alpha=1) + stat_summary(fun.data = n_fun, geom = "text", alpha=1) + geom_jitter(size=0.0) + ylab(expression(Phi[ST])) + xlab("Barrier") + scale_alpha_manual(values=c(1,1,1,1,0), guide=F) + scale_x_discrete(labels=c("Western Indo-Pacific / \n Central Indo-Pacific", "Central Indo-Pacific / \n Eastern Indo-Pacific", "Eastern Indo-Pacific / \n Hawaii", "Eastern Indo-Pacific / \n Marquesas", "Randomized"))
+phist_violins<-ggplot(data=extracted_Fst_melt, aes(x=variable,y=value, alpha=variable)) + geom_violin(alpha=1) + stat_summary(fun.data = n_fun, geom = "text", alpha=1) + geom_jitter(size=0.0) + ylab(expression(Phi[ST])) + xlab("Barrier") + scale_alpha_manual(values=c(0.5,0.5,0.5,0.5,0), guide=F) + scale_x_discrete(labels=c("Western Indo-Pacific / \n Central Indo-Pacific", "Central Indo-Pacific / \n Eastern Indo-Pacific", "Eastern Indo-Pacific / \n Hawaii", "Eastern Indo-Pacific / \n Marquesas", "Randomized"))
 
 
 #Function for 1000 bootstraps which take 100 samples from the data with replacement and establish 95%CI
@@ -1697,7 +1721,7 @@ medianCI<-as.data.frame(t(rbind(medians,CI95)))
 colnames(medianCI)<-c("medians","low","high")
 medianCI["barrier"]<-rownames(medianCI)
 
-phist_violins2<-phist_violins  + geom_pointrange(data=medianCI,mapping=aes(x=barrier,y=medians,ymin=low,ymax=high), inherit.aes=F,fatten=0.1) + coord_cartesian(ylim=c(0,0.6))
+phist_violins2<-phist_violins  + geom_pointrange(data=medianCI,mapping=aes(x=barrier,y=medians,ymin=low,ymax=high), inherit.aes=F,fatten=1) + coord_cartesian(ylim=c(0,0.55))
 
 medianCI
 
