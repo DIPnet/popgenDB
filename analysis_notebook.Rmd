@@ -1205,14 +1205,9 @@ s<-s + facet_grid(L1 ~ .)
 # dbRDA
 
 ```{r dbRDA}
-#get diffstats for just ip localities
-#diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb_ip, gdist = "PhiST", minseqs = 6, minsamps = 3, mintotalseqs = 0, nrep = 0, num.cores = 2, ABGD = F, regionalization = "sample")
-
-#save(diffstats,file="DIPnet_structure_sample_PhiST_030918.Rdata")
-
-
 # read in the Fst/PhiSt table 
-load("DIPnet_structure_sample_PhiST_031818.Rdata")
+load("~/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_Species/Pairwise_statistics/sample/DIPnet_structure_sample_PhiST.Rdata")
+#load("~/Desktop/DIPnet_structure_sample_PhiST_042817.Rdata")
 
 # read in the best hypotheses
 best_hypotheses<-read.csv("best_hypothesis.csv")
@@ -1251,7 +1246,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
    
   if(diffstats[[gsl]]=="Fewer than 3 sampled populations after filtering. No stats calculated"){all.gsl.rda[[gsl]]<-"Fewer than 4 sampled populations after filtering."; cat("Fewer than 4 sampled populations after filtering.");next}
   
-   sp<-ipdb_ip[which(ipdb_ip$Genus_species_locus==gsl),]
+   sp<-ipdb[which(ipdb$Genus_species_locus==gsl),]
   
   #clean weird backslashes from names
   sp$locality<-gsub("\"","",sp$locality)
