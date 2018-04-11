@@ -104,7 +104,10 @@ barriers<-read.csv("VeronBarriers.csv",header=F,stringsAsFactors = F)
 #duplicate GSLs that need to be dropped
 dups<-c("Acanthaster_planciSIO_CR","Acanthaster_planciRedSea_CR","Acanthaster_planciNIO_CR","Acanthaster_planciPac_CR","Acanthurus_nigrofuscus_CO1","Cephalopholis_argus_CO1","Chaetodon_auriga_CO1","Halichoeres_claudia_CR","Halichoeres_hortulanus_CO1","Halichoeres_hortulanus_CYB","Halichoeres_trimaculatus_CR","Lutjanus_kasmira_CO1","Naso_hexacanthus_CR","Neoniphon_sammara_CO1","Pomacentrus_coelestis_CO1","Pygoplites_diacanthus_CYB", "Stenella_longirostris_CYB")
 
+hypotheses<-c("Bowen","Keith","Kulbicki_r","Kulbicki_b","REALM","PROVINCE","ECOREGION", "VeronDivis")
 
+# Remove dups
+ipdb_ip<-ipdb_ip[!ipdb_ip$Genus_species_locus %in% c(dups,"Ctenochaetus_marginatus_A68"),]
 ```
 
 
@@ -211,15 +214,34 @@ crit_rank<-crit_rank[, colSums(is.na(crit_rank)) < nrow(crit_rank)-4]
 ## choose the best hypothesis or set of hypotheses for each species  
 best_hypothesis<-sapply(crit_rank,function(x){row.names(crit_rank)[which(x==min(x,na.rm=T)) ]})
 
+# Add phylum to each
+best_hypothesis<-as.data.frame(unlist(best_hypothesis))
+best_hypothesis$Genus_species_locus<-row.names(best_hypothesis)
+ipdb_phylum<-ipdb_ip[,c("Genus_species_locus","phylum")]
+ipdb_phylum<-unique(ipdb_phylum)
 
+#some grepping to get the extra numbers off the ends of gsl names
+best_hypothesis$Genus_species_locus<-gsub("(\\w+_\\w+_CR)", replacement="\\1R",best_hypothesis$Genus_species_locus, perl=T)
+
+best_hypothesis$Genus_species_locus<-gsub("(\\w+_\\w+_\\w\\w\\w)\\w", replacement="\\1", best_hypothesis$Genus_species_locus, perl=T)
+
+best_hypothesis$Genus_species_locus<-gsub("(\\w+_\\w+_CR)R", replacement="\\1", best_hypothesis$Genus_species_locus, perl=T)
+
+
+best_hypothesis<-left_join(best_hypothesis, ipdb_phylum, by="Genus_species_locus")
+
+names(best_hypothesis)[1]<-"Hypothesis"
+
+                               
 ## Make a bar graph of best support for each hypothesis among species
 
-barplot<-ggplot(data=as.data.frame(unlist(best_hypothesis)), aes(x=unlist(best_hypothesis) )) + geom_bar(aes(y = (..count..)/sum(..count..))) +
+barplot<-ggplot(data=best_hypothesis, aes(x=Hypothesis,fill=phylum )) + geom_bar(aes(y = (..count..)/sum(..count..))) +
    scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 25", "Veron et al. \n k = 12")) +
-  labs(x="Hypothesis",y="Proportion of Species") + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  labs(x="Hypothesis",y="Proportion of Species") + theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.title=element_blank())
 
 barplot
 
+#ggsave("./output/PhiST_Bars_Final.pdf", barplot, width=7,height=7,units="in")
 ```
 
 
@@ -273,12 +295,14 @@ rp<-ggplot(relprob,aes(y=Species,x=Hypothesis,fill=Relative_Probability))
 #add geom_tile, turn the x-axis elements by 90 degrees, reverse the names on the y-axis, and use a diverging color scheme to highlight hypotheses with >50% rel prob.
 rp<-rp+geom_tile()+
   theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-  scale_fill_gradient2(low = "blue", mid = "white",
-                       high = "red", midpoint = 0.5, space = "rgb",
+  scale_fill_gradient(low = "white",
+                       high = "red", space = "rgb",
                        na.value = "grey50", guide = "colourbar") +
   scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 25", "Veron et al. \n k = 12")) +
   scale_y_discrete(limits=rev(sort(levels(relprob$Species))), labels=rev(spnames))
 rp
+
+#ggsave("./output/PhiST_Heatmap_Final.pdf", rp)
 ```
 
 
@@ -291,7 +315,7 @@ Code is suppressed for the other 3 examples
 ```{r Measure Support1, echo=F}
 load(file=file.path(amova_ts_path,"FST_TradSpec_table_amova_output.Rdata"))
 #remove duplicate gsls
-#amovastats<-lapply(amovastats,remove.dup.gsls)
+amovastats<-lapply(amovastats,remove.dup.gsls)
 
 
 
@@ -324,13 +348,34 @@ crit_rank<-crit_rank[, colSums(is.na(crit_rank)) < nrow(crit_rank)-4]
 best_hypothesis<-sapply(crit_rank,function(x){row.names(crit_rank)[which(x==min(x,na.rm=T)) ]})
 
 
+# Add phylum to each
+best_hypothesis<-as.data.frame(unlist(best_hypothesis))
+best_hypothesis$Genus_species_locus<-row.names(best_hypothesis)
+ipdb_phylum<-ipdb_ip[,c("Genus_species_locus","phylum")]
+ipdb_phylum<-unique(ipdb_phylum)
+
+#some grepping to get the extra numbers off the ends of gsl names
+best_hypothesis$Genus_species_locus<-gsub("(\\w+_\\w+_CR)", replacement="\\1R",best_hypothesis$Genus_species_locus, perl=T)
+
+best_hypothesis$Genus_species_locus<-gsub("(\\w+_\\w+_\\w\\w\\w)\\w", replacement="\\1", best_hypothesis$Genus_species_locus, perl=T)
+
+best_hypothesis$Genus_species_locus<-gsub("(\\w+_\\w+_CR)R", replacement="\\1", best_hypothesis$Genus_species_locus, perl=T)
+
+
+best_hypothesis<-left_join(best_hypothesis, ipdb_phylum, by="Genus_species_locus")
+
+names(best_hypothesis)[1]<-"Hypothesis"
+
+                               
 ## Make a bar graph of best support for each hypothesis among species
 
-barplot<-ggplot(data=as.data.frame(unlist(best_hypothesis)), aes(x=unlist(best_hypothesis) )) + geom_bar(aes(y = (..count..)/sum(..count..))) +
+barplot<-ggplot(data=best_hypothesis, aes(x=Hypothesis,fill=phylum )) + geom_bar(aes(y = (..count..)/sum(..count..))) +
    scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 25", "Veron et al. \n k = 12")) +
-  labs(x="Hypothesis",y="Proportion of Species") + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  labs(x="Hypothesis",y="Proportion of Species") + theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.title=element_blank())
 
 barplot
+
+#ggsave("./output/FST_Bars_Final.pdf", barplot,width=7,height=7,units="in")
 ```
 
 ### Calculate relative probability from Johnson and Omland 2004 and visualize with a heatmap
@@ -350,12 +395,24 @@ crit_df_deltaI_sums<-sapply(crit_df_deltaI_b,sum,na.rm=T)
 # this time use the scale argument of scale to divide each column by the corresponding sum
 crit_df_relative_prob<-scale(crit_df_deltaI_b,center=F,scale=crit_df_deltaI_sums) 
 
+# Now zap all GSLs that test less than 5 hypotheses
+
+naCount<-colSums(is.na(crit_df_relative_prob))
+
+na4<-names(naCount)[which(naCount<4)]
+
+
+crit_df_relative_prob_na4<-crit_df_relative_prob[,na4]
 
 ## Make a heatmap of relative probability of each hypothesis
 
 #melt for ggplot2
-relprob<-melt(crit_df_relative_prob)
+relprob<-melt(crit_df_relative_prob_na4)
 colnames(relprob)<-c("Hypothesis","Species","Relative_Probability")
+
+#make names
+spnames<-sub("(\\w+)_(\\w+)_\\w+","\\1 \\2",na4, perl=T)
+spnames<-sort(spnames)
 
 #baseplot
 rp<-ggplot(relprob,aes(y=Species,x=Hypothesis,fill=Relative_Probability))
@@ -363,11 +420,14 @@ rp<-ggplot(relprob,aes(y=Species,x=Hypothesis,fill=Relative_Probability))
 #add geom_tile, turn the x-axis elements by 90 degrees, reverse the names on the y-axis, and use a diverging color scheme to highlight hypotheses with >50% rel prob.
 rp<-rp+geom_tile()+
   theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-  ylim(rev(levels(relprob$Species)))+
-  scale_fill_gradient2(low = "blue", mid = "white",
-                       high = "red", midpoint = 0.5, space = "rgb",
-                       na.value = "grey50", guide = "colourbar")
+  scale_fill_gradient(low = "white",
+                       high = "red", space = "rgb",
+                       na.value = "grey50", guide = "colourbar") +
+  scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 25", "Veron et al. \n k = 12")) +
+  scale_y_discrete(limits=rev(sort(levels(relprob$Species))), labels=rev(spnames))
 rp
+
+ggsave("./output/FST_Heatmap_Final.pdf", rp, width=7, height=7, units = "in")
 ```
 
 
@@ -562,6 +622,7 @@ rp<-rp+geom_tile()+
 rp
 ```
 
+
 # Calculate Pairwise Differentiation Stats
 
 By sample
@@ -577,6 +638,7 @@ diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb, gdist = "Jost D", minseqs = 5,
 
 save(diffstats, file="/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_ESU/Pairwise_statistics/DIPnet_structure_sample_JostD_ABGD.Rdata")
 ```
+
 
 # Generalized Dissimilarity Modeling
 
