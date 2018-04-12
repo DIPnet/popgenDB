@@ -1,0 +1,79 @@
+#Arlequin input file written by the simulation program fastsimcoal2
+
+[Profile]
+	Title="A series of simulated samples"
+	NbSamples=2
+
+	GenotypicData=0
+	GameticPhase=0
+	RecessiveData=0
+	DataType=DNA
+	LocusSeparator=NONE
+	MissingData='?'
+
+[Data]
+	[[Samples]]
+
+#Number of independent chromosomes: 1
+#Total number of polymorphic sites: 9
+# 9 polymorphic positions on chromosome 1
+#13, 88, 150, 163, 215, 562, 600, 910, 994
+		SampleName="Sample 1"
+		SampleSize=20
+		SampleData= {
+1_1	1	GTCTGAACT
+1_2	1	GTCTGACCT
+1_3	1	GTCTGAAAT
+1_4	1	GTCTGAACT
+1_5	1	GTCTGAACT
+1_6	1	GTCTGAACT
+1_7	1	GTCTGAACT
+1_8	1	GTCGGAACC
+1_9	1	GTCTGAACT
+1_10	1	GTCTGAACT
+1_11	1	GTCTAAACT
+1_12	1	GTCTGAACT
+1_13	1	GTGTGAACT
+1_14	1	GTCTGAACT
+1_15	1	GTCTGAACT
+1_16	1	TTCTGAACT
+1_17	1	GTCTGTACT
+1_18	1	GTCTGAACT
+1_19	1	GTCTGAACT
+1_20	1	GACTGAACT
+
+}
+		SampleName="Sample 2"
+		SampleSize=20
+		SampleData= {
+2_1	1	GTCTGAACT
+2_2	1	GTCTGAACT
+2_3	1	GTCTGAACT
+2_4	1	GTCTGAACT
+2_5	1	GTCTGAACT
+2_6	1	GTCTGAACT
+2_7	1	GTCTGAACT
+2_8	1	GTCTGAACT
+2_9	1	GTCTGAACT
+2_10	1	GTCTGAACT
+2_11	1	GTCTGAACT
+2_12	1	GTCTGAACT
+2_13	1	GTCTGAACT
+2_14	1	GTCTGAACT
+2_15	1	GTCTGAACT
+2_16	1	GTCTGAACT
+2_17	1	GTCTGAACT
+2_18	1	GTCTGAACT
+2_19	1	GTCTGAACT
+2_20	1	GTCTGAACT
+
+}
+
+[[Structure]]
+
+	StructureName="Simulated data"
+	NbGroups=1
+	Group={
+	   "Sample 1"
+	   "Sample 2"
+	}
