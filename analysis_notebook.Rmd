@@ -640,6 +640,29 @@ save(diffstats, file="/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_f
 ```
 
 
+
+# Mixing Bowen and Spalding Realms
+First step is to distinguish Hawaii, Easter Island and the Marquesas, thereby mixing in a little bit of Briggs and Bowen
+
+
+```{r}
+unique(ipdb_ip$Bowen)
+
+unique(ipdb_ip$REALM)
+
+dim(ipdb_ip)
+
+
+ipdb_ip$REALM[which(ipdb_ip$Bowen=="Hawaiian")]<-"Hawaii"
+ipdb_ip$REALM[which(ipdb_ip$Bowen=="Marquesas")]<-"Marquesas"
+ipdb_ip$REALM[which(ipdb_ip$Bowen=="Easter")]<-"Easter"
+
+unique(ipdb_ip$REALM)
+
+
+```
+
+
 # Generalized Dissimilarity Modeling
 
 ## GDM code
@@ -962,7 +985,7 @@ if(fullgdm$nulldeviance==0.00001){
 }
 
 ibdplots<-marrangeGrob(plotlist, nrow=2,ncol=2)
-ggsave("./output/ibdplots.pdf",ibdplots)
+ggsave("./output/ibdplots_test.pdf",ibdplots)
   ####################################################################### Calculate Overwater Distances#
   #Save for later##
   #######################################################################
@@ -1297,8 +1320,8 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
   cat("\n","\n","\n","Now starting", gsl, "\n")
   
   #lookup the best hypothesis
-  best_h<-as.character(best_hypotheses[which(gsl==best_hypotheses$gsl),2])
-  
+  #best_h<-as.character(best_hypotheses[which(gsl==best_hypotheses$gsl),2])
+  best_h<-"REALM"
 #  if(any(is.na(diffstats[[gsl]]))){cat("NAs in FST table, No dbRDA calculated"); #all.gsl.rda[[gsl]]<-"NAs in FST table, No dbRDA calculated"; next}
  
   #replace NAs with 1s. NAs occur when no haplotypes are shared.
@@ -1308,7 +1331,7 @@ for(gsl in esu_loci){ #gsl<-"Linckia_laevigata_CO1" "Tridacna_crocea_CO1" "Lutja
    
   if(diffstats[[gsl]]=="Fewer than 3 sampled populations after filtering. No stats calculated"){all.gsl.rda[[gsl]]<-"Fewer than 4 sampled populations after filtering."; cat("Fewer than 4 sampled populations after filtering.");next}
   
-   sp<-ipdb[which(ipdb$Genus_species_locus==gsl),]
+   sp<-ipdb_ip[which(ipdb_ip$Genus_species_locus==gsl),]
   
   #clean weird backslashes from names
   sp$locality<-gsub("\"","",sp$locality)
@@ -1549,15 +1572,15 @@ plotlist[[gsl]]<-ibdplot
  
   }
 
-write.csv(term.vars,file="./output/dbRDA_term_vars_PHIST_030818.csv")
-write.csv(term.pvals,file="./output/dbRDA_term_pvals_PHIST_030818.csv")
+write.csv(term.vars,file="./output/dbRDA_term_vars_PHIST_bowenrealms_041118.csv")
+write.csv(term.pvals,file="./output/dbRDA_term_pvals_PHIST_bowenrealms_041118.csv")
 
- save(all.gsl.rda,file="./output/multibarrier_dbRDA_PHIST_030818.Rdata")
+ save(all.gsl.rda,file="./output/multibarrier_dbRDA_PHIST_bowenrealms_041118.Rdata")
   
-write.csv(stats, "./output/multibarrier_dbRDA_PHIST_030818.csv")
+write.csv(stats, "./output/multibarrier_dbRDA_PHIST_bowenrealms_041118.csv")
 
 ibdplots<-marrangeGrob(plotlist, nrow=2,ncol=2)
-ggsave("./output/ibdplots_030818.pdf",ibdplots)
+ggsave("./output/ibdplots_PHIST_bowenrealms_041118.pdf",ibdplots)
   
 ```
 
@@ -1619,6 +1642,8 @@ bars<-ggplot(data=term.vars.melt, mapping=aes(x=gsl,y=value,fill=variable)) +
 
 
 bars
+
+ggsave(filename = "./output/dbRDA_stacked_bars_PHI_bowenrealms_041118.pdf",bars,width=7,height=7,units="in")
 ```
 
 # Structure as Lines on a Map
@@ -1626,43 +1651,16 @@ bars
 Now I am going to come up with code to measure the mean PhiST across the Spalding Realms
 
 
-## Mixing Bowen and Spalding Realms
-First step is to distinguish Hawaii, Easter Island and the Marquesas, thereby mixing in a little bit of Briggs and Bowen
-
-
-```{r}
-unique(ipdb$Bowen)
-
-unique(ipdb$REALM)
-
-# first get rid of non-Indo-Pacific samples
-
-dim(ipdb)
-
-ipdb2<-ipdb[ipdb$REALM %in% c("Central Indo-Pacific","Eastern Indo-Pacific","Western Indo-Pacific"),]
-
-
-dim(ipdb)[1]-dim(ipdb2)[1]
-# Removed about 3600 samples
-
-ipdb2$REALM[which(ipdb2$Bowen=="Hawaiian")]<-"Hawaii"
-ipdb2$REALM[which(ipdb2$Bowen=="Marquesas")]<-"Marquesas"
-ipdb2$REALM[which(ipdb2$Bowen=="Easter")]<-"Easter"
-
-unique(ipdb2$REALM)
-
-# Remove dups
-ipdb2<-ipdb2[!ipdb2$Genus_species_locus %in% c(dups,"Ctenochaetus_marginatus_A68"),]
-
-```
 
 
 ## Calculate the diffstats
 ```{r}
-#diffstats2<-pairwise.structure.mtDNA.db(ipdb=ipdb2, gdist = "PhiST", minseqs = 5, minsamps = 2, mintotalseqs = 0, nrep = 1000, num.cores = 2, ABGD = F, regionalization = "REALM")
-#save(diffstats2,"./output/PHIst_for_map.R")
+#diffstats2<-pairwise.structure.mtDNA.db(ipdb=ipdb_ip, gdist = "PhiST", minseqs = 5, minsamps = 2, mintotalseqs = 0, nrep = 1000, num.cores = 2, ABGD = F, regionalization = "REALM")
+#save(diffstats_phist,file="./output/PHIst_for_map.R")
+#save(diffstats_fst,file="./output/Fst_for_map.R")
 
-load("./output/PHIst_for_map.R")
+#load("./output/PHIst_for_map.R")
+#load("./output/FST_for_map.R")
 
 # now 
 str(ipdb2)
@@ -1673,7 +1671,7 @@ str(ipdb2)
 
 ```{r}
 # first filter out all species that had fewer than 2 sampled populations
-diffstats3<-diffstats2[lapply(diffstats2, class) =="dist"]
+diffstats3<-diffstats_fst[lapply(diffstats2, class) =="dist"]
 
 
 barrier_extract<-function(x){
@@ -1706,28 +1704,32 @@ barrier_extract<-function(x){
 Randomly sort each locality for each species into two regions and calculate Fst between them.
 
 ```{r}
-# ipdb3<-ipdb2[which(ipdb2$Genus_species_locus %in% names(diffstats3)),]
-# 
-# ipdb3$randomregion<-NA
-# 
-# for(i in 1:10){
-# #randomly assign all localities to 1 or 2
-#   for(loc in unique(ipdb3$locality)){
-#     ipdb3$randomregion[which(ipdb3$locality==loc)]<-sample(c(1,2),size=1)
-#   }
-# 
-# random_diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb3, gdist = "PhiST", minseqs = 5, minsamps = 2, mintotalseqs = 0, nrep = 0, num.cores = 2, ABGD = F, regionalization = "randomregion")
-# 
-# random_diffstats2<-random_diffstats[lapply(random_diffstats, class) =="dist"]
-# 
-# random_diffstats_all<-c(random_diffstats_all,unlist(random_diffstats2))
-# }
-# 
-# random_diffstats_all[which(random_diffstats_all < 0)]<-0
-# 
-# random_diffstats_all<-data.frame(variable=factor("Randomized"), value = as.numeric(random_diffstats_all))
+ipdb3<-ipdb_ip[which(ipdb_ip$Genus_species_locus %in% names(diffstats3)),]
 
-#save(random_diffstats_all,file="Randomized_PHIst.R")
+ipdb3$randomregion<-NA
+
+random_diffstats2<-NULL
+random_diffstats_all<-NULL
+for(i in 1:10){
+#randomly assign all localities to 1 or 2
+  for(loc in unique(ipdb3$locality)){
+    ipdb3$randomregion[which(ipdb3$locality==loc)]<-sample(c(1,2),size=1)
+  }
+
+random_diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb3, gdist = "WC Theta", minseqs = 5, minsamps = 2, mintotalseqs = 0, nrep = 0, num.cores = 2, ABGD = F, regionalization = "randomregion")
+
+random_diffstats2<-random_diffstats[lapply(random_diffstats, class) =="dist"]
+
+random_diffstats_all<-c(random_diffstats_all,unlist(random_diffstats2))
+}
+
+random_diffstats_all_2<-unlist(random_diffstats_all)
+random_diffstats_all_2[which(random_diffstats_all_2 < 0)]<-0
+
+random_diffstats_all_3<-data.frame(variable=factor("Randomized"), value = as.numeric(random_diffstats_all_2))
+
+#save(random_diffstats_all,file="./output/Randomized_PHIst.R")
+#save(random_diffstats_all,file="./output/Randomized_FST.R")
 load("Randomized_PHIst.R")
 ```
 
@@ -1760,7 +1762,7 @@ n_fun <- function(x){
   return(data.frame(y = -0.05, label = paste0("n = ",length(x))))
 }
 
-ggplot(data=extracted_Fst_melt, aes(x=variable,y=value)) + geom_boxplot() + stat_summary(fun.data = n_fun, geom = "text")
+#ggplot(data=extracted_Fst_melt, aes(x=variable,y=value)) + geom_boxplot() + stat_summary(fun.data = n_fun, geom = "text")
 
 phist_violins<-ggplot(data=extracted_Fst_melt, aes(x=variable,y=value, alpha=variable)) + geom_violin(alpha=1) + stat_summary(fun.data = n_fun, geom = "text", alpha=1) + geom_jitter(size=0.0) + ylab(expression(Phi[ST])) + xlab("Barrier") + scale_alpha_manual(values=c(0.5,0.5,0.5,0.5,0), guide=F) + scale_x_discrete(labels=c("Western Indo-Pacific / \n Central Indo-Pacific", "Central Indo-Pacific / \n Eastern Indo-Pacific", "Eastern Indo-Pacific / \n Hawaii", "Eastern Indo-Pacific / \n Marquesas", "Randomized"))
 
@@ -1776,12 +1778,15 @@ CI95<-cbind(apply(extracted_Fst2,MARGIN=2,FUN=bootstrap_phist),Randomized=bootst
 
 medianCI<-as.data.frame(t(rbind(medians,CI95)))
 colnames(medianCI)<-c("medians","low","high")
-medianCI["barrier"]<-rownames(medianCI)
+medianCI["barrier"]<-factor(rownames(medianCI), levels=c("West_Central","East_Central","East_Hawaii","East_Marquesas","Randomized"))
+medianCI
 
 phist_violins2<-phist_violins  + geom_pointrange(data=medianCI,mapping=aes(x=barrier,y=medians,ymin=low,ymax=high), inherit.aes=F,fatten=1) + coord_cartesian(ylim=c(0,0.55))
 
+phist_medians<-ggplot(data=medianCI) + geom_pointrange(data=medianCI,mapping=aes(x=barrier,y=medians,ymin=low,ymax=high), inherit.aes=F,fatten=4) + scale_x_discrete(labels=c("Western Indo-Pacific / \n Central Indo-Pacific", "Central Indo-Pacific / \n Eastern Indo-Pacific", "Eastern Indo-Pacific / \n Hawaii", "Eastern Indo-Pacific / \n Marquesas", "Randomized")) + ylab(expression(Phi[ST])) + xlab("Barrier")  + stat_summary(data=extracted_Fst_melt,mapping=aes(x=variable,y=value),fun.data = n_fun, geom = "text", alpha=1, position_fill(vjust=1.1))  + coord_cartesian(ylim=c(0,0.1)) + theme(axis.text.x = element_text(angle=45, hjust=1))
+ 
 medianCI
 
-#Figure out why N. albicilla is so low!
+ggsave(phist_medians,file="./output/phist_medians1.pdf", width=7, height=7, units="in")
 
 ```
