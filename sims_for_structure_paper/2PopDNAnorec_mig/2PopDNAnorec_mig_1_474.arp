@@ -1,0 +1,79 @@
+#Arlequin input file written by the simulation program fastsimcoal2
+
+[Profile]
+	Title="A series of simulated samples"
+	NbSamples=2
+
+	GenotypicData=0
+	GameticPhase=0
+	RecessiveData=0
+	DataType=DNA
+	LocusSeparator=NONE
+	MissingData='?'
+
+[Data]
+	[[Samples]]
+
+#Number of independent chromosomes: 1
+#Total number of polymorphic sites: 11
+# 11 polymorphic positions on chromosome 1
+#169, 222, 289, 301, 315, 363, 587, 617, 703, 795, 962
+		SampleName="Sample 1"
+		SampleSize=20
+		SampleData= {
+1_1	1	GTAAACACACA
+1_2	1	GTAAACACCCA
+1_3	1	GTAAACACACA
+1_4	1	GTAAACACACA
+1_5	1	GAAAACACACA
+1_6	1	GTAAGCACACA
+1_7	1	GTAAACATACA
+1_8	1	GTAAAGACACA
+1_9	1	GTAAACACACA
+1_10	1	GTATACACAAA
+1_11	1	GTAAACACACA
+1_12	1	GTTAACACACA
+1_13	1	GTAAACACACA
+1_14	1	CTAAACACACA
+1_15	1	GTAAACCCCCA
+1_16	1	GTAAACACACA
+1_17	1	GTAAACACACT
+1_18	1	GTAAACACACA
+1_19	1	GTAAACACACA
+1_20	1	GTAAACACACA
+
+}
+		SampleName="Sample 2"
+		SampleSize=20
+		SampleData= {
+2_1	1	GTAAACACACA
+2_2	1	GTAAACACACA
+2_3	1	GTAAACACACA
+2_4	1	GTAAACACACA
+2_5	1	GTAAACACACA
+2_6	1	GTAAACACACA
+2_7	1	GTAAACACACA
+2_8	1	GTAAACACACA
+2_9	1	GTAAACACACA
+2_10	1	GTAAACACACA
+2_11	1	GTAAACACACA
+2_12	1	GTAAACACACA
+2_13	1	GTAAACACACA
+2_14	1	GTAAACACACA
+2_15	1	GTAAACACACA
+2_16	1	GTAAACACACA
+2_17	1	GTAAACACACA
+2_18	1	GTAAACACACA
+2_19	1	GTAAACACACA
+2_20	1	GTAAACACACA
+
+}
+
+[[Structure]]
+
+	StructureName="Simulated data"
+	NbGroups=1
+	Group={
+	   "Sample 1"
+	   "Sample 2"
+	}
