@@ -1,0 +1,79 @@
+#Arlequin input file written by the simulation program fastsimcoal2
+
+[Profile]
+	Title="A series of simulated samples"
+	NbSamples=2
+
+	GenotypicData=0
+	GameticPhase=0
+	RecessiveData=0
+	DataType=DNA
+	LocusSeparator=NONE
+	MissingData='?'
+
+[Data]
+	[[Samples]]
+
+#Number of independent chromosomes: 1
+#Total number of polymorphic sites: 11
+# 11 polymorphic positions on chromosome 1
+#7, 66, 126, 255, 321, 346, 377, 523, 711, 796, 846
+		SampleName="Sample 1"
+		SampleSize=20
+		SampleData= {
+1_1	1	GAGGAGTGGTG
+1_2	1	AATGAGAGGTG
+1_3	1	AATGAGTGGTG
+1_4	1	AATGAGTGGTG
+1_5	1	AATGAGTGGTG
+1_6	1	AATGAGTGGTG
+1_7	1	AATGAGTGGTG
+1_8	1	AATGAGTGGTG
+1_9	1	AATGAGTGGTG
+1_10	1	AATGAGTGGTG
+1_11	1	AATGAGTGGTC
+1_12	1	ATTGAGTGGAG
+1_13	1	AATGAGTGGTG
+1_14	1	AATTGGTGGTG
+1_15	1	AATGAGTGATG
+1_16	1	AATGAGTGGTG
+1_17	1	AATGAGTGGTG
+1_18	1	AATGAATGGTG
+1_19	1	AATGAGTCGTG
+1_20	1	AATGAGTGGTG
+
+}
+		SampleName="Sample 2"
+		SampleSize=20
+		SampleData= {
+2_1	1	AATGAGTGGTG
+2_2	1	AATGAGTGGTG
+2_3	1	AATGAGTGGTG
+2_4	1	AATGAGTGGTG
+2_5	1	AATGAGTGGTG
+2_6	1	AATGAGTGGTG
+2_7	1	AATGAGTGGTG
+2_8	1	AATGAGTGGTG
+2_9	1	AATGAGTGGTG
+2_10	1	AATGAGTGGTG
+2_11	1	AATGAGTGGTG
+2_12	1	AATGAGTGGTG
+2_13	1	AATGAGTGGTG
+2_14	1	AATGAGTGGTG
+2_15	1	AATGAGTGGTG
+2_16	1	AATGAGTGGTG
+2_17	1	AATGAGTGGTG
+2_18	1	AATGAGTGGTG
+2_19	1	AATGAGTGGTG
+2_20	1	AATGAGTGGTG
+
+}
+
+[[Structure]]
+
+	StructureName="Simulated data"
+	NbGroups=1
+	Group={
+	   "Sample 1"
+	   "Sample 2"
+	}

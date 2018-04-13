@@ -1,0 +1,79 @@
+#Arlequin input file written by the simulation program fastsimcoal2
+
+[Profile]
+	Title="A series of simulated samples"
+	NbSamples=2
+
+	GenotypicData=0
+	GameticPhase=0
+	RecessiveData=0
+	DataType=DNA
+	LocusSeparator=NONE
+	MissingData='?'
+
+[Data]
+	[[Samples]]
+
+#Number of independent chromosomes: 1
+#Total number of polymorphic sites: 11
+# 11 polymorphic positions on chromosome 1
+#5, 211, 294, 297, 303, 307, 456, 495, 644, 887, 947
+		SampleName="Sample 1"
+		SampleSize=20
+		SampleData= {
+1_1	1	ACTCCGGAGAC
+1_2	1	ACTCCGGAGAC
+1_3	1	CGTCCGGAGAC
+1_4	1	ACTCCGGAGAC
+1_5	1	ACTCCGGAGAC
+1_6	1	ACTCAGGACAC
+1_7	1	ACTCCGGAGAC
+1_8	1	ACTCCGGGGAC
+1_9	1	ACTCCAGAGAC
+1_10	1	ACTCCGGAGAC
+1_11	1	ACGCCGGAGAC
+1_12	1	ACTCCGGAGCG
+1_13	1	ACTCCGGAGAC
+1_14	1	ACTCCGGAGAC
+1_15	1	ACTCCGGAGAC
+1_16	1	ACTCCGGAGAC
+1_17	1	ACTCCGGAGAC
+1_18	1	ACTCCGGAGAC
+1_19	1	ACTCCGGGGAC
+1_20	1	ACTCCGGAGAC
+
+}
+		SampleName="Sample 2"
+		SampleSize=20
+		SampleData= {
+2_1	1	ACTACGCAGAC
+2_2	1	ACTACGCAGAC
+2_3	1	ACTACGCAGAC
+2_4	1	ACTACGCAGAC
+2_5	1	ACTACGCAGAC
+2_6	1	ACTACGCAGAC
+2_7	1	ACTACGCAGAC
+2_8	1	ACTACGCAGAC
+2_9	1	ACTACGCAGAC
+2_10	1	ACTACGCAGAC
+2_11	1	ACTACGCAGAC
+2_12	1	ACTACGCAGAC
+2_13	1	ACTACGCAGAC
+2_14	1	ACTACGCAGAC
+2_15	1	ACTACGCAGAC
+2_16	1	ACTACGCAGAC
+2_17	1	ACTACGCAGAC
+2_18	1	ACTACGCAGAC
+2_19	1	ACTACGCAGAC
+2_20	1	ACTACGCAGAC
+
+}
+
+[[Structure]]
+
+	StructureName="Simulated data"
+	NbGroups=1
+	Group={
+	   "Sample 1"
+	   "Sample 2"
+	}

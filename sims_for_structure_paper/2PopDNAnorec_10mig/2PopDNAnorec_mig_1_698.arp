@@ -1,0 +1,79 @@
+#Arlequin input file written by the simulation program fastsimcoal2
+
+[Profile]
+	Title="A series of simulated samples"
+	NbSamples=2
+
+	GenotypicData=0
+	GameticPhase=0
+	RecessiveData=0
+	DataType=DNA
+	LocusSeparator=NONE
+	MissingData='?'
+
+[Data]
+	[[Samples]]
+
+#Number of independent chromosomes: 1
+#Total number of polymorphic sites: 7
+# 7 polymorphic positions on chromosome 1
+#53, 74, 244, 449, 513, 532, 749
+		SampleName="Sample 1"
+		SampleSize=20
+		SampleData= {
+1_1	1	ACTCAGT
+1_2	1	ACTCATT
+1_3	1	ACTCATT
+1_4	1	ACTCATT
+1_5	1	ACTCATT
+1_6	1	ACTCATT
+1_7	1	ACTCATT
+1_8	1	ACTAATT
+1_9	1	ACTCATT
+1_10	1	ACTCATT
+1_11	1	ACTCATG
+1_12	1	ACTCATT
+1_13	1	ACTCATT
+1_14	1	GCGCATT
+1_15	1	ACTCATT
+1_16	1	ACTCATT
+1_17	1	ATTCATT
+1_18	1	ACTCATT
+1_19	1	ACTCATT
+1_20	1	ACTCATT
+
+}
+		SampleName="Sample 2"
+		SampleSize=20
+		SampleData= {
+2_1	1	ACTCCTT
+2_2	1	ACTCCTT
+2_3	1	ACTCCTT
+2_4	1	ACTCCTT
+2_5	1	ACTCCTT
+2_6	1	ACTCCTT
+2_7	1	ACTCCTT
+2_8	1	ACTCCTT
+2_9	1	ACTCCTT
+2_10	1	ACTCCTT
+2_11	1	ACTCCTT
+2_12	1	ACTCCTT
+2_13	1	ACTCCTT
+2_14	1	ACTCCTT
+2_15	1	ACTCCTT
+2_16	1	ACTCCTT
+2_17	1	ACTCCTT
+2_18	1	ACTCCTT
+2_19	1	ACTCCTT
+2_20	1	ACTCCTT
+
+}
+
+[[Structure]]
+
+	StructureName="Simulated data"
+	NbGroups=1
+	Group={
+	   "Sample 1"
+	   "Sample 2"
+	}

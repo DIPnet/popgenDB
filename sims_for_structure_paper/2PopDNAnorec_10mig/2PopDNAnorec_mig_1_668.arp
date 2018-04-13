@@ -1,0 +1,79 @@
+#Arlequin input file written by the simulation program fastsimcoal2
+
+[Profile]
+	Title="A series of simulated samples"
+	NbSamples=2
+
+	GenotypicData=0
+	GameticPhase=0
+	RecessiveData=0
+	DataType=DNA
+	LocusSeparator=NONE
+	MissingData='?'
+
+[Data]
+	[[Samples]]
+
+#Number of independent chromosomes: 1
+#Total number of polymorphic sites: 10
+# 10 polymorphic positions on chromosome 1
+#40, 102, 145, 249, 439, 540, 776, 883, 887, 928
+		SampleName="Sample 1"
+		SampleSize=20
+		SampleData= {
+1_1	1	CGCAAGAGCC
+1_2	1	CGCAAGAGCC
+1_3	1	CGCAAGAGCC
+1_4	1	CACAAGAGCC
+1_5	1	CGCAAGAGGC
+1_6	1	CGCACGAGCC
+1_7	1	CGCAAGAGCC
+1_8	1	CGCAAGACCC
+1_9	1	TGCAAGAGCC
+1_10	1	CGCAAGAGCT
+1_11	1	CGCAAGAGCC
+1_12	1	CGCAAGAGCC
+1_13	1	CGCAAGAGCC
+1_14	1	CGCAAGAGCC
+1_15	1	CGGAAGAGCC
+1_16	1	CGCAAGAGCC
+1_17	1	CGCAAGGGCC
+1_18	1	CGCAAGAGCC
+1_19	1	CGCGATAGCC
+1_20	1	CGCAAGAGCC
+
+}
+		SampleName="Sample 2"
+		SampleSize=20
+		SampleData= {
+2_1	1	CGCAAGAGCC
+2_2	1	CGCAAGAGCC
+2_3	1	CGCAAGAGCC
+2_4	1	CGCAAGAGCC
+2_5	1	CGCAAGAGCC
+2_6	1	CGCAAGAGCC
+2_7	1	CGCAAGAGCC
+2_8	1	CGCAAGAGCC
+2_9	1	CGCAAGAGCC
+2_10	1	CGCAAGAGCC
+2_11	1	CGCAAGAGCC
+2_12	1	CGCAAGAGCC
+2_13	1	CGCAAGAGCC
+2_14	1	CGCAAGAGCC
+2_15	1	CGCAAGAGCC
+2_16	1	CGCAAGAGCC
+2_17	1	CGCAAGAGCC
+2_18	1	CGCAAGAGCC
+2_19	1	CGCAAGAGCC
+2_20	1	CGCAAGAGCC
+
+}
+
+[[Structure]]
+
+	StructureName="Simulated data"
+	NbGroups=1
+	Group={
+	   "Sample 1"
+	   "Sample 2"
+	}
