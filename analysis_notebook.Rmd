@@ -1625,6 +1625,8 @@ term.vars.structure<-term.vars[,c("gsl","Residual","Structure","pcx","pcy")]
 #term.vars.structure[which(stats$modelPvalue>0.05),2]<-1
 #term.vars.structure[which(stats$modelPvalue>0.05),c(3,4,5)]<-0
 
+
+
 #species names
 spnames<-sub("(\\w+)_(\\w+)_\\w+","\\1 \\2",term.vars.structure$gsl)
 
@@ -1639,11 +1641,32 @@ bars<-ggplot(data=term.vars.melt, mapping=aes(x=gsl,y=value,fill=variable)) +
   scale_fill_manual(values=c("Grey50","Green","Blue","Blue4")) +
   scale_x_discrete(labels=rev(spnames)) + xlab(element_blank()) + ylab("Proportion")
 
+ggsave(filename = "./output/dbRDA_stacked_bars_PHI_bowenrealms_041118.pdf",bars,width=7,height=7,units="in")
 
+
+
+
+
+#now pull out just the significant models
+term.vars.structure.sigmodel<-term.vars.structure[which(term.vars.structure$Residual<1),]
+
+#species names
+spnames<-sub("(\\w+)_(\\w+)_\\w+","\\1 \\2",term.vars.structure.sigmodel$gsl)
+
+#melt into long format
+term.vars.melt<-melt(term.vars.structure.sigmodel, id.vars="gsl")
+
+term.vars.melt$gsl<-factor(term.vars.melt$gsl)
+term.vars.melt$gsl<-factor(term.vars.melt$gsl,levels=rev(levels(term.vars.melt$gsl)))
+
+bars<-ggplot(data=term.vars.melt, mapping=aes(x=gsl,y=value,fill=variable)) +
+  geom_col() + coord_flip() +
+  scale_fill_manual(values=c("Grey50","Green","Blue","Blue4"), labels=c("Unconstrained Inertia","Hybrid Regionalization","Zonal Distance","Meridional Distance")) + scale_x_discrete(labels=rev(spnames)) + xlab(element_blank()) + ylab("Proportion of Inertia Constrained") + theme(axis.title.y = element_blank(), legend.title = element_blank())
 
 bars
 
-ggsave(filename = "./output/dbRDA_stacked_bars_PHI_bowenrealms_041118.pdf",bars,width=7,height=7,units="in")
+ggsave(filename = "./output/dbRDA_stacked_bars_PHI_bowenrealms_sigonly_041118.pdf",bars,width=7,height=7,units="in")
+
 ```
 
 # Structure as Lines on a Map
@@ -1671,7 +1694,7 @@ str(ipdb2)
 
 ```{r}
 # first filter out all species that had fewer than 2 sampled populations
-diffstats3<-diffstats_fst[lapply(diffstats2, class) =="dist"]
+diffstats3<-diffstats_phist[lapply(diffstats2, class) =="dist"]
 
 
 barrier_extract<-function(x){
@@ -1724,12 +1747,12 @@ random_diffstats_all<-c(random_diffstats_all,unlist(random_diffstats2))
 }
 
 random_diffstats_all_2<-unlist(random_diffstats_all)
-random_diffstats_all_2[which(random_diffstats_all_2 < 0)]<-0
+random_diffstats_all[which(random_diffstats_all < 0)]<-0
 
 random_diffstats_all_3<-data.frame(variable=factor("Randomized"), value = as.numeric(random_diffstats_all_2))
 
 #save(random_diffstats_all,file="./output/Randomized_PHIst.R")
-#save(random_diffstats_all,file="./output/Randomized_FST.R")
+#save(random_diffstats_all_3,file="./output/Randomized_FST.R")
 load("Randomized_PHIst.R")
 ```
 
@@ -1755,7 +1778,7 @@ extracted_Fst2<-as.data.frame(extracted_Fst2)
 extracted_Fst_melt<-melt(extracted_Fst2,measure.vars=names(extracted_Fst2), na.rm=T)
 
 #rbind on the randomized values
-extracted_Fst_melt<-rbind(extracted_Fst_melt,random_diffstats_all)
+extracted_Fst_melt<-rbind(extracted_Fst_melt,random_diffstats_all_3)
 
 #function to add in n values
 n_fun <- function(x){
@@ -1772,9 +1795,9 @@ bootstrap_phist<-function(x){
 quantile(sapply(1:1000,function(y) median(sample(x=x,size=100,replace=T),na.rm=T)),probs=c(0.025,0.975))
 }
 
-medians<-c(apply(extracted_Fst2,MARGIN=2,FUN=median, na.rm=T), Randomized=median(random_diffstats_all$value,na.rm=T))
+medians<-c(apply(extracted_Fst2,MARGIN=2,FUN=median, na.rm=T), Randomized=median(random_diffstats_all_3$value,na.rm=T))
 
-CI95<-cbind(apply(extracted_Fst2,MARGIN=2,FUN=bootstrap_phist),Randomized=bootstrap_phist(random_diffstats_all$value))
+CI95<-cbind(apply(extracted_Fst2,MARGIN=2,FUN=bootstrap_phist),Randomized=bootstrap_phist(random_diffstats_all_3$value))
 
 medianCI<-as.data.frame(t(rbind(medians,CI95)))
 colnames(medianCI)<-c("medians","low","high")
@@ -1783,10 +1806,10 @@ medianCI
 
 phist_violins2<-phist_violins  + geom_pointrange(data=medianCI,mapping=aes(x=barrier,y=medians,ymin=low,ymax=high), inherit.aes=F,fatten=1) + coord_cartesian(ylim=c(0,0.55))
 
-phist_medians<-ggplot(data=medianCI) + geom_pointrange(data=medianCI,mapping=aes(x=barrier,y=medians,ymin=low,ymax=high), inherit.aes=F,fatten=4) + scale_x_discrete(labels=c("Western Indo-Pacific / \n Central Indo-Pacific", "Central Indo-Pacific / \n Eastern Indo-Pacific", "Eastern Indo-Pacific / \n Hawaii", "Eastern Indo-Pacific / \n Marquesas", "Randomized")) + ylab(expression(Phi[ST])) + xlab("Barrier")  + stat_summary(data=extracted_Fst_melt,mapping=aes(x=variable,y=value),fun.data = n_fun, geom = "text", alpha=1, position_fill(vjust=1.1))  + coord_cartesian(ylim=c(0,0.1)) + theme(axis.text.x = element_text(angle=45, hjust=1))
+phist_medians<-ggplot(data=medianCI) + geom_pointrange(data=medianCI,mapping=aes(x=barrier,y=medians,ymin=low,ymax=high), inherit.aes=F,fatten=4) + scale_x_discrete(labels=c("Western Indo-Pacific / \n Central Indo-Pacific", "Central Indo-Pacific / \n Eastern Indo-Pacific", "Eastern Indo-Pacific / \n Hawaii", "Eastern Indo-Pacific / \n Marquesas", "Randomized")) + ylab(expression(Phi[ST])) + xlab("Barrier")  + stat_summary(data=extracted_Fst_melt,mapping=aes(x=variable,y=value),fun.data = n_fun, geom = "text", alpha=1, position_fill(vjust=1.2))  + coord_cartesian(ylim=c(0,0.12)) + theme(axis.text.x = element_text(angle=45, hjust=1))
  
 medianCI
 
-ggsave(phist_medians,file="./output/phist_medians1.pdf", width=7, height=7, units="in")
+ggsave(phist_medians,file="./output/fst_medians1.pdf", width=7, height=7, units="in")
 
 ```
