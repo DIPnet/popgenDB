@@ -656,6 +656,7 @@ dim(ipdb_ip)
 ipdb_ip$REALM[which(ipdb_ip$Bowen=="Hawaiian")]<-"Hawaii"
 ipdb_ip$REALM[which(ipdb_ip$Bowen=="Marquesas")]<-"Marquesas"
 ipdb_ip$REALM[which(ipdb_ip$Bowen=="Easter")]<-"Easter"
+ipdb_ip$REALM[which(ipdb_ip$Bowen=="Western Indian Ocean Province")]<-"Western Indian Ocean Province"
 
 unique(ipdb_ip$REALM)
 
@@ -1572,15 +1573,15 @@ plotlist[[gsl]]<-ibdplot
  
   }
 
-write.csv(term.vars,file="./output/dbRDA_term_vars_PHIST_bowenrealms_041118.csv")
-write.csv(term.pvals,file="./output/dbRDA_term_pvals_PHIST_bowenrealms_041118.csv")
+write.csv(term.vars,file="./output/dbRDA_term_vars_PHIST_bowenrealms_041318.csv")
+write.csv(term.pvals,file="./output/dbRDA_term_pvals_PHIST_bowenrealms_041318.csv")
 
- save(all.gsl.rda,file="./output/multibarrier_dbRDA_PHIST_bowenrealms_041118.Rdata")
+ save(all.gsl.rda,file="./output/multibarrier_dbRDA_PHIST_bowenrealms_041318.Rdata")
   
-write.csv(stats, "./output/multibarrier_dbRDA_PHIST_bowenrealms_041118.csv")
+write.csv(stats, "./output/multibarrier_dbRDA_PHIST_bowenrealms_041318.csv")
 
 ibdplots<-marrangeGrob(plotlist, nrow=2,ncol=2)
-ggsave("./output/ibdplots_PHIST_bowenrealms_041118.pdf",ibdplots)
+ggsave("./output/ibdplots_PHIST_bowenrealms_041318.pdf",ibdplots)
   
 ```
 
@@ -1665,7 +1666,7 @@ bars<-ggplot(data=term.vars.melt, mapping=aes(x=gsl,y=value,fill=variable)) +
 
 bars
 
-ggsave(filename = "./output/dbRDA_stacked_bars_PHI_bowenrealms_sigonly_041118.pdf",bars,width=7,height=7,units="in")
+ggsave(filename = "./output/dbRDA_stacked_bars_PHI_bowenrealms_sigonly_041318.pdf",bars,width=7,height=7,units="in")
 
 ```
 
@@ -1694,13 +1695,17 @@ str(ipdb2)
 
 ```{r}
 # first filter out all species that had fewer than 2 sampled populations
-diffstats3<-diffstats_phist[lapply(diffstats2, class) =="dist"]
+diffstats3<-diffstats_phist[lapply(diffstats_phist, class) =="dist"]
 
 
 barrier_extract<-function(x){
   
   a<-as.matrix(x)
-  
+ 
+     if("Western Indian Ocean Province" %in% rownames(a) && "Western Indo-Pacific" %in% rownames(a))
+   {west_indian<- a["Western Indian Ocean Province","Western Indo-Pacific"]}
+   else{west_indian<- NA}
+   
    if("Central Indo-Pacific" %in% rownames(a) && "Western Indo-Pacific" %in% rownames(a))
    {west_central<- a["Central Indo-Pacific","Western Indo-Pacific"]}
    else{west_central<- NA}
@@ -1718,10 +1723,23 @@ barrier_extract<-function(x){
    else{east_marquesas<- NA}
    
 
-   return(c(west_central,east_central,east_hawaii,east_marquesas))
+   return(c(west_indian,west_central,east_central,east_hawaii,east_marquesas))
 }
 ```
 
+## Simulated Fst
+I ran 1000 simulations of a 1e6 population splitting into 2 1e6 populations with either 0 or 10 migrants/generation, 10K generations ago. Couldn't pull the .arp files into strataG, so had to run Phist analysis in Arlequin
+
+```{r}
+sims.nomig<-read.table("./sims_for_structure_paper/2PopDNAnorec_5pct_1000/outSumStats_phist.txt",header=T)
+
+sims.mig10<-read.table("./sims_for_structure_paper/2PopDNAnorec_10mig/outSumStats.txt",header=T)
+
+simPHIST<-sims.nomig$FST
+simPHIST[which(simPHIST<0)]<-0
+simPHISTdf<-data.frame(variable="Simulated", value=simPHIST)
+
+```
 
 ## Randomized Fst
 Randomly sort each locality for each species into two regions and calculate Fst between them.
@@ -1753,7 +1771,7 @@ random_diffstats_all_3<-data.frame(variable=factor("Randomized"), value = as.num
 
 #save(random_diffstats_all,file="./output/Randomized_PHIst.R")
 #save(random_diffstats_all_3,file="./output/Randomized_FST.R")
-load("Randomized_PHIst.R")
+load("./output/Randomized_PHIst.R")
 ```
 
 
@@ -1763,11 +1781,11 @@ load("Randomized_PHIst.R")
 
 extracted_Fst<-lapply(diffstats3,barrier_extract)
 
-extracted_Fst2<-matrix(unlist(extracted_Fst), ncol=4, byrow=T)
+extracted_Fst2<-matrix(unlist(extracted_Fst), ncol=5, byrow=T)
 
 rownames(extracted_Fst2)<-names(diffstats3)
 
-colnames(extracted_Fst2)<-c("West_Central","East_Central","East_Hawaii","East_Marquesas")
+colnames(extracted_Fst2)<-c("West_Indian","West_Central","East_Central","East_Hawaii","East_Marquesas")
 
 #set values less than 0 to 0
 extracted_Fst2[which(extracted_Fst2 < 0)] <- 0
@@ -1777,8 +1795,10 @@ extracted_Fst2<-as.data.frame(extracted_Fst2)
 
 extracted_Fst_melt<-melt(extracted_Fst2,measure.vars=names(extracted_Fst2), na.rm=T)
 
+#rbind on the simulated values
+extracted_Fst_melt<-rbind(extracted_Fst_melt,simPHISTdf)
 #rbind on the randomized values
-extracted_Fst_melt<-rbind(extracted_Fst_melt,random_diffstats_all_3)
+extracted_Fst_melt<-rbind(extracted_Fst_melt,random_diffstats_all)
 
 #function to add in n values
 n_fun <- function(x){
@@ -1787,7 +1807,7 @@ n_fun <- function(x){
 
 #ggplot(data=extracted_Fst_melt, aes(x=variable,y=value)) + geom_boxplot() + stat_summary(fun.data = n_fun, geom = "text")
 
-phist_violins<-ggplot(data=extracted_Fst_melt, aes(x=variable,y=value, alpha=variable)) + geom_violin(alpha=1) + stat_summary(fun.data = n_fun, geom = "text", alpha=1) + geom_jitter(size=0.0) + ylab(expression(Phi[ST])) + xlab("Barrier") + scale_alpha_manual(values=c(0.5,0.5,0.5,0.5,0), guide=F) + scale_x_discrete(labels=c("Western Indo-Pacific / \n Central Indo-Pacific", "Central Indo-Pacific / \n Eastern Indo-Pacific", "Eastern Indo-Pacific / \n Hawaii", "Eastern Indo-Pacific / \n Marquesas", "Randomized"))
+phist_violins<-ggplot(data=extracted_Fst_melt, aes(x=variable,y=value, alpha=variable)) + geom_violin(alpha=1) + stat_summary(fun.data = n_fun, geom = "text", alpha=1) + geom_jitter(size=0.0) + ylab(expression(Phi[ST])) + xlab("Barrier") + scale_alpha_manual(values=c(0.5,0.5,0.5,0.5,0.5,0,0), guide=F) + scale_x_discrete(labels=c("Western Indian/ \n Western Indo-Pacific","Western Indo-Pacific / \n Central Indo-Pacific", "Central Indo-Pacific / \n Eastern Indo-Pacific", "Eastern Indo-Pacific / \n Hawaii", "Eastern Indo-Pacific / \n Marquesas", "Simulated","Randomized")) + theme(axis.text.x = element_text(angle=45, hjust=1))
 
 
 #Function for 1000 bootstraps which take 100 samples from the data with replacement and establish 95%CI
@@ -1795,21 +1815,22 @@ bootstrap_phist<-function(x){
 quantile(sapply(1:1000,function(y) median(sample(x=x,size=100,replace=T),na.rm=T)),probs=c(0.025,0.975))
 }
 
-medians<-c(apply(extracted_Fst2,MARGIN=2,FUN=median, na.rm=T), Randomized=median(random_diffstats_all_3$value,na.rm=T))
+medians<-c(apply(extracted_Fst2,MARGIN=2,FUN=median, na.rm=T),Simulated=median(simPHISTdf$value,na.rm=T), Randomized=median(random_diffstats_all$value,na.rm=T))
 
-CI95<-cbind(apply(extracted_Fst2,MARGIN=2,FUN=bootstrap_phist),Randomized=bootstrap_phist(random_diffstats_all_3$value))
+CI95<-cbind(apply(extracted_Fst2,MARGIN=2,FUN=bootstrap_phist),Simulated=bootstrap_phist(simPHISTdf$value),Randomized=bootstrap_phist(random_diffstats_all$value))
 
 medianCI<-as.data.frame(t(rbind(medians,CI95)))
 colnames(medianCI)<-c("medians","low","high")
-medianCI["barrier"]<-factor(rownames(medianCI), levels=c("West_Central","East_Central","East_Hawaii","East_Marquesas","Randomized"))
+medianCI["barrier"]<-factor(rownames(medianCI), levels=c("West_Indian","West_Central","East_Central","East_Hawaii","East_Marquesas","Simulated","Randomized"))
 medianCI
 
-phist_violins2<-phist_violins  + geom_pointrange(data=medianCI,mapping=aes(x=barrier,y=medians,ymin=low,ymax=high), inherit.aes=F,fatten=1) + coord_cartesian(ylim=c(0,0.55))
+phist_violins2<-phist_violins  + geom_pointrange(data=medianCI,mapping=aes(x=barrier,y=medians,ymin=low,ymax=high), inherit.aes=F,fatten=1) + coord_cartesian(ylim=c(0,0.1))
 
-phist_medians<-ggplot(data=medianCI) + geom_pointrange(data=medianCI,mapping=aes(x=barrier,y=medians,ymin=low,ymax=high), inherit.aes=F,fatten=4) + scale_x_discrete(labels=c("Western Indo-Pacific / \n Central Indo-Pacific", "Central Indo-Pacific / \n Eastern Indo-Pacific", "Eastern Indo-Pacific / \n Hawaii", "Eastern Indo-Pacific / \n Marquesas", "Randomized")) + ylab(expression(Phi[ST])) + xlab("Barrier")  + stat_summary(data=extracted_Fst_melt,mapping=aes(x=variable,y=value),fun.data = n_fun, geom = "text", alpha=1, position_fill(vjust=1.2))  + coord_cartesian(ylim=c(0,0.12)) + theme(axis.text.x = element_text(angle=45, hjust=1))
+phist_medians<-ggplot(data=medianCI) + geom_pointrange(data=medianCI,mapping=aes(x=barrier,y=medians,ymin=low,ymax=high), inherit.aes=F,fatten=4) + scale_x_discrete(labels=c("Western Indian/ \n Western Indo-Pacific","Western Indo-Pacific / \n Central Indo-Pacific", "Central Indo-Pacific / \n Eastern Indo-Pacific", "Eastern Indo-Pacific / \n Hawaii", "Eastern Indo-Pacific / \n Marquesas","Simulated", "Randomized")) + ylab(expression(Phi[ST])) + xlab("Barrier")  + stat_summary(data=extracted_Fst_melt,mapping=aes(x=variable,y=value),fun.data = n_fun, geom = "text", alpha=1, position_fill(vjust=1.1))  + coord_cartesian(ylim=c(0,0.105)) + theme(axis.text.x = element_text(angle=45, hjust=1))
  
 medianCI
 
-ggsave(phist_medians,file="./output/fst_medians1.pdf", width=7, height=7, units="in")
+ggsave(phist_medians,file="./output/phist_medians3.pdf", width=7, height=7, units="in")
+ggsave(phist_violins,file="./output/phist_violins3.pdf", width=7, height=7, units="in")
 
 ```
