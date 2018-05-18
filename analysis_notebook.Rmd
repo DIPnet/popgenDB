@@ -1593,7 +1593,7 @@ random_diffstats_all<-c(random_diffstats_all,unlist(random_diffstats2))
 }
 
 random_diffstats_all_2<-unlist(random_diffstats_all)
-random_diffstats_all[which(random_diffstats_all < 0)]<-0
+random_diffstats_all_2[which(random_diffstats_all_2 < 0)]<-0
 
 random_diffstats_all_3<-data.frame(variable=factor("Randomized"), value = as.numeric(random_diffstats_all_2))
 
@@ -1626,7 +1626,7 @@ extracted_Fst_melt<-melt(extracted_Fst2,measure.vars=names(extracted_Fst2), na.r
 #rbind on the simulated values
 extracted_Fst_melt<-rbind(extracted_Fst_melt,simPHISTdf)
 #rbind on the randomized values
-extracted_Fst_melt<-rbind(extracted_Fst_melt,random_diffstats_all)
+extracted_Fst_melt<-rbind(extracted_Fst_melt,random_diffstats_all_3)
 
 #function to add in n values
 n_fun <- function(x){
@@ -1643,9 +1643,9 @@ bootstrap_phist<-function(x){
 quantile(sapply(1:1000,function(y) median(sample(x=x,size=100,replace=T),na.rm=T)),probs=c(0.025,0.975))
 }
 
-medians<-c(apply(extracted_Fst2,MARGIN=2,FUN=median, na.rm=T),Simulated=median(simPHISTdf$value,na.rm=T), Randomized=median(random_diffstats_all$value,na.rm=T))
+medians<-c(apply(extracted_Fst2,MARGIN=2,FUN=median, na.rm=T),Simulated=median(simPHISTdf$value,na.rm=T), Randomized=median(random_diffstats_all_3$value,na.rm=T))
 
-CI95<-cbind(apply(extracted_Fst2,MARGIN=2,FUN=bootstrap_phist),Simulated=bootstrap_phist(simPHISTdf$value),Randomized=bootstrap_phist(random_diffstats_all$value))
+CI95<-cbind(apply(extracted_Fst2,MARGIN=2,FUN=bootstrap_phist),Simulated=bootstrap_phist(simPHISTdf$value),Randomized=bootstrap_phist(random_diffstats_all_3$value))
 
 medianCI<-as.data.frame(t(rbind(medians,CI95)))
 colnames(medianCI)<-c("medians","low","high")
@@ -1654,7 +1654,7 @@ medianCI
 
 phist_violins2<-phist_violins  + geom_pointrange(data=medianCI,mapping=aes(x=barrier,y=medians,ymin=low,ymax=high), inherit.aes=F,fatten=1) + coord_cartesian(ylim=c(0,0.1))
 
-phist_medians<-ggplot(data=medianCI) + geom_pointrange(data=medianCI,mapping=aes(x=barrier,y=medians,ymin=low,ymax=high), inherit.aes=F,fatten=4) + scale_x_discrete(labels=c("Western Indian/ \n Western Indo-Pacific","Western Indo-Pacific / \n Central Indo-Pacific", "Central Indo-Pacific / \n Eastern Indo-Pacific", "Eastern Indo-Pacific / \n Hawaii", "Eastern Indo-Pacific / \n Marquesas","Simulated", "Randomized")) + ylab(expression(Phi[ST])) + xlab("Barrier")  + stat_summary(data=extracted_Fst_melt,mapping=aes(x=variable,y=value),fun.data = n_fun, geom = "text", alpha=1, position_fill(vjust=1.1))  + coord_cartesian(ylim=c(0,0.105)) + theme(axis.text.x = element_text(angle=45, hjust=1))
+phist_medians<-ggplot(data=medianCI) + geom_pointrange(data=medianCI,mapping=aes(x=barrier,y=medians,ymin=low,ymax=high), inherit.aes=F,fatten=4) + scale_x_discrete(labels=c("Western Indian/ \n Western Indo-Pacific","Western Indo-Pacific / \n Central Indo-Pacific", "Central Indo-Pacific / \n Eastern Indo-Pacific", "Eastern Indo-Pacific / \n Hawaii", "Eastern Indo-Pacific / \n Marquesas","Simulated", "Randomized")) + ylab(expression(Phi[ST])) + xlab("Barrier")  + stat_summary(data=extracted_Fst_melt,mapping=aes(x=variable,y=value),fun.data = n_fun, geom = "text", alpha=1, position_fill(vjust=1.15))  + coord_cartesian(ylim=c(0,0.15)) + theme(axis.text.x = element_text(angle=45, hjust=1))
  
 medianCI
 
