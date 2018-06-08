@@ -101,6 +101,9 @@ amova_abgd_path<-"/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first
 # Read in Veron barriers
 barriers<-read.csv("VeronBarriers.csv",header=F,stringsAsFactors = F)
 
+# Read in a file with taxonomic ordering
+taxorder<-read.csv("DIPnet_Species_Class.csv")
+
 #duplicate GSLs that need to be dropped
 dups<-c("Acanthaster_planciSIO_CR","Acanthaster_planciRedSea_CR","Acanthaster_planciNIO_CR","Acanthaster_planciPac_CR","Acanthurus_nigrofuscus_CO1","Cephalopholis_argus_CO1","Chaetodon_auriga_CO1","Halichoeres_claudia_CR","Halichoeres_hortulanus_CO1","Halichoeres_hortulanus_CYB","Halichoeres_trimaculatus_CR","Lutjanus_kasmira_CO1","Naso_hexacanthus_CR","Neoniphon_sammara_CO1","Pomacentrus_coelestis_CO1","Pygoplites_diacanthus_CYB", "Stenella_longirostris_CYB")
 
@@ -183,7 +186,10 @@ This takes a long time, so we are not running this code in the document, but loa
 
 ### Measure Support
 ```{r Measure Support2}
+
 load(file=file.path(amova_ts_path,"PHIST_ts_tableN_amova_output.Rdata"))
+#load(file=file.path(amova_ts_path,"FST_TradSpec_table_amova_output.Rdata"))
+
 #remove duplicate gsls
 amovastats<-lapply(amovastats,remove.dup.gsls)
 
@@ -214,11 +220,10 @@ crit_rank<-crit_rank[, colSums(is.na(crit_rank)) < nrow(crit_rank)-4]
 ## choose the best hypothesis or set of hypotheses for each species  
 best_hypothesis<-sapply(crit_rank,function(x){row.names(crit_rank)[which(x==min(x,na.rm=T)) ]})
 
-# Add phylum to each
+# Convert to Data Frame
 best_hypothesis<-as.data.frame(unlist(best_hypothesis))
 best_hypothesis$Genus_species_locus<-row.names(best_hypothesis)
-ipdb_phylum<-ipdb_ip[,c("Genus_species_locus","phylum")]
-ipdb_phylum<-unique(ipdb_phylum)
+
 
 #some grepping to get the extra numbers off the ends of gsl names
 best_hypothesis$Genus_species_locus<-gsub("(\\w+_\\w+_CR)", replacement="\\1R",best_hypothesis$Genus_species_locus, perl=T)
@@ -228,20 +233,30 @@ best_hypothesis$Genus_species_locus<-gsub("(\\w+_\\w+_\\w\\w\\w)\\w", replacemen
 best_hypothesis$Genus_species_locus<-gsub("(\\w+_\\w+_CR)R", replacement="\\1", best_hypothesis$Genus_species_locus, perl=T)
 
 
-best_hypothesis<-left_join(best_hypothesis, ipdb_phylum, by="Genus_species_locus")
+best_hypothesis<-left_join(best_hypothesis, taxorder[,8:9], by="Genus_species_locus")
 
 names(best_hypothesis)[1]<-"Hypothesis"
 
-                               
+
+#Order the levels of "Taxon"
+
+best_hypothesis$Taxon<-factor(best_hypothesis$Taxon,levels=c("Arthropoda","Mollusca","Echinodermata","Acanthuridae","Chaetodontidae","Holocentridae","Labridae","Lutjanidae","Pomacanthidae","Pomacentridae","Scombridae","Other Fish","Delphinidae"))
+
+# make a custom palette
+library(RColorBrewer)
+blue<-brewer.pal(9,"Blues")
+
+cols<-c("#7FC97F","#FDC086","#FFFF99","#CDE2FF","#BFD1EC",blue[3:9],"#BEAED4")
+                    
 ## Make a bar graph of best support for each hypothesis among species
 
-barplot<-ggplot(data=best_hypothesis, aes(x=Hypothesis,fill=phylum )) + geom_bar(aes(y = (..count..)/sum(..count..))) +
-   scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 25", "Veron et al. \n k = 12")) +
-  labs(x="Hypothesis",y="Proportion of Species") + theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.title=element_blank())
+barplot<-ggplot(data=best_hypothesis, aes(x=Hypothesis,fill=Taxon )) + geom_bar(aes(y = (..count..)/sum(..count..))) +
+   scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 77", "Veron et al. \n k = 12")) +
+  labs(x="Hypothesis",y="Proportion of Species") + theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.title=element_blank()) + scale_fill_manual(values=cols)
 
 barplot
 
-#ggsave("./output/PhiST_Bars_Final.pdf", barplot, width=7,height=7,units="in")
+#ggsave("./output/PHIST_Bars_Final.pdf", barplot, width=7,height=7,units="in")
 ```
 
 
@@ -286,8 +301,11 @@ colnames(relprob)<-c("Hypothesis","Species","Relative_Probability")
 
 
 #make names
-spnames<-sub("(\\w+)_(\\w+)_\\w+","\\1 \\2",na4, perl=T)
+spnames<-sub("(\\w+)_(\\w+)_(\\w+)","\\1 \\2 \\3",na4, perl=T)
 spnames<-sort(spnames)
+
+#sort taxonomically
+relprob$Species<-factor(relprob$Species,levels=taxorder$Genus_species_locus)
 
 #baseplot
 rp<-ggplot(relprob,aes(y=Species,x=Hypothesis,fill=Relative_Probability))
@@ -299,7 +317,7 @@ rp<-rp+geom_tile()+
                        high = "red", space = "rgb",
                        na.value = "grey50", guide = "colourbar") +
   scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 25", "Veron et al. \n k = 12")) +
-  scale_y_discrete(limits=rev(sort(levels(relprob$Species))), labels=rev(spnames))
+  scale_y_discrete(limits=rev(levels(relprob$Species)), labels=sub("(\\w+)_(\\w+)_(\\w+)","\\1 \\2 \\3",rev(levels(relprob$Species)), perl=T))
 rp
 
 #ggsave("./output/PhiST_Heatmap_Final.pdf", rp)
@@ -1490,7 +1508,7 @@ term.vars.melt$gsl<-factor(term.vars.melt$gsl,levels=rev(levels(term.vars.melt$g
 
 bars<-ggplot(data=term.vars.melt, mapping=aes(x=gsl,y=value,fill=variable)) +
   geom_col() + coord_flip() +
-  scale_fill_manual(values=c("Grey50","Green","Blue","Blue4"), labels=c("Unconstrained Inertia","Hybrid Regionalization","Zonal Distance","Meridional Distance")) + scale_x_discrete(labels=rev(spnames)) + xlab(element_blank()) + ylab("Proportion of Inertia Constrained") + theme(axis.title.y = element_blank(), legend.title = element_blank())
+  scale_fill_manual(values=c("Grey50","Green","Blue","Blue4"), labels=c("Unconstrained Inertia","Merged Regionalization","Zonal Distance","Meridional Distance")) + scale_x_discrete(labels=rev(spnames)) + xlab(element_blank()) + ylab("Proportion of Inertia Constrained") + theme(axis.title.y = element_blank(), legend.title = element_blank())
 
 bars
 
@@ -1523,7 +1541,7 @@ str(ipdb2)
 
 ```{r}
 # first filter out all species that had fewer than 2 sampled populations
-diffstats3<-diffstats_phist[lapply(diffstats_phist, class) =="dist"]
+diffstats3<-diffstats_fst[lapply(diffstats_phist, class) =="dist"]
 
 
 barrier_extract<-function(x){
