@@ -316,14 +316,96 @@ rp<-rp+geom_tile()+
   scale_fill_gradient(low = "white",
                        high = "red", space = "rgb",
                        na.value = "grey50", guide = "colourbar") +
-  scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 25", "Veron et al. \n k = 12")) +
+  scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 77", "Veron et al. \n k = 12")) +
   scale_y_discrete(limits=rev(levels(relprob$Species)), labels=sub("(\\w+)_(\\w+)_(\\w+)","\\1 \\2 \\3",rev(levels(relprob$Species)), perl=T))
 rp
 
 #ggsave("./output/PhiST_Heatmap_Final.pdf", rp)
 ```
 
+### Calculate Effect Sizes
+```{r Effect Sizes}
+effect<-data.frame(setNames(replicate(maxlength,numeric(0), simplify = F),nm=row.names(amovastats[["PROVINCE"]]))) 
 
+for(h in names(amovastats)){
+  effect<-merge(effect,t(amovastats[[h]]["level2_SSD"]/amovastats[[h]]["total_SSD"]),all=T,sort=F)
+}
+
+row.names(effect)<-names(amovastats)
+
+effect$model<-rownames(effect)
+
+effectsize<-melt(effect)
+colnames(effectsize)<-c("Hypothesis","Species","Effect_Size")
+
+
+#baseplot
+ef<-ggplot(effectsize,aes(y=Species,x=Hypothesis,fill=Effect_Size))
+
+#add geom_tile, turn the x-axis elements by 90 degrees, reverse the names on the y-axis, and use a diverging color scheme to highlight hypotheses with >50% rel prob.
+ef<-ef+geom_tile()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  scale_fill_gradient(low = "white",
+                       high = "red", space = "rgb",
+                       na.value = "grey50", guide = "colourbar") +
+  scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 77", "Veron et al. \n k = 12")) +
+  scale_y_discrete(limits=rev(levels(effectsize$Species)), labels=sub("(\\w+)_(\\w+)_(\\w+)","\\1 \\2 \\3",rev(levels(effectsize$Species)), perl=T))
+
+
+effect$model<-NULL
+#Change all values to negative so that rank() treats them appropriately
+effectneg<-as.data.frame(sapply(effect,function(x){return(x*-1)}))
+rownames(effectneg)<-rownames(effect)
+#rank the hypotheses for each species
+effect_rank<-as.data.frame(sapply(effectneg,rank,na.last="keep",ties.method="average"))
+rownames(effect_rank)<-rownames(effectneg)
+
+## remove gsls with more than 3 missing models
+effect_rank<-effect_rank[, colSums(is.na(effect_rank)) < nrow(effect_rank)-4]  
+
+## choose the best hypothesis or set of hypotheses for each species  
+best_hypothesis<-sapply(effect_rank,function(x){row.names(effect_rank)[which(x==min(x,na.rm=T)) ]})
+
+
+
+# Convert to Data Frame
+best_hypothesis<-as.data.frame(unlist(best_hypothesis))
+best_hypothesis$Genus_species_locus<-row.names(best_hypothesis)
+
+
+#some grepping to get the extra numbers off the ends of gsl names
+best_hypothesis$Genus_species_locus<-gsub("(\\w+_\\w+_CR)", replacement="\\1R",best_hypothesis$Genus_species_locus, perl=T)
+
+best_hypothesis$Genus_species_locus<-gsub("(\\w+_\\w+_\\w\\w\\w)\\w", replacement="\\1", best_hypothesis$Genus_species_locus, perl=T)
+
+best_hypothesis$Genus_species_locus<-gsub("(\\w+_\\w+_CR)R", replacement="\\1", best_hypothesis$Genus_species_locus, perl=T)
+
+
+best_hypothesis<-left_join(best_hypothesis, taxorder[,8:9], by="Genus_species_locus")
+
+names(best_hypothesis)[1]<-"Hypothesis"
+
+
+#Order the levels of "Taxon"
+
+best_hypothesis$Taxon<-factor(best_hypothesis$Taxon,levels=c("Arthropoda","Mollusca","Echinodermata","Acanthuridae","Chaetodontidae","Holocentridae","Labridae","Lutjanidae","Pomacanthidae","Pomacentridae","Scombridae","Other Fish","Delphinidae"))
+
+# make a custom palette
+library(RColorBrewer)
+blue<-brewer.pal(9,"Blues")
+
+cols<-c("#7FC97F","#FDC086","#FFFF99","#CDE2FF","#BFD1EC",blue[3:9],"#BEAED4")
+                    
+## Make a bar graph of best support for each hypothesis among species
+
+barplot<-ggplot(data=best_hypothesis, aes(x=Hypothesis,fill=Taxon )) + geom_bar(aes(y = (..count..)/sum(..count..))) +
+   scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 77", "Veron et al. \n k = 12")) +
+  labs(x="Hypothesis",y="Proportion of Species") + theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.title=element_blank()) + scale_fill_manual(values=cols)
+
+barplot
+
+
+```
 
 ## FST and Traditional Species Boundaries
 
