@@ -158,7 +158,7 @@ Thus, we need to loop through all of the regionalizations above, running all 4 f
 ```{r AMOVA Loops, eval=F}
 
 ## Loop through hypotheses, calculating AMOVA
-hypotheses<-c("Bowen","Keith","Kulbicki_r","Kulbicki_b","REALM","PROVINCE","ECOREGION", "VeronDivis")
+hypotheses<-c("Kulbicki_r","REALM","Bowen","Kulbicki_b","Keith", "VeronDivis","PROVINCE","ECOREGION")
 amova_list<-list()
 
 for(h in hypotheses){
@@ -247,11 +247,14 @@ library(RColorBrewer)
 blue<-brewer.pal(9,"Blues")
 
 cols<-c("#7FC97F","#FDC086","#FFFF99","#CDE2FF","#BFD1EC",blue[3:9],"#BEAED4")
+
+#remove Tridacna costata because according to Marc Kochzius, this is actually T. crocea data
+best_hypothesis<-best_hypothesis[-77,]
                     
 ## Make a bar graph of best support for each hypothesis among species
 
 barplot<-ggplot(data=best_hypothesis, aes(x=Hypothesis,fill=Taxon )) + geom_bar(aes(y = (..count..)/sum(..count..))) +
-   scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 77", "Veron et al. \n k = 12")) +
+   scale_x_discrete(limits=hypotheses, labels=c("Kulbicki et al. \n Regions k = 3","Spalding et al. \n Realms k = 3","Briggs and Bowen \n k = 5","Kulbicki et al. \n Provinces k = 10","Keith et al. \n k = 11","Veron et al. \n k = 12",  "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 77")) +
   labs(x="Hypothesis",y="Proportion of Species") + theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.title=element_blank()) + scale_fill_manual(values=cols)
 
 barplot
@@ -285,6 +288,9 @@ na4<-names(naCount)[which(naCount<4)]
 
 
 crit_df_relative_prob_na4<-crit_df_relative_prob[,na4]
+
+#remove Tridacna costata because Kochzius says this is actually T. crocea data
+crit_df_relative_prob_na4<-crit_df_relative_prob_na4[,-51]
 ```
 
 There are `r length(na4)` GSLs that test at least 5 hypotheses
@@ -316,7 +322,7 @@ rp<-rp+geom_tile()+
   scale_fill_gradient(low = "white",
                        high = "red", space = "rgb",
                        na.value = "grey50", guide = "colourbar") +
-  scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 77", "Veron et al. \n k = 12")) +
+  scale_x_discrete(limits=hypotheses, labels=c("Kulbicki et al. \n Regions k = 3","Spalding et al. \n Realms k = 3","Briggs and Bowen \n k = 5","Kulbicki et al. \n Provinces k = 10","Keith et al. \n k = 11","Veron et al. \n k = 12",  "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 77")) +
   scale_y_discrete(limits=rev(levels(relprob$Species)), labels=sub("(\\w+)_(\\w+)_(\\w+)","\\1 \\2 \\3",rev(levels(relprob$Species)), perl=T))
 rp
 
@@ -325,6 +331,20 @@ rp
 
 ### Calculate Effect Sizes
 ```{r Effect Sizes}
+# Look at mean FCT for each hypothesis
+FCTs<-NULL
+for(h in hypotheses){
+  FCT<-amovastats[[h]]$FCT
+  FCTs[[h]]<-FCT
+}
+
+FCTsmelt<-melt(FCTs)
+
+ggplot(FCTsmelt,aes(x=L1, y=value)) + geom_boxplot() + scale_x_discrete(limits=hypotheses, labels=c("Kulbicki et al. \n Regions k = 3","Spalding et al. \n Realms k = 3","Briggs and Bowen \n k = 5","Kulbicki et al. \n Provinces k = 10","Keith et al. \n k = 11","Veron et al. \n k = 12",  "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 77")) + theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+                                        ylab("Phi_CT") + xlab("Regionalization")
+
+lapply(FCTs,mean)
+
 effect<-data.frame(setNames(replicate(maxlength,numeric(0), simplify = F),nm=row.names(amovastats[["PROVINCE"]]))) 
 
 for(h in names(amovastats)){
