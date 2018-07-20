@@ -326,12 +326,17 @@ rp<-rp+geom_tile()+
   scale_y_discrete(limits=rev(levels(relprob$Species)), labels=sub("(\\w+)_(\\w+)_(\\w+)","\\1 \\2 \\3",rev(levels(relprob$Species)), perl=T))
 rp
 
+#save this from the viewer
+
 #ggsave("./output/PhiST_Heatmap_Final.pdf", rp)
 ```
 
 ### Calculate Effect Sizes
 ```{r Effect Sizes}
-# Look at mean FCT for each hypothesis
+
+# Sean Connolly wants to know if the tendency for the analysis to favor fewer regions is a consequence of the smaller sample sizes (and thus lower power) relative to number of parameters for the more finely subdivided bioregions (i.e. number of populations per bioregion would be smaller). To do this, I am going to look at PhiCT instead of BIC
+
+# Look at mean PhiCT for each hypothesis
 FCTs<-NULL
 for(h in hypotheses){
   FCT<-amovastats[[h]]$FCT
@@ -348,7 +353,8 @@ lapply(FCTs,mean)
 effect<-data.frame(setNames(replicate(maxlength,numeric(0), simplify = F),nm=row.names(amovastats[["PROVINCE"]]))) 
 
 for(h in names(amovastats)){
-  effect<-merge(effect,t(amovastats[[h]]["level2_SSD"]/amovastats[[h]]["total_SSD"]),all=T,sort=F)
+ # effect<-merge(effect,t(amovastats[[h]]["level2_SSD"]/amovastats[[h]]["total_SSD"]),all=T,sort=F) #rsquared or etasquared
+  effect<-merge(effect,t(amovastats[[h]]["FCT"]),all=T,sort=F)
 }
 
 row.names(effect)<-names(amovastats)
@@ -365,10 +371,10 @@ ef<-ggplot(effectsize,aes(y=Species,x=Hypothesis,fill=Effect_Size))
 #add geom_tile, turn the x-axis elements by 90 degrees, reverse the names on the y-axis, and use a diverging color scheme to highlight hypotheses with >50% rel prob.
 ef<-ef+geom_tile()+
   theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-  scale_fill_gradient(low = "white",
+  scale_fill_gradient2(low = "blue",mid="white",
                        high = "red", space = "rgb",
                        na.value = "grey50", guide = "colourbar") +
-  scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 77", "Veron et al. \n k = 12")) +
+  scale_x_discrete(limits=hypotheses, labels=c("Kulbicki et al. \n Regions k = 3","Spalding et al. \n Realms k = 3","Briggs and Bowen \n k = 5","Kulbicki et al. \n Provinces k = 10","Keith et al. \n k = 11","Veron et al. \n k = 12",  "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 77")) +
   scale_y_discrete(limits=rev(levels(effectsize$Species)), labels=sub("(\\w+)_(\\w+)_(\\w+)","\\1 \\2 \\3",rev(levels(effectsize$Species)), perl=T))
 
 
@@ -419,7 +425,7 @@ cols<-c("#7FC97F","#FDC086","#FFFF99","#CDE2FF","#BFD1EC",blue[3:9],"#BEAED4")
 ## Make a bar graph of best support for each hypothesis among species
 
 barplot<-ggplot(data=best_hypothesis, aes(x=Hypothesis,fill=Taxon )) + geom_bar(aes(y = (..count..)/sum(..count..))) +
-   scale_x_discrete(limits=hypotheses, labels=c("Briggs and Bowen \n k = 5","Keith et al. \n k = 11", "Kulbicki et al. \n Regions k = 3", "Kulbicki et al. \n Provinces k = 10", "Spalding et al. \n Realms k = 3", "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 77", "Veron et al. \n k = 12")) +
+   scale_x_discrete(limits=hypotheses, labels=c("Kulbicki et al. \n Regions k = 3","Spalding et al. \n Realms k = 3","Briggs and Bowen \n k = 5","Kulbicki et al. \n Provinces k = 10","Keith et al. \n k = 11","Veron et al. \n k = 12",  "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 77")) +
   labs(x="Hypothesis",y="Proportion of Species") + theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.title=element_blank()) + scale_fill_manual(values=cols)
 
 barplot
