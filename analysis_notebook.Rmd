@@ -980,9 +980,9 @@ ggsave(filename = "./output/dbRDA_stacked_bars_PHI_bowenrealms_sigonly_041318.pd
 
 ```
 
-# Structure as Lines on a Map
+# Barrier Strength Analysis
 
-Now I am going to come up with code to measure the mean PhiST across the Spalding Realms
+Now I am going to come up with code to measure the mean PhiST across the merged regionalizations
 
 
 
@@ -1005,7 +1005,7 @@ str(ipdb2)
 
 ```{r}
 # first filter out all species that had fewer than 2 sampled populations
-diffstats3<-diffstats_fst[lapply(diffstats_phist, class) =="dist"]
+diffstats3<-diffstats_phist[lapply(diffstats_phist, class) =="dist"]
 
 
 barrier_extract<-function(x){
@@ -1108,7 +1108,7 @@ extracted_Fst_melt<-melt(extracted_Fst2,measure.vars=names(extracted_Fst2), na.r
 #rbind on the simulated values
 extracted_Fst_melt<-rbind(extracted_Fst_melt,simPHISTdf)
 #rbind on the randomized values
-extracted_Fst_melt<-rbind(extracted_Fst_melt,random_diffstats_all_3)
+extracted_Fst_melt<-rbind(extracted_Fst_melt,random_diffstats_all)
 
 #function to add in n values
 n_fun <- function(x){
@@ -1120,27 +1120,58 @@ n_fun <- function(x){
 phist_violins<-ggplot(data=extracted_Fst_melt, aes(x=variable,y=value, alpha=variable)) + geom_violin(alpha=1) + stat_summary(fun.data = n_fun, geom = "text", alpha=1) + geom_jitter(size=0.0) + ylab(expression(Phi[ST])) + xlab("Barrier") + scale_alpha_manual(values=c(0.5,0.5,0.5,0.5,0.5,0,0), guide=F) + scale_x_discrete(labels=c("Western Indian/ \n Western Indo-Pacific","Western Indo-Pacific / \n Central Indo-Pacific", "Central Indo-Pacific / \n Eastern Indo-Pacific", "Eastern Indo-Pacific / \n Hawaii", "Eastern Indo-Pacific / \n Marquesas", "Simulated","Randomized")) + theme(axis.text.x = element_text(angle=45, hjust=1))
 
 
-#Function for 1000 bootstraps which take 100 samples from the data with replacement and establish 95%CI
+#Function for 10000 bootstraps which take 100 samples from the data with replacement and establish 95%CI
 bootstrap_phist<-function(x){
-quantile(sapply(1:1000,function(y) median(sample(x=x,size=100,replace=T),na.rm=T)),probs=c(0.025,0.975))
+sapply(1:10000,function(y) median(sample(x=x,size=100,replace=T),na.rm=T))
 }
 
-medians<-c(apply(extracted_Fst2,MARGIN=2,FUN=median, na.rm=T),Simulated=median(simPHISTdf$value,na.rm=T), Randomized=median(random_diffstats_all_3$value,na.rm=T))
 
-CI95<-cbind(apply(extracted_Fst2,MARGIN=2,FUN=bootstrap_phist),Simulated=bootstrap_phist(simPHISTdf$value),Randomized=bootstrap_phist(random_diffstats_all_3$value))
+medians<-c(apply(extracted_Fst2,MARGIN=2,FUN=median, na.rm=T),Simulated=median(simPHISTdf$value,na.rm=T), Randomized=median(random_diffstats_all$value,na.rm=T))
+
+medians_dist<-cbind(apply(extracted_Fst2,MARGIN=2,FUN=bootstrap_phist),Simulated=bootstrap_phist(simPHISTdf$value),Randomized=bootstrap_phist(random_diffstats_all$value))
+
+CI95<-apply(medians_dist, MARGIN=2, FUN=quantile,probs=c(0.025,0.975))
+
+#Significance
+#West_Indian
+sum(medians_dist[,1] < medians_dist[,7])/10000
+#West_Central
+sum(medians_dist[,2] < medians_dist[,7])/10000
+#East_Central
+sum(medians_dist[,3] < medians_dist[,7])/10000
+#East_Hawaii
+sum(medians_dist[,4] < medians_dist[,7])/10000
+#East_Marquesas
+sum(medians_dist[,5] < medians_dist[,7])/10000
+#Simulated
+sum(medians_dist[,6] < medians_dist[,7])/10000
+
 
 medianCI<-as.data.frame(t(rbind(medians,CI95)))
 colnames(medianCI)<-c("medians","low","high")
 medianCI["barrier"]<-factor(rownames(medianCI), levels=c("West_Indian","West_Central","East_Central","East_Hawaii","East_Marquesas","Simulated","Randomized"))
-medianCI
+
 
 phist_violins2<-phist_violins  + geom_pointrange(data=medianCI,mapping=aes(x=barrier,y=medians,ymin=low,ymax=high), inherit.aes=F,fatten=1) + coord_cartesian(ylim=c(0,0.1))
 
-phist_medians<-ggplot(data=medianCI) + geom_pointrange(data=medianCI,mapping=aes(x=barrier,y=medians,ymin=low,ymax=high), inherit.aes=F,fatten=4) + scale_x_discrete(labels=c("Western Indian/ \n Western Indo-Pacific","Western Indo-Pacific / \n Central Indo-Pacific", "Central Indo-Pacific / \n Eastern Indo-Pacific", "Eastern Indo-Pacific / \n Hawaii", "Eastern Indo-Pacific / \n Marquesas","Simulated", "Randomized")) + ylab(expression(Phi[ST])) + xlab("Barrier")  + stat_summary(data=extracted_Fst_melt,mapping=aes(x=variable,y=value),fun.data = n_fun, geom = "text", alpha=1, position_fill(vjust=1.15))  + coord_cartesian(ylim=c(0,0.15)) + theme(axis.text.x = element_text(angle=45, hjust=1))
+phist_medians<-ggplot(data=medianCI) + geom_pointrange(data=medianCI,mapping=aes(x=barrier,y=medians,ymin=low,ymax=high), inherit.aes=F,fatten=4) + scale_x_discrete(labels=c("1. Western Indian/ \n Western Indo-Pacific","2. Western Indo-Pacific / \n Central Indo-Pacific", "3. Central Indo-Pacific / \n Eastern Indo-Pacific", "4. Eastern Indo-Pacific / \n Hawaii", "5. Eastern Indo-Pacific / \n Marquesas","Simulated", "Randomized")) + ylab(expression(Phi[ST])) + xlab("Barrier")  + stat_summary(data=extracted_Fst_melt,mapping=aes(x=variable,y=value),fun.data = n_fun, geom = "text", alpha=1, position_fill(vjust=1.10))  + coord_cartesian(ylim=c(0,0.10)) + theme(axis.text.x = element_text(angle=45, hjust=1))
  
 medianCI
 
-ggsave(phist_medians,file="./output/phist_medians3.pdf", width=7, height=7, units="in")
+ggsave(phist_medians,file="./output/phist_medians4.pdf", width=7, height=7, units="in")
 ggsave(phist_violins,file="./output/phist_violins3.pdf", width=7, height=7, units="in")
 
+length(which(extracted_Fst2$West_Indian==0))
+
+# Count the zeros!
+zerocount<-function(x){
+  length(which(x == 0)) / length(which(!is.na(x)))
+}
+
+apply(extracted_Fst2,FUN=zerocount, MARGIN=2)
 ```
+
+### Signficance Testing
+```{r}
+
+length(which(extracted_Fst_melt$variable=="Simulated"))
