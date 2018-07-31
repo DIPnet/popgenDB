@@ -332,9 +332,10 @@ rp
 ```
 
 ### Calculate Effect Sizes
+#### FCT
 ```{r Effect Sizes}
 
-# Sean Connolly wants to know if the tendency for the analysis to favor fewer regions is a consequence of the smaller sample sizes (and thus lower power) relative to number of parameters for the more finely subdivided bioregions (i.e. number of populations per bioregion would be smaller). To do this, I am going to look at PhiCT instead of BIC
+# Sean Connolly wants to know if the tendency for the analysis to favor fewer regions is a consequence of the smaller sample sizes (and thus lower power) relative to number of parameters for the more finely subdivided bioregions (i.e. number of populations per bioregion would be smaller). To do this, I am going to look at PhiCT (variance among regions/total variance) as well as Sigma^2a (variance among regions) instead of BIC.
 
 # Look at mean PhiCT for each hypothesis
 FCTs<-NULL
@@ -430,6 +431,86 @@ barplot<-ggplot(data=best_hypothesis, aes(x=Hypothesis,fill=Taxon )) + geom_bar(
 
 barplot
 
+
+
+```
+
+#### Sigma^2a (level2_sigma2)
+
+```{r}
+# Look at mean PhiCT for each hypothesis
+sigma_as<-NULL
+for(h in hypotheses){
+  sigma_a<-amovastats[[h]]$level2_sigma2
+  sigma_as[[h]]<-sigma_a
+}
+
+sigma_as_melt<-melt(sigma_as)
+
+ggplot(sigma_as_melt,aes(x=L1, y=value)) + geom_boxplot() + scale_x_discrete(limits=hypotheses, labels=c("Kulbicki et al. \n Regions k = 3","Spalding et al. \n Realms k = 3","Briggs and Bowen \n k = 5","Kulbicki et al. \n Provinces k = 10","Keith et al. \n k = 11","Veron et al. \n k = 12",  "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 77")) + theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+                                        ylab("Sigma^2_regions") + xlab("Regionalization")
+
+lapply(sigma_as,mean)
+
+
+effect<-data.frame(setNames(replicate(maxlength,numeric(0), simplify = F),nm=row.names(amovastats[["PROVINCE"]]))) 
+
+for(h in names(amovastats)){
+ # effect<-merge(effect,t(amovastats[[h]]["level2_SSD"]/amovastats[[h]]["total_SSD"]),all=T,sort=F) #rsquared or etasquared
+  effect<-merge(effect,t(amovastats[[h]]["level2_sigma2"]),all=T,sort=F)
+}
+
+effect$model<-NULL
+#Change all values to negative so that rank() treats them appropriately
+effectneg<-as.data.frame(sapply(effect,function(x){return(x*-1)}))
+rownames(effectneg)<-rownames(effect)
+#rank the hypotheses for each species
+effect_rank<-as.data.frame(sapply(effectneg,rank,na.last="keep",ties.method="average"))
+rownames(effect_rank)<-rownames(effectneg)
+
+## remove gsls with more than 3 missing models
+effect_rank<-effect_rank[, colSums(is.na(effect_rank)) < nrow(effect_rank)-4]  
+
+## choose the best hypothesis or set of hypotheses for each species  
+best_hypothesis<-sapply(effect_rank,function(x){row.names(effect_rank)[which(x==min(x,na.rm=T)) ]})
+
+
+
+# Convert to Data Frame
+best_hypothesis<-as.data.frame(unlist(best_hypothesis))
+best_hypothesis$Genus_species_locus<-row.names(best_hypothesis)
+
+
+#some grepping to get the extra numbers off the ends of gsl names
+best_hypothesis$Genus_species_locus<-gsub("(\\w+_\\w+_CR)", replacement="\\1R",best_hypothesis$Genus_species_locus, perl=T)
+
+best_hypothesis$Genus_species_locus<-gsub("(\\w+_\\w+_\\w\\w\\w)\\w", replacement="\\1", best_hypothesis$Genus_species_locus, perl=T)
+
+best_hypothesis$Genus_species_locus<-gsub("(\\w+_\\w+_CR)R", replacement="\\1", best_hypothesis$Genus_species_locus, perl=T)
+
+
+best_hypothesis<-left_join(best_hypothesis, taxorder[,8:9], by="Genus_species_locus")
+
+names(best_hypothesis)[1]<-"Hypothesis"
+
+
+#Order the levels of "Taxon"
+
+best_hypothesis$Taxon<-factor(best_hypothesis$Taxon,levels=c("Arthropoda","Mollusca","Echinodermata","Acanthuridae","Chaetodontidae","Holocentridae","Labridae","Lutjanidae","Pomacanthidae","Pomacentridae","Scombridae","Other Fish","Delphinidae"))
+
+# make a custom palette
+library(RColorBrewer)
+blue<-brewer.pal(9,"Blues")
+
+cols<-c("#7FC97F","#FDC086","#FFFF99","#CDE2FF","#BFD1EC",blue[3:9],"#BEAED4")
+                    
+## Make a bar graph of best support for each hypothesis among species
+
+barplot<-ggplot(data=best_hypothesis, aes(x=Hypothesis,fill=Taxon )) + geom_bar(aes(y = (..count..)/sum(..count..))) +
+   scale_x_discrete(limits=hypotheses, labels=c("Kulbicki et al. \n Regions k = 3","Spalding et al. \n Realms k = 3","Briggs and Bowen \n k = 5","Kulbicki et al. \n Provinces k = 10","Keith et al. \n k = 11","Veron et al. \n k = 12",  "Spalding et al. \n Provinces k = 27" , "Spalding et al. \n Ecoregions k = 77")) +
+  labs(x="Hypothesis",y="Proportion of Species") + theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.title=element_blank()) + scale_fill_manual(values=cols)
+
+barplot
 
 ```
 

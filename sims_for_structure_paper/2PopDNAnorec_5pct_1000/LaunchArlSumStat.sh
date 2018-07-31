@@ -10,7 +10,7 @@
 #           graphical interface).
 
 #Modify the following line to state which version of arlsumstat you are using
-arlsumstat=arlsumstat3522_64bit #Windows version
+arlsumstat=arlsumstat64.exe #Windows version
 #Modify the follwing name to specify the name of the output file for the summary statistics 
 outss=outSumStats.txt
 
