@@ -41,17 +41,7 @@ remove.dup.gsls<-function(amovatable){
   amovatable<-amovatable[-which(rownames(amovatable) %in% dups),]
 }
 
-splinegrab<-function(ispline){
-  x<-as.data.frame(ispline$x)
-  y<-as.data.frame(ispline$y)
-  xy<-as.data.frame(cbind(x$matrix_1,y$matrix_1))
-}
 
-splinegrab2<-function(ispline){
-  x<-as.data.frame(x=ispline$x)
-  melted<-melt(ispline$y)
-  xy<-as.data.frame(cbind(d=x$matrix_1,spline=as.character(melted$Var2),value=melted$value))
-}
 
 ```
 
@@ -1124,7 +1114,7 @@ I ran 1000 simulations of a 1e6 population splitting into 2 1e6 populations with
 ```{r}
 sims.nomig<-read.table("./sims_for_structure_paper/2PopDNAnorec_5pct_1000/outSumStats_phist.txt",header=T)
 
-sims.mig10<-read.table("./sims_for_structure_paper/2PopDNAnorec_10mig/outSumStats.txt",header=T)
+sims.nomig<-read.table("~/Datasets/simulations/fast_simcoal/dipnet_sims/2PopDNAnorec/outSumStats.txt",header=T)
 
 simPHIST<-sims.nomig$FST
 simPHIST[which(simPHIST<0)]<-0
@@ -1239,8 +1229,8 @@ phist_medians<-ggplot(data=medianCI) + geom_pointrange(data=medianCI,mapping=aes
  
 medianCI
 
-ggsave(phist_medians,file="./output/phist_medians4.pdf", width=7, height=7, units="in")
-ggsave(phist_violins,file="./output/phist_violins3.pdf", width=7, height=7, units="in")
+ggsave(phist_medians,file="./output/phist_medians5.pdf", width=7, height=7, units="in")
+ggsave(phist_violins,file="./output/phist_violins5.pdf", width=7, height=7, units="in")
 
 length(which(extracted_Fst2$West_Indian==0))
 
@@ -1250,9 +1240,12 @@ zerocount<-function(x){
 }
 
 apply(extracted_Fst2,FUN=zerocount, MARGIN=2)
+
+zerocount(simPHIST)
 ```
 
 ### Signficance Testing
 ```{r}
 
 length(which(extracted_Fst_melt$variable=="Simulated"))
+```

@@ -1,0 +1,59 @@
+Log file path: ./2PopDNAnorec_1_413.res/Arlequin_log.txt
+Core Program Directory: /Users/eric/github/popgenDB/sims_for_structure_paper/2PopDNAnorec_0.5_1000/
+Random number generator initialized with lidum=-618756
+Reading project profile section...
+done !
+Opening next project...
+./2PopDNAnorec_1_413.arp
+////////////////////////////////////////////////////////////////////
+RUN NUMBER 1 (31/07/18 at 17:01:57)
+////////////////////////////////////////////////////////////////////
+
+
+Reading Project: 
+Reading input file ...
+	Reading Samples section ...
+	Reading Sample 1 ... 
+	done ! (0 ms)
+
+	Reading Sample 2 ... 
+	done ! (0 ms)
+
+	done reading Samples section! (1 ms)
+	Reading genetic structure ...
+	done reading genetic structure! (0 ms)
+done ! (1 ms)
+
+------------------------------------------------------------------------
+  Checking all selected options...
+		Building vectors of alleles...
+		done in 0 ms
+  done!
+  check selected settings...
+  done!
+
+Population 'Sample 1' : 
+done in 0 ms
+
+Population 'Sample 2' : 
+done in 0 ms
+		Beginning distance computations ...
+		done ! (0 ms)
+		Writing matrix to file ...
+		done ! (0 ms)
+		Computing F statistics ...
+	Computing pairwise Fst's ... 
+
+2 ms to compute pairwise differences and test significance
+
+All FST distances have been computed and written to file
+
+	done ! (2 ms)
+		done ! (8 ms)
+
+////////////////////////////////////////////////////////////////////
+END OF RUN NUMBER 1 (31/07/18 at 17:01:57))
+Total computing time for this run : 0h 0m 0s 17 ms
+////////////////////////////////////////////////////////////////////
+
+Successful run of ./2PopDNAnorec_1_413.arp

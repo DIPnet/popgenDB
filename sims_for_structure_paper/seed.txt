@@ -1,1 +1,1 @@
-Random generator seed :467735
+fastsimcoal seed initialized with 2557
