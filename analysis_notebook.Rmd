@@ -1112,7 +1112,7 @@ barrier_extract<-function(x){
 I ran 1000 simulations of a 1e6 population splitting into 2 1e6 populations with either 0 or 10 migrants/generation, 10K generations ago. Couldn't pull the .arp files into strataG, so had to run Phist analysis in Arlequin
 
 ```{r}
-sims.nomig<-read.table("./sims_for_structure_paper/2PopDNAnorec_5pct_1000/outSumStats_phist.txt",header=T)
+sims.nomig<-read.table("./sims_for_structure_paper/2PopDNAnorec_0.5_1000/outSumStats_phist.txt",header=T)
 
 sims.nomig<-read.table("~/Datasets/simulations/fast_simcoal/dipnet_sims/2PopDNAnorec/outSumStats.txt",header=T)
 
@@ -1231,8 +1231,6 @@ medianCI
 
 ggsave(phist_medians,file="./output/phist_medians5.pdf", width=7, height=7, units="in")
 ggsave(phist_violins,file="./output/phist_violins5.pdf", width=7, height=7, units="in")
-
-length(which(extracted_Fst2$West_Indian==0))
 
 # Count the zeros!
 zerocount<-function(x){
