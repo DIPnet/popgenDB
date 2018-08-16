@@ -88,7 +88,6 @@ amova_ts_path<-"/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_p
 
 amova_abgd_path<-"/Users/eric/google_drive/DIPnet_Gait_Lig_Bird/DIPnet_WG4_first_papers/statistics/By_ESU/Hierarchical_structure"
 
-
 # Read in a file with taxonomic ordering
 taxorder<-read.csv("DIPnet_Species_Class.csv")
 
@@ -121,8 +120,17 @@ The overall workflow for this analysis is as follows:
     - Keith et al. 2013 - Faunal Breaks
   - Select the best model for each species according to the Bayesian Information Criterion
   - Analyze individual "barriers" as implied by the regionalization that best explains the distribution of variation in the most species by modeling pairwise genetic distances given geographic distance and each barrier (individually or together):
+    - Generalized Dissimilarity Modeling (GDM)
+    - Multiple Regression with Distance Matrices (MRDM)
     - Distance Based Redundancy Analysis (dbRDA)
-  
+  - Special considerations:
+    - What is a species? Do the analysis using:
+        - Traditional species boundaries
+        - Automated Barcode Gap Discovery (ABGD) to account for cryptic species
+    - Include sequence distance in AMOVA?
+        - No: traditional Fst, specifically Weir and Cockerhams Theta
+        - Yes: Phi-ST
+
 # Run AMOVA loops
 
 Given the special considerations, we need to run 4 different flavors of AMOVA:
@@ -243,7 +251,7 @@ barplot
 
 
 ### Calculate relative probability from Johnson and Omland 2004
-```{r Relative Probability Heatmap2, echo=T}
+```{r Relative Probability Heatmap2, echo=F}
 # lookup the minimum BIC value for each species (which.min works better here, because it returns only the first instance of the minimum value)
 minBIC<-sapply(crit_df,function(x){x[which.min(x)]}) 
 
@@ -311,7 +319,7 @@ rp
 ```
 
 ### Calculate Effect Sizes
-#### PHICT
+#### FCT
 ```{r Effect Sizes}
 
 # Sean Connolly wants to know if the tendency for the analysis to favor fewer regions is a consequence of the smaller sample sizes (and thus lower power) relative to number of parameters for the more finely subdivided bioregions (i.e. number of populations per bioregion would be smaller). To do this, I am going to look at PhiCT (variance among regions/total variance) as well as Sigma^2a (variance among regions) instead of BIC.
@@ -417,7 +425,7 @@ barplot
 #### Sigma^2a (level2_sigma2)
 
 ```{r}
-
+# Look at mean PhiCT for each hypothesis
 sigma_as<-NULL
 for(h in hypotheses){
   sigma_a<-amovastats[[h]]$level2_sigma2
@@ -495,6 +503,7 @@ barplot
 
 ## FST and Traditional Species Boundaries
 
+Code is suppressed for the other 3 examples
 
 ### Measure Support
 ```{r Measure Support1, echo=F}
@@ -564,7 +573,7 @@ barplot
 ```
 
 ### Calculate relative probability from Johnson and Omland 2004 and visualize with a heatmap
-```{r Relative Probability Heatmap1, fig.height=11, fig.width=8.5, echo=F}
+```{r Relative Probability Heatmap1, fig.height=11, fig.width=8.5}
 # lookup the minimum BIC value for each species (which.min works better here, because it returns only the first instance of the minimum value)
 minBIC<-sapply(crit_df,function(x){x[which.min(x)]}) 
 
@@ -621,7 +630,7 @@ ggsave("./output/FST_Heatmap_Final.pdf", rp, width=7, height=7, units = "in")
 
 By sample
 
-```{r, eval=F, echo=T}
+```{r, eval=F}
 diffstats<-pairwise.structure.mtDNA.db(ipdb=ipdb, gdist = "WC Theta", minseqs = 5, minsamps = 3, mintotalseqs = 0, nrep = 0, num.cores = 2, ABGD = T, regionalization = "sample")
 
 
@@ -1052,7 +1061,7 @@ Now I am going to come up with code to measure the mean PhiST across the merged 
 #save(diffstats_phist,file="./output/PHIst_for_map.R")
 #save(diffstats_fst,file="./output/Fst_for_map.R")
 
-load("./output/PHIst_for_map.R")
+#load("./output/PHIst_for_map.R")
 #load("./output/FST_for_map.R")
 
 # now 
@@ -1102,6 +1111,7 @@ I ran 1000 simulations of a 1e6 population splitting into 2 1e6 populations with
 ```{r}
 sims.nomig<-read.table("./sims_for_structure_paper/2PopDNAnorec_0.5_1000/outSumStats_phist.txt",header=T)
 
+sims.nomig<-read.table("~/Datasets/simulations/fast_simcoal/dipnet_sims/2PopDNAnorec/outSumStats.txt",header=T)
 
 simPHIST<-sims.nomig$FST
 simPHIST[which(simPHIST<0)]<-0
@@ -1112,7 +1122,7 @@ simPHISTdf<-data.frame(variable="Simulated", value=simPHIST)
 ## Randomized Fst
 Randomly sort each locality for each species into two regions and calculate Fst between them.
 
-```{r, echo=F}
+```{r}
 ipdb3<-ipdb_ip[which(ipdb_ip$Genus_species_locus %in% names(diffstats3)),]
 
 ipdb3$randomregion<-NA
@@ -1139,14 +1149,13 @@ random_diffstats_all_3<-data.frame(variable=factor("Randomized"), value = as.num
 
 #save(random_diffstats_all,file="./output/Randomized_PHIst.R")
 #save(random_diffstats_all_3,file="./output/Randomized_FST.R")
-
+load("./output/Randomized_PHIst.R")
 ```
 
 
 ## Pull them out and plot them
 
 ```{r}
-load("./output/Randomized_PHIst.R")
 
 extracted_Fst<-lapply(diffstats3,barrier_extract)
 
@@ -1191,7 +1200,7 @@ medians_dist<-cbind(apply(extracted_Fst2,MARGIN=2,FUN=bootstrap_phist),Simulated
 
 CI95<-apply(medians_dist, MARGIN=2, FUN=quantile,probs=c(0.025,0.975))
 
-#Significance Testing
+#Significance
 #West_Indian
 sum(medians_dist[,1] < medians_dist[,7])/10000
 #West_Central
@@ -1217,10 +1226,6 @@ phist_medians<-ggplot(data=medianCI) + geom_pointrange(data=medianCI,mapping=aes
  
 medianCI
 
-phist_violins2
-
-phist_medians
-
 ggsave(phist_medians,file="./output/phist_medians5.pdf", width=7, height=7, units="in")
 ggsave(phist_violins,file="./output/phist_violins5.pdf", width=7, height=7, units="in")
 
@@ -1234,3 +1239,8 @@ apply(extracted_Fst2,FUN=zerocount, MARGIN=2)
 zerocount(simPHIST)
 ```
 
+### Signficance Testing
+```{r}
+
+length(which(extracted_Fst_melt$variable=="Simulated"))
+```
