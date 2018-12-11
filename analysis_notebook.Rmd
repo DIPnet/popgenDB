@@ -311,10 +311,13 @@ rp
 ```
 
 ### Calculate Effect Sizes
+
+Sean Connolly wants to know if the tendency for the analysis to favor fewer regions is a consequence of the smaller sample sizes (and thus lower power) relative to number of parameters for the more finely subdivided bioregions (i.e. number of populations per bioregion would be smaller). To do this, I am going to look at PhiCT (variance among regions/total variance) as well as Sigma^2a (variance among regions) instead of BIC.
+
 #### PHICT
 ```{r Effect Sizes}
 
-# Sean Connolly wants to know if the tendency for the analysis to favor fewer regions is a consequence of the smaller sample sizes (and thus lower power) relative to number of parameters for the more finely subdivided bioregions (i.e. number of populations per bioregion would be smaller). To do this, I am going to look at PhiCT (variance among regions/total variance) as well as Sigma^2a (variance among regions) instead of BIC.
+
 
 # Look at mean PhiCT for each hypothesis
 FCTs<-NULL
